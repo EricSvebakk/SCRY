@@ -44,6 +44,7 @@ async function uploadFile(
   const totalChunks = Math.ceil(file.size / chunkSize);
   const fileId = `${file.name}-${Date.now()}`; // Unique file identifier
 
+  setUploadProgress(0);
   setUploadLimit(totalChunks);
 
   for (let i = 0; i < totalChunks; i++) {
@@ -55,7 +56,7 @@ async function uploadFile(
     formData.append("total_chunks", totalChunks.toString());
     formData.append("file_id", fileId);
     
-    fetch(`http://localhost:8020/upload_chunk`, {
+    fetch(`http://localhost:8020/upload_file_chunk`, {
       method: "POST",
       mode: "cors",
       body: formData,
@@ -110,21 +111,28 @@ export default function FilesPage() {
   
   let cols: GridColDef[] = [
     { field: "name", headerName: "Name", width: 500 },
-    { field: "col2", headerName: "Column 2", width: 150 },
+    // { field: "col2", headerName: "Column 2", width: 150 },
     {
       field: "actions",
       headerName: "Actions",
       width: 150,
       renderCell: (params) => {
-        
+        const fileName: string = params.row.id;
+        const isZarr = fileName.endsWith("zarr");
+
         return (
           // <Link href={`/files/${params.row.id}`}>
-            <Button
-              variant="contained"
-              onClick={() => dispatch(selectFile(params.row.id))}
-            >
-              Open
-            </Button>
+          <Button
+            variant="contained"
+            disabled={!isZarr}
+            onClick={() => {
+              if (fileName.endsWith("zarr")) {
+                dispatch(selectFile(params.row.id));
+              }
+            }}
+          >
+            Open
+          </Button>
           // </Link>
         );
       },

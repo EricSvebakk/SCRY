@@ -2,7 +2,6 @@
 "use client"
 
 import { Inter } from "next/font/google";
-import "./globals.css";
 import { Box, Button, Container, Grid, ListItem, ListItemButton, ListItemText, Paper } from "@mui/material";
 import Link from "next/link";
 import { green, red } from "@mui/material/colors";

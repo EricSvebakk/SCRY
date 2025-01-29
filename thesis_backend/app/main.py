@@ -10,8 +10,9 @@ import logging
 from pathlib import Path
 import anndata as ad
 from math import ceil
-import dask
+import dask.array
 import zarr
+import json
 
 # from serialize_util import convert_to_serializable
 
@@ -30,7 +31,9 @@ logger = logging.getLogger("uvicorn.error")
 logger.setLevel(logging.DEBUG)
 
 logger.debug(["config", FRONTEND_ENDPOINT])
-logger.debug(["update v4"])
+
+# Creates directory if it does not exist
+Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,21 +46,23 @@ app.add_middleware(
     allow_headers=["*"],        # Allow all headers
 )
 
-def file_exists(file_id: str):
-  
-  file_path = os.path.join(UPLOAD_DIR, file_id)
+def path_exists(path: str):
+  file_path = os.path.join(UPLOAD_DIR, path)
   return os.path.exists(file_path)
   
 
 
 @app.get("/")
 async def root():
-  return JSONResponse(content={"message": "Thesis API"})
+  return JSONResponse(content={
+      "message": "Thesis API",
+      "files": list(filter(lambda x: x.endswith("zarr"), os.listdir(UPLOAD_DIR)))
+  })
 
 
 @app.get("/get_filenames")
 async def get_filenames():
-  return os.listdir(UPLOAD_DIR)
+  return list(filter(lambda x: x.endswith("zarr"), os.listdir(UPLOAD_DIR)))
 
 
 @app.get("/get_file_size")
@@ -82,61 +87,87 @@ async def get_file_hierarchy(file_id: str):
     Recursively traverse a Zarr group (or array) and return a nested dict
     describing the hierarchy. Includes metadata like shape, dtype, etc.
     """
-    if isinstance(obj, zarr.hierarchy.Array):
-        return {
-            "type": "array",
-            "path": path,
-            "shape": obj.shape,
-            "dtype": str(obj.dtype),
-            "chunks": obj.chunks
-        }
-    elif isinstance(obj, zarr.hierarchy.Group):
-        children = {}
-        for key in sorted(obj.keys()):
-            subobj = obj[key]
-            subpath = f"{path}/{key}" if path else key
-            children[key] = get_zarr_hierarchy(subobj, subpath)
-        return {
-            "type": "group",
-            "path": path,
-            "children": children
-        }
-    else:
-        raise TypeError(f"Unknown Zarr object type: {type(obj)}")
+  #   if isinstance(obj, zarr.hierarchy.Array):
+  #       return {
+  #           "type": "array",
+  #           "path": path,
+  #           "shape": obj.shape,
+  #           "dtype": str(obj.dtype),
+  #           "chunks": obj.chunks
+  #       }
+  #   elif isinstance(obj, zarr.hierarchy.Group):
+  #       children = {}
+  #       for key in sorted(obj.keys()):
+  #           subobj = obj[key]
+  #           subpath = f"{path}/{key}" if path else key
+  #           children[key] = get_zarr_hierarchy(subobj, subpath)
+  #       return {
+  #           "type": "group",
+  #           "path": path,
+  #           "children": children
+  #       }
+  #   else:
+  #       raise TypeError(f"Unknown Zarr object type: {type(obj)}")
       
-  if (not file_exists(file_id)):
-    return JSONResponse(content={"message": f"File not found"})
+  # if (not path_exists(file_id)):
+  #   return JSONResponse(content={"message": f"File not found"})
   
+  # file_path = os.path.join(UPLOAD_DIR, file_id)
+  
+  # zarr_group = zarr.open_group(file_path, mode="r")
+  # zarr_hierachy = get_zarr_hierarchy(zarr_group)
+  
+  # return zarr_hierachy
+
   file_path = os.path.join(UPLOAD_DIR, file_id)
-  
-  zarr_group = zarr.open_group(file_path, mode="r")
-  zarr_hierachy = get_zarr_hierarchy(zarr_group)
-  
-  return zarr_hierachy
+
+  print(file_path)
+
+  zarr_data = zarr.open(file_path, "r")
+
+  zarr_obj = {
+      group_key: list(
+          zarr_data[group_key].keys()
+          if isinstance(zarr_data[group_key], zarr.Group)
+          else []
+      )
+      for group_key in zarr_data.keys()
+  }
+
+  return JSONResponse(content=zarr_obj)
 
   
 
 @app.get("/get_file_information")
 async def get_file_information(file_id: str):
   
-  if (not file_exists(file_id)):
-    return JSONResponse(content={"message": f"File not found"})
+  pass  
+  # if (not path_exists(file_id)):
+  #   return JSONResponse(content={"message": f"File not found"})
   
-  file_path = os.path.join(UPLOAD_DIR, file_id)
+  # file_path = os.path.join(UPLOAD_DIR, file_id)
   
-  dask.array.from_zarr(file_path)
+  # print(file_path)
   
-  # adata = ad.read_zarr(file_path)
+  # zarr_data = zarr.open(file_path, "r")
   
-  adata_serialized = convert_to_serializable(adata)
+  # zarr_obj = {
+  #     group_key: list(zarr_data[group_key].keys() if isinstance(zarr_data[group_key], zarr.Group) else [])
+  #     for group_key in zarr_data.keys()
+  # }
   
-  return JSONResponse(content={
-    "adata": adata_serialized
-  })
+  # return JSONResponse(content=zarr_obj)
+  
+  # print(zarr_obj)
+  
+  # return JSONResponse(content={
+  #   "obs": list(zarr_data["obs"].keys()),
+  #   "obsm": list(zarr_data["obsm"].keys()),
+  # })
   
 
 
-@app.post("/upload_chunk/")
+@app.post("/upload_file_chunk/")
 async def upload_chunk(
     chunk: UploadFile = File(...),
     chunk_index: int = Form(...),
@@ -148,59 +179,78 @@ async def upload_chunk(
   """
 
   logger.debug(["chunk", chunk_index])
-
-  file_path = os.path.join(UPLOAD_DIR, f"{file_id}_part{chunk_index}")
+  
+  dir_path = os.path.join(UPLOAD_DIR, file_id)
+  
+  # Creates directory for file if it does not exist
+  Path(dir_path).mkdir(parents=True, exist_ok=True)
+  
+  file_path = os.path.join(dir_path, f"{file_id}_chunk_{chunk_index}")
 
   # Save the chunk
   with open(file_path, "wb") as f:
     content = await chunk.read()
     f.write(content)
 
-  #
-  all_chunks_found = []
-  assembled_file_name = None
-
-  #
-  for i in range(total_chunks):
-    temp_path = os.path.join(UPLOAD_DIR, f"{file_id}_part{i}")
-
-    path_exists = os.path.exists(temp_path)
-
-    all_chunks_found.append(path_exists)
-
-    #
-    if len(all_chunks_found) == total_chunks and all(all_chunks_found):
-
-      logger.debug([f"found all chunks"])
-
-      assembled_file_name = f"{file_id}_assembled"
-
-      assembled_file_path = os.path.join(UPLOAD_DIR, assembled_file_name)
-
-      # create assembled file
-      with open(assembled_file_path, "wb") as assembled_file:
-
-        logger.info("assembling file")
-
-        for i in range(total_chunks):
-
-          chunk_path = os.path.join(UPLOAD_DIR, f"{file_id}_part{i}")
-
-          with open(chunk_path, "rb") as part_file:
-            assembled_file.write(part_file.read())
-            
-          # remove the chunk file after assembly
-          os.remove(chunk_path)
-        
-        logger.info("finished assembling file")
-
-      return JSONResponse(content={"message": f"Chunk {chunk_index + 1} of {total_chunks} uploaded successfully. Creation of '{assembled_file_name}' successful"})
-
-  return JSONResponse(content={"message": f"Chunk {chunk_index + 1} of {total_chunks} uploaded successfully."})
-
-@app.get("/assemble_file")
-async def assemble_file(file_id: str):
+  dir_contents = os.listdir(dir_path)
   
+  if (len(dir_contents) == total_chunks):
+    return JSONResponse(
+      content={
+        "message": f"Chunk {chunk_index + 1} of {total_chunks} uploaded successfully. All chunks found."
+      }
+    )
+  
+  return JSONResponse(
+    content={
+      "message": f"Chunk {chunk_index + 1} of {total_chunks} uploaded successfully."
+    }
+  )
+  
+@app.get("/assemble_file")
+def assemble_file(file_id: str):
+  
+  dir_path = os.path.join(UPLOAD_DIR, file_id)
+  
+  path_exists = os.path.exists(dir_path)
+  is_dir = os.path.isdir(dir_path)
+  
+  if (not path_exists or not is_dir):
+    return JSONResponse(
+      content={
+        "message": {
+          "path_exists": path_exists,
+          "is_dir": is_dir
+        }
+      }
+    )
+  
+  dir_contents = sorted(os.listdir(dir_path), key=lambda x: int(x.split("_chunk_")[1]))
+  
+  dir_contents_len = len(dir_contents)
+  
+  assembled_file_path = os.path.join(UPLOAD_DIR, f"{file_id}_assembled")
+  
+  with open(assembled_file_path, "wb") as assembled_file:
+    
+    for chunk_path in dir_contents:
+      
+      chunk_file_path = os.path.join(dir_path, chunk_path)
+      
+      with open(chunk_file_path, "rb") as chunk_file:
+        assembled_file.write(chunk_file.read())
+        
+      os.remove(chunk_file_path)
+  
+  os.rmdir(dir_path)
+  os.rename(assembled_file_path, dir_path)
+  
+  return JSONResponse(
+    content={
+      "message": f"File {file_id} successfully assembled from {dir_contents_len} chunks"
+    }
+  )
+
   
 
 
@@ -210,26 +260,40 @@ async def convert_h5ad_to_zarr(file_id: str):
   Receives and assembles a chunk-separated file uploaded from the thesis frontend application :)
   """
   
-  logger.info(["converting file", file_id])
   logger.info(["looking for file"])
   
   file_path = os.path.join(UPLOAD_DIR, file_id)
+
+  path_exists = os.path.exists(file_path)
+  is_file = os.path.isfile(file_path)
+  is_h5ad = file_path.split(".")[1].startswith("h5ad")
   
-  file_exists = os.path.exists(file_path)
+  if (not path_exists or not is_file or not is_h5ad):
+    return JSONResponse(
+        content={
+            "message": {
+                "path_exists": path_exists,
+                "is_file": is_file,
+                "is_h5ad": is_h5ad
+            }
+        }
+    )  
   
-  if not file_exists:
-    return JSONResponse(content={"message": f"File not found"})
-  
-  logger.info(["file found", file_path])
+  logger.info(["converting file", file_path])
   
   file_name, file_type = file_id.split(".")
-  file_type_cleaned = file_type.split("-")[0]
+  file_type_cleaned, file_id = file_type.split("-")
   
   if "h5ad" in file_type_cleaned:
-    adata = ad.read_h5ad(file_path, backed="r", chunk_size=ADATA_CHUNK_SIZE)
     
+    logger.info(["reading h5ad"])
+    
+    adata = ad.read_h5ad(file_path, backed="r")
+    
+    logger.info(["writing zarr"])
+
     adata.write_zarr(
-      os.path.join(UPLOAD_DIR, f"{file_name}.zarr"),
+      os.path.join(UPLOAD_DIR, f"{file_name}-{file_id}.zarr"),
 
     )
     
