@@ -1,0 +1,15 @@
+
+/**/.env*
+
+# Data
+/thesis_data
+
+# Backend
+/thesis_backend/.venv*
+/thesis_backend/**/__pycache__
+/thesis_backend/testing/
+
+# Frontend
+/thesis_frontend/package-lock.json
+/thesis_frontend/**/*.ico
+/thesis_frontend/**/*.svg

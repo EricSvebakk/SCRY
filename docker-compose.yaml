@@ -1,0 +1,28 @@
+
+services:
+        
+  thesis_backend:
+    container_name: thesis-backend
+    build:
+      context: ./thesis_backend
+      dockerfile: Dockerfile
+    ports:
+      - "8020:8000"
+    volumes:
+      - ./thesis_backend:/code  # Sync the backend code
+      - ./thesis_data:/code/thesis_data  # Mount thesis_data for file storage
+    environment:
+      - FRONTEND_ENDPOINT=http://localhost:3005
+      - PYTHONPATH=/code/app
+  
+  thesis_frontend:
+    container_name: thesis-frontend
+    build:
+      context: ./thesis_frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3005:3000"
+    environment:
+      - NEXT_PUBLIC_BACKEND_ENDPOINT=https://localhost:8020
+    depends_on:
+      - thesis_backend
