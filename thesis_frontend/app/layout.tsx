@@ -2,11 +2,7 @@
 "use client"
 
 import { Inter } from "next/font/google";
-import { Box, Button, Container, Grid, ListItem, ListItemButton, ListItemText, Paper } from "@mui/material";
-import Link from "next/link";
-import { green, red } from "@mui/material/colors";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { Box, Container, Paper } from "@mui/material";
 import { Provider } from "react-redux";
 import { store } from "@/lib/redux/stores/store";
 
@@ -29,6 +25,7 @@ export default function RootLayout({
             component={Paper}
             elevation={4}
             square
+            disableGutters
             sx={{
               minHeight: "100vh",
             }}
@@ -37,9 +34,7 @@ export default function RootLayout({
               disableGutters
               sx={{
                 padding: 2,
-                // margin: 0,
                 minHeight: "100%",
-                border: "1px solid red",
               }}
             >
               <Provider store={store}>

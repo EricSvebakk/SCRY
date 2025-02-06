@@ -45,7 +45,12 @@ export default function PagesLayout({
   
   return (
     <Box>
-      <Grid container direction="row" p={2} sx={{ border: "1px solid red" }}>
+      <Grid
+        container
+        direction="row"
+        p={2}
+        sx={{ border: "1px solid grey" }}
+      >
         {navItems.map((e) => {
           return (
             <Grid
@@ -53,14 +58,6 @@ export default function PagesLayout({
               item
               width={150}
               overflow="hidden"
-              // lineHeight={1}
-              // maxHeight=""
-              // p={2}
-              sx={
-                {
-                  // border: "1px solid red",
-                }
-              }
             >
               {CustomNavItem({
                 id: e.id,
@@ -92,14 +89,12 @@ function CustomNavItem({ id, title, path, curPath }: CustomNavItemProps) {
       href={path}
       style={{
         textDecoration: "none",
-        // border: "1px solid red"
       }}
     >
       <ListItem
         key={`nav_item_${id}`}
         disablePadding
         style={{
-          // border: "1px solid",
           borderStyle: "solid",
           borderWidth: 2,
           borderColor: grey[500],

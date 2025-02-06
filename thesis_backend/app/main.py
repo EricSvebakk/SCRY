@@ -46,12 +46,6 @@ app.add_middleware(
     allow_headers=["*"],        # Allow all headers
 )
 
-def path_exists(path: str):
-  file_path = os.path.join(UPLOAD_DIR, path)
-  return os.path.exists(file_path)
-  
-
-
 @app.get("/")
 async def root():
   return JSONResponse(content={
@@ -81,49 +75,14 @@ async def get_file_size(file_id: str):
 
 @app.get("/get_file_hierarchy")
 async def get_file_hierarchy(file_id: str):
-  
-  def get_zarr_hierarchy(obj, path=""):
-    """
-    Recursively traverse a Zarr group (or array) and return a nested dict
-    describing the hierarchy. Includes metadata like shape, dtype, etc.
-    """
-  #   if isinstance(obj, zarr.hierarchy.Array):
-  #       return {
-  #           "type": "array",
-  #           "path": path,
-  #           "shape": obj.shape,
-  #           "dtype": str(obj.dtype),
-  #           "chunks": obj.chunks
-  #       }
-  #   elif isinstance(obj, zarr.hierarchy.Group):
-  #       children = {}
-  #       for key in sorted(obj.keys()):
-  #           subobj = obj[key]
-  #           subpath = f"{path}/{key}" if path else key
-  #           children[key] = get_zarr_hierarchy(subobj, subpath)
-  #       return {
-  #           "type": "group",
-  #           "path": path,
-  #           "children": children
-  #       }
-  #   else:
-  #       raise TypeError(f"Unknown Zarr object type: {type(obj)}")
-      
-  # if (not path_exists(file_id)):
-  #   return JSONResponse(content={"message": f"File not found"})
-  
-  # file_path = os.path.join(UPLOAD_DIR, file_id)
-  
-  # zarr_group = zarr.open_group(file_path, mode="r")
-  # zarr_hierachy = get_zarr_hierarchy(zarr_group)
-  
-  # return zarr_hierachy
 
   file_path = os.path.join(UPLOAD_DIR, file_id)
 
   print(file_path)
 
   zarr_data = zarr.open(file_path, "r")
+  
+  print(zarr_data.tree())
 
   zarr_obj = {
       group_key: list(
@@ -136,36 +95,111 @@ async def get_file_hierarchy(file_id: str):
 
   return JSONResponse(content=zarr_obj)
 
-  
 
 @app.get("/get_file_information")
-async def get_file_information(file_id: str):
+async def get_file_information(file_id: str, component: str):
   
-  pass  
-  # if (not path_exists(file_id)):
-  #   return JSONResponse(content={"message": f"File not found"})
-  
-  # file_path = os.path.join(UPLOAD_DIR, file_id)
-  
-  # print(file_path)
-  
-  # zarr_data = zarr.open(file_path, "r")
-  
-  # zarr_obj = {
-  #     group_key: list(zarr_data[group_key].keys() if isinstance(zarr_data[group_key], zarr.Group) else [])
-  #     for group_key in zarr_data.keys()
-  # }
-  
-  # return JSONResponse(content=zarr_obj)
-  
-  # print(zarr_obj)
-  
-  # return JSONResponse(content={
-  #   "obs": list(zarr_data["obs"].keys()),
-  #   "obsm": list(zarr_data["obsm"].keys()),
-  # })
-  
+  file_path = os.path.join(UPLOAD_DIR, file_id) 
 
+  if (not os.path.exists(file_path) or not os.path.isdir(file_path)):
+    return JSONResponse(content={"message": f"File not found"})
+  
+  components = component.split("/")
+  zarr_data = zarr.open_group(file_path, "r")
+  
+  # 
+  def recursive_indexing(obj, keys):
+    
+    print("ri", obj)
+    
+    if len(keys) == 0: 
+      return obj
+    elif len(keys) == 1:
+      return obj[keys[0]]
+    else:
+      return recursive_indexing(obj[keys[0]], keys[1:])
+  
+  print(file_id, components, zarr_data)
+  
+  result = recursive_indexing(zarr_data, components)
+  
+  return list(result)
+
+
+@app.get("/get_file_obs")
+async def get_file_obs(file_id: str):
+
+  file_path = os.path.join(UPLOAD_DIR, file_id)
+
+  # print(file_path)
+
+  zarr_data = zarr.open(file_path, "r")
+
+  # print(zarr_data.tree())
+
+  zarr_obj = {
+      "obs": list(
+          filter(
+              lambda x: isinstance(zarr_data.obs[x], zarr.Group),
+              zarr_data.obs.keys()
+          )
+      ),
+      "obsm": list(
+        zarr_data.obsm.keys()
+      )
+      # for group_key in zarr_data.keys()
+  }
+
+  return JSONResponse(content=zarr_obj)
+
+@app.get("/get_file_obsm")
+async def get_file_obsm(file_id: str, obsm: str, obs: str):
+  
+  obsm_path = os.path.join(UPLOAD_DIR, file_id, "obsm", obsm)
+
+  obsm_path_exists = os.path.exists(obsm_path)
+  obsm_dir_exists = os.path.isdir(obsm_path)
+
+  # for obsm
+  if (not obsm_path_exists or not obsm_dir_exists):
+    return JSONResponse(content={
+        "message": {
+            "path": obsm_path,
+            "path_exists": obsm_path_exists,
+            "is_dir": obsm_dir_exists
+        }
+    })
+    
+  obs_path = os.path.join(UPLOAD_DIR, file_id, "obs", obs)
+  obs_path_exists = os.path.exists(obs_path)
+  obs_dir_exists = os.path.isdir(obs_path)
+
+  # for obs
+  if (not obs_path_exists or not obs_dir_exists):
+    return JSONResponse(content={
+        "message": {
+            "path": obs_path,
+            "path_exists": obs_path_exists,
+            "is_dir": obs_dir_exists
+        }
+    })
+
+  obsm_group = zarr.open_array(obsm_path, "r")
+  obs_group = zarr.open_group(obs_path, "r")
+  
+  # obsm_group
+  
+  print(type(obsm_group), type(obsm_group[0]))
+  print(obs_group.codes)
+  
+  result = {
+    "coordinates": [x.tolist() for x in obsm_group],
+    "labels": list(obs_group.categories),
+    "label_map": obs_group.codes[:].tolist(),
+  }
+  
+  return JSONResponse(content=json.dumps(result))
+  
 
 @app.post("/upload_file_chunk/")
 async def upload_chunk(
