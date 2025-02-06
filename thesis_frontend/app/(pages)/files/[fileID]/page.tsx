@@ -2,22 +2,18 @@
 "use client"
 
 import { Plot } from "@/lib/components/plot";
-import { RootState } from "@/lib/redux/stores/store";
-import { Circle } from "@mui/icons-material";
-import { Box, Button, Grid, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Stack, Typography } from "@mui/material";
-import { red } from "@mui/material/colors";
+import { Button, Divider, Grid, Stack } from "@mui/material";
 
 import { 
   useParams,
-  // useRouter,
  } from "next/navigation";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+
 
 async function fetchFileHierarchy(fileID: string, callback: Dispatch<SetStateAction<zarrHierarchy | null>>) {
   
   const endpoint = `http://localhost:8020/`;
-  const request = `get_file_obs?file_id=${fileID}`;
+  const request = `get_file_hierarchy?file_id=${fileID}`;
   
   fetch(`${endpoint}${request}`)
   .then((response) => {
@@ -38,27 +34,44 @@ async function fetchFileHierarchy(fileID: string, callback: Dispatch<SetStateAct
 
 async function fetchFileObs(
   fileID: string,
-  obs: string,
-  callback1: Dispatch<SetStateAction<{
-    coordinates: number[][],
-    labels: string[]
-    label_map: number[]
-  } | null>>,
-  // callback2: Dispatch<SetStateAction<null>>
+  obs: string | null,
+  callback: Dispatch<SetStateAction<obsData | null>>
 ) {
   const endpoint = `http://localhost:8020/`;
-  const request1 = `get_file_obsm?file_id=${fileID}&obsm=X_umap&obs=${obs}`;
+  const request = `get_file_obs?file_id=${fileID}&obs=${obs}`;
 
-  fetch(`${endpoint}${request1}`)
+  fetch(`${endpoint}${request}`)
     .then((response) => {
       if (!response.ok) {
         console.error("something fucky happened");
       }
-
       return response.json();
     })
     .then((data) => {
-      callback1(JSON.parse(data));
+      callback(JSON.parse(data));
+    })
+    .catch((error) => {
+      console.error("something fucky", error);
+    });
+}
+
+async function fetchFileObsm(
+  fileID: string,
+  obsm: string | null,
+  callback: Dispatch<SetStateAction<obsmData | null>>
+) {
+  const endpoint = `http://localhost:8020/`;
+  const request = `get_file_obsm?file_id=${fileID}&obsm=${obsm}`;
+
+  fetch(`${endpoint}${request}`)
+    .then((response) => {
+      if (!response.ok) {
+        console.error("something fucky happened");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      callback(JSON.parse(data));
     })
     .catch((error) => {
       console.error("something fucky", error);
@@ -67,30 +80,36 @@ async function fetchFileObs(
 
 export default function FileIdPage({ }) {
   
+  const [selectedObs, setSelectedObs] = useState("");
+  const [selectedObsm, setSelectedObsm] = useState("");
+  
+  const [obsData, setObsData] = useState<obsData | null>(null);
+  const [obsmData, setObsmData] = useState<obsmData | null>(null);
+  
   const { fileID } = useParams();
   const [hierarchy, setHierarchy] = useState<zarrHierarchy | null>(null);
-  const [plotData, setPlotData] = useState<plotData | null>(null);
   
   useEffect(() => {
-    
     if (typeof fileID === "string") {
       fetchFileHierarchy(fileID, setHierarchy);
     }
-    
   }, [])
   
   return (
     <Grid
       container
       direction="row"
-      // p={2}
-      sx={
-        {
-          // border: "1px solid red",
-        }
-      }
+      mt={1}
+      columnGap={1}
     >
-      <Grid item xs={4}>
+      <Grid
+        item
+        xs={3}
+        p={2}
+        sx={{
+          border: "1px solid grey",
+        }}
+      >
         <Stack direction="column" gap={2}>
           <Stack direction="column">
             {hierarchy ? (
@@ -101,9 +120,11 @@ export default function FileIdPage({ }) {
                     <Button
                       key={`button_obsm_${e}`}
                       variant="contained"
+                      disabled={selectedObs === e}
                       onClick={() => {
                         if (typeof fileID === "string") {
-                          fetchFileObs(fileID, e, setPlotData);
+                          setSelectedObs(e)
+                          fetchFileObsm(fileID, e, setObsmData);
                         }
                       }}
                       size="small"
@@ -111,8 +132,6 @@ export default function FileIdPage({ }) {
                         justifyContent: "flex-start",
                         overflow: "hidden",
                         fontSize: 10,
-                        // alignContent: "start"
-                        // alignItems: ""
                       }}
                     >
                       {e}
@@ -124,6 +143,8 @@ export default function FileIdPage({ }) {
             )}
           </Stack>
 
+          {hierarchy ? <Divider/> : <></>}
+
           <Stack direction="column">
             {hierarchy ? (
               hierarchy.obs
@@ -132,10 +153,12 @@ export default function FileIdPage({ }) {
                   return (
                     <Button
                       key={`button_obs_${e}`}
-                      variant="outlined"
+                      variant="contained"
+                      disabled={!obsmData || selectedObsm === e}
                       onClick={() => {
                         if (typeof fileID === "string") {
-                          fetchFileObs(fileID, e, setPlotData);
+                          setSelectedObsm(e);
+                          fetchFileObs(fileID, e, setObsData);
                         }
                       }}
                       size="small"
@@ -143,8 +166,6 @@ export default function FileIdPage({ }) {
                         justifyContent: "flex-start",
                         overflow: "hidden",
                         fontSize: 10,
-                        // alignContent: "start"
-                        // alignItems: ""
                       }}
                     >
                       {e}
@@ -158,12 +179,30 @@ export default function FileIdPage({ }) {
         </Stack>
       </Grid>
 
-      <Grid item width="fit-content" xs>
-        <Plot plotData={plotData} />
+      <Grid
+        item
+        width="fit-content"
+        xs
+        p={2}
+        sx={{
+          border: "1px solid grey",
+        }}
+      >
+        <Plot obsData={obsData} obsmData={obsmData} />
       </Grid>
     </Grid>
   );
   
+}
+
+
+export type obsData = {
+  labels: string[];
+  label_map: number[];
+}
+
+export type obsmData = {
+  coordinates: number[][]
 }
 
 type zarrHierarchy = {
@@ -177,10 +216,4 @@ type zarrHierarchy = {
   var: string[];
   varm: string[];
   varp: string[];
-}
-
-type plotData = {
-  coordinates: number[][],
-  labels: string[]
-  label_map: number[]
 }

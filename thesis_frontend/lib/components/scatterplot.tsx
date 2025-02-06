@@ -1,28 +1,30 @@
 
 
+import { obsData, obsmData } from "@/app/(pages)/files/[fileID]/page";
 import * as d3 from "d3";
 
 const LargeDatasetCanvasPlot = (props: {
   svgCurrent: SVGSVGElement,
   groupRefs: [],
-  plotData: {
-    coordinates: number[][],
-    labels: string[]
-    label_map: number[]
-  },
+  obsData: obsData | null,
+  obsmData: obsmData,
 }) => {
-  const { coordinates, labels, label_map } = props.plotData;
   
   const containerRect = props.svgCurrent.getBoundingClientRect();
   const height = containerRect.height;
   const width = containerRect.width;
+  
+  let tempLabels = props.obsData ? props.obsData.labels : ["none"];
+  let tempLabelMap = props.obsData ? props.obsData.label_map : props.obsmData.coordinates.map((e) => 0);
+  let colorScheme = props.obsData ? d3.schemeCategory10 : ["black"];
+  let coordinates = props.obsmData.coordinates;
 
   // Prepare the unique labels and map them to colors
   // const uniqueLabels = Array.from(new Set(labels));
   const colorScale = d3
     .scaleOrdinal<string>()
-    .domain(labels)
-    .range(d3.schemeCategory10); // Use provided colors or default to d3.schemeCategory10
+    .domain(tempLabels)
+    .range(colorScheme); // Use provided colors or default to d3.schemeCategory10
     
   // Set up scales based on data extent
   const xScale = d3
@@ -46,16 +48,16 @@ const LargeDatasetCanvasPlot = (props: {
   const legend = svgContext
     .append("g")
     .attr("transform", `translate(${width - 100}, 50)`) // Position the legend on the right side
-
-
-  labels.forEach((label, index) => {
+    
+  
+  tempLabels.forEach((label, index) => {
     
     const someContext: CanvasRenderingContext2D = props.groupRefs[index].getContext("2d")
     
     someContext.canvas.width = width
     someContext.canvas.height = height
     
-    label_map.map((f, j) => {
+    tempLabelMap.map((f, j) => {
       
       if (f !== index) return;
       
@@ -63,7 +65,7 @@ const LargeDatasetCanvasPlot = (props: {
       
       someContext.beginPath();
       someContext.arc(xScale(point[0]), yScale(point[1]), 1, 0, 2 * Math.PI);
-      someContext.fillStyle = colorScale(labels[label_map[j]]); // Apply color based on the label
+      someContext.fillStyle = tempLabels.length > 0 ? colorScale(tempLabels[tempLabelMap[j]]) : "black"; // Apply color based on the label
       someContext.fill();
       someContext.closePath();
     })
@@ -77,7 +79,7 @@ const LargeDatasetCanvasPlot = (props: {
       .append("rect")
       .attr("width", 20)
       .attr("height", 20)
-      .attr("fill", colorScale(labels[index]))
+      .attr("fill", colorScale(tempLabels[index]))
       .style("padding", "5px");
       // .style("zIndex", 11);
 
@@ -85,6 +87,7 @@ const LargeDatasetCanvasPlot = (props: {
       .append("text")
       .attr("x", 20)
       .attr("y", 12)
+      .attr("transform", "translate(5, 0)")
       .attr("text-anchor", "start")
       .style("alignment-baseline", "middle")
       .style("font-size", "15px")
@@ -97,19 +100,17 @@ const LargeDatasetCanvasPlot = (props: {
       .attr("height", 30)
       .attr("transform", "translate(0, -5)")
       .style("opacity", "0%")
-      // .attr("fill", "")
-      // .style("zIndex", 12)
       .on("mouseover", (event, d) => {
         props.groupRefs[index].style.zIndex = "5";
 
-        labels.forEach((label_temp, index_other) => {
+        tempLabels.forEach((label_temp, index_other) => {
           label !== label_temp
             ? (props.groupRefs[index_other]!.style.opacity = "0%")
             : label_temp;
         });
       })
       .on("mouseout", () => {
-        labels.forEach((label_temp, index_other) => {
+        tempLabels.forEach((label_temp, index_other) => {
           label !== label_temp
             ? (props.groupRefs[index_other]!.style.opacity = "100%")
             : label_temp;
@@ -117,6 +118,7 @@ const LargeDatasetCanvasPlot = (props: {
       });
       
   });
+
   
   return () => {
     svgContext.remove()

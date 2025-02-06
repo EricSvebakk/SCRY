@@ -63,7 +63,7 @@ async def get_filenames():
 async def get_file_size(file_id: str):
   filesize = os.path.getsize(f"{UPLOAD_DIR}/{file_id}")
   
-  logger.info(["HELLO", filesize])
+  # logger.info(["HELLO", filesize])
   
   return JSONResponse(
     content={
@@ -82,7 +82,7 @@ async def get_file_hierarchy(file_id: str):
 
   zarr_data = zarr.open(file_path, "r")
   
-  print(zarr_data.tree())
+  # print(zarr_data.tree())
 
   zarr_obj = {
       group_key: list(
@@ -92,71 +92,43 @@ async def get_file_hierarchy(file_id: str):
       )
       for group_key in zarr_data.keys()
   }
+  
+  zarr_obj["obs"] = list(filter(lambda x: isinstance(zarr_data.obs[x], zarr.Group), zarr_data.obs.keys()))
 
   return JSONResponse(content=zarr_obj)
-
-
-@app.get("/get_file_information")
-async def get_file_information(file_id: str, component: str):
-  
-  file_path = os.path.join(UPLOAD_DIR, file_id) 
-
-  if (not os.path.exists(file_path) or not os.path.isdir(file_path)):
-    return JSONResponse(content={"message": f"File not found"})
-  
-  components = component.split("/")
-  zarr_data = zarr.open_group(file_path, "r")
-  
-  # 
-  def recursive_indexing(obj, keys):
-    
-    print("ri", obj)
-    
-    if len(keys) == 0: 
-      return obj
-    elif len(keys) == 1:
-      return obj[keys[0]]
-    else:
-      return recursive_indexing(obj[keys[0]], keys[1:])
-  
-  print(file_id, components, zarr_data)
-  
-  result = recursive_indexing(zarr_data, components)
-  
-  return list(result)
 
 
 @app.get("/get_file_obs")
-async def get_file_obs(file_id: str):
+async def get_file_obs(file_id: str, obs: str):
+  
+  obs_path = os.path.join(UPLOAD_DIR, file_id, "obs", obs)
+  obs_path_exists = os.path.exists(obs_path)
+  obs_dir_exists = os.path.isdir(obs_path)
+  
+  # for obs
+  if (not obs_path_exists or not obs_dir_exists):
+    return JSONResponse(content={
+        "message": {
+            "path": obs_path,
+            "path_exists": obs_path_exists,
+            "is_dir": obs_dir_exists
+        }
+    })
+    
+  obs_group = zarr.open_group(obs_path, "r")
+  
+  result = {
+    "labels": list(obs_group.categories),
+    "label_map": obs_group.codes[:].tolist()
+  }  
 
-  file_path = os.path.join(UPLOAD_DIR, file_id)
+  return JSONResponse(content=json.dumps(result))
 
-  # print(file_path)
-
-  zarr_data = zarr.open(file_path, "r")
-
-  # print(zarr_data.tree())
-
-  zarr_obj = {
-      "obs": list(
-          filter(
-              lambda x: isinstance(zarr_data.obs[x], zarr.Group),
-              zarr_data.obs.keys()
-          )
-      ),
-      "obsm": list(
-        zarr_data.obsm.keys()
-      )
-      # for group_key in zarr_data.keys()
-  }
-
-  return JSONResponse(content=zarr_obj)
 
 @app.get("/get_file_obsm")
-async def get_file_obsm(file_id: str, obsm: str, obs: str):
+async def get_file_obsm(file_id: str, obsm: str):
   
   obsm_path = os.path.join(UPLOAD_DIR, file_id, "obsm", obsm)
-
   obsm_path_exists = os.path.exists(obsm_path)
   obsm_dir_exists = os.path.isdir(obsm_path)
 
@@ -170,32 +142,10 @@ async def get_file_obsm(file_id: str, obsm: str, obs: str):
         }
     })
     
-  obs_path = os.path.join(UPLOAD_DIR, file_id, "obs", obs)
-  obs_path_exists = os.path.exists(obs_path)
-  obs_dir_exists = os.path.isdir(obs_path)
-
-  # for obs
-  if (not obs_path_exists or not obs_dir_exists):
-    return JSONResponse(content={
-        "message": {
-            "path": obs_path,
-            "path_exists": obs_path_exists,
-            "is_dir": obs_dir_exists
-        }
-    })
-
   obsm_group = zarr.open_array(obsm_path, "r")
-  obs_group = zarr.open_group(obs_path, "r")
-  
-  # obsm_group
-  
-  print(type(obsm_group), type(obsm_group[0]))
-  print(obs_group.codes)
-  
+    
   result = {
-    "coordinates": [x.tolist() for x in obsm_group],
-    "labels": list(obs_group.categories),
-    "label_map": obs_group.codes[:].tolist(),
+    "coordinates": [x.tolist() for x in obsm_group]
   }
   
   return JSONResponse(content=json.dumps(result))
