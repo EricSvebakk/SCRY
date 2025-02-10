@@ -278,7 +278,7 @@ async def convert_h5ad_to_zarr(file_id: str):
   Receives and assembles a chunk-separated file uploaded from the thesis frontend application :)
   """
   
-  logger.info(["looking for file"])
+  print("looking for file", file_id)
   
   file_path = os.path.join(UPLOAD_DIR, file_id)
 
@@ -290,6 +290,7 @@ async def convert_h5ad_to_zarr(file_id: str):
     return JSONResponse(
         content={
             "message": {
+                "path": file_path,
                 "path_exists": path_exists,
                 "is_file": is_file,
                 "is_h5ad": is_h5ad
@@ -297,26 +298,24 @@ async def convert_h5ad_to_zarr(file_id: str):
         }
     )  
   
-  logger.info(["converting file", file_path])
+  print("converting file", file_path)
   
   file_name, file_type = file_id.split(".")
   file_type_cleaned, file_id = file_type.split("-")
   
   if "h5ad" in file_type_cleaned:
     
-    logger.info(["reading h5ad"])
+    print("reading h5ad")
     
     adata = ad.read_h5ad(file_path, backed="r")
     
-    logger.info(["writing zarr"])
+    print("writing zarr")
 
     adata.write_zarr(
-      os.path.join(UPLOAD_DIR, f"{file_name}-{file_id}.zarr"),
-
+      os.path.join(UPLOAD_DIR, f"{file_name}-{file_id}.zarr")
     )
     
-    if os.path.exists(os.path.join(UPLOAD_DIR, f"{file_name}.zarr")):
-      os.remove(file_path)
+    os.remove(file_path)
     
     return JSONResponse(content={"message": f"File converted to zarr"})
       

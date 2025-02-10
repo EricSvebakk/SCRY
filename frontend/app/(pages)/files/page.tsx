@@ -1,14 +1,23 @@
 
 "use client"
 
-import { Box, Button, Dialog, DialogContent, DialogTitle, Grid, Stack, Tooltip, Typography } from "@mui/material"
-import { DataGrid, GridColDef, GridRowsProp } from "@mui/x-data-grid"
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Grid,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { DataGrid, GridColDef } from "@mui/x-data-grid"
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/lib/redux/stores/store";
-import { addFile, addFiles, selectFile, selectFiles } from "@/lib/redux/reducers/reducer1";
-import Link from "next/link";
+import { addFiles, selectFile } from "@/lib/redux/reducers/reducer1";
 import { CloudUpload } from "@mui/icons-material";
 import styled from "@emotion/styled";
 
@@ -67,11 +76,20 @@ async function uploadFile(
       if (!response.ok) {
         throw new Error("Network response was not ok for chunk " + i);
       }
-      return response.json()
+      return response.json();
     })
     .then((data) => {
       console.log(data)
-      setUploadProgress((progress) => progress + 1);
+      setUploadProgress((progress) => {
+        
+        const newProgress = progress + 1;
+        
+        if (newProgress === totalChunks) {
+          finalizeFile(fileId);
+        }
+        
+        return newProgress;
+      });
     })
     .catch((error) => {
       console.error("There was a problem with the fetch operation:", error);
@@ -81,18 +99,26 @@ async function uploadFile(
 
 async function finalizeFile(fileID: string) {
   
+  const result = await fetch(`${BACKEND_ENDPOINT}/assemble_file?file_id=${fileID}`);
   
+  if (!result.ok) {
+    console.error("error", result);
+  }
   
-  // fetch(`${BACKEND_ENDPOINT}/convert_file`, {
-  //   method: "POST",
-  //   mode: "cors",
-  //   body: formData,
-  // });
+  const data = await result.json();
   
-  return (
-    true
-  );
+  console.log(data);
   
+  fetch(`${BACKEND_ENDPOINT}/convert_file?file_id=${fileID}`)
+  .then((response) => {
+    if (!response.ok) {
+      throw new Error("Network response was not ok for file_conversion");
+    }
+    return response.json();
+  })
+  .then((e) => {
+    console.log("finalizeFinale", e);
+  })
 }
 
 
@@ -113,7 +139,6 @@ export default function FilesPage() {
   
   let cols: GridColDef[] = [
     { field: "name", headerName: "Name", width: 500 },
-    // { field: "col2", headerName: "Column 2", width: 150 },
     {
       field: "actions",
       headerName: "Actions",
@@ -123,7 +148,6 @@ export default function FilesPage() {
         const isZarr = fileName.endsWith("zarr");
 
         return (
-          // <Link href={`/files/${params.row.id}`}>
           <Button
             variant="contained"
             disabled={!isZarr}
@@ -135,15 +159,12 @@ export default function FilesPage() {
           >
             Open
           </Button>
-          // </Link>
         );
       },
-      // hide: true,
     },
   ];
   
   useEffect(() => {
-    
     fetchFiles()
     .then((data: any) => {
       const newRows = data.map((e: any, i: number) => ({
@@ -155,9 +176,7 @@ export default function FilesPage() {
       
       setDynamicRows(newRows);
     });
-    
-  }, []);
-  
+  }, []);  
   
   return (
     <Box>
@@ -171,9 +190,6 @@ export default function FilesPage() {
           <DataGrid
             columns={cols}
             rows={dynamicRows}
-            // onRowSelectionModelChange={(e) => {
-            //   dispatch(selectFiles(e as string[]));
-            // }}
           />
         </Grid>
       </Grid>
@@ -187,16 +203,17 @@ export default function FilesPage() {
             maxWidth: "500px",
           },
         }}
-        // open={files.length > 0}
       >
         <DialogTitle>Please provide an H5AD-file</DialogTitle>
         <DialogContent>
           <Grid container direction="column" spacing={2}>
+            
             <Grid item>
               <Typography variant="caption">
                 The uploaded file will be converted to Zarr format
               </Typography>
             </Grid>
+            
             <Grid item>
               <Stack direction="row" columnGap={2} alignItems="center">
                 <label htmlFor="file-upload" key="selectFile_label">
@@ -207,7 +224,6 @@ export default function FilesPage() {
                     sx={{
                       width: 200,
                     }}
-                    // fullWidth
                     startIcon={<CloudUpload />}
                     key="selectFile_button"
                   >
@@ -246,9 +262,6 @@ export default function FilesPage() {
               </Stack>
             </Grid>
 
-            {/* <Grid item>
-            </Grid> */}
-
             <Grid item xs key="uploadFileButton_grid">
               <Stack
                 direction="row"
@@ -278,7 +291,6 @@ export default function FilesPage() {
                 <progress
                   value={uploadProgress}
                   max={uploadLimit}
-                  // style={{ width: "100%" }}
                   key="progressElement_progress"
                 />
                 <Typography key="progressElement_p">
@@ -286,6 +298,7 @@ export default function FilesPage() {
                 </Typography>
               </Stack>
             </Grid>
+            
           </Grid>
         </DialogContent>
       </Dialog>
