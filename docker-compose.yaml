@@ -1,28 +1,32 @@
 
 services:
         
-  thesis_backend:
-    container_name: thesis-backend
+  thesis_docker_backend:
+    container_name: thesis-docker-backend
     build:
-      context: ./thesis_backend
+      context: ./backend
       dockerfile: Dockerfile
+      args:
+        FRONTEND_ENDPOINT: http://localhost:3000
     ports:
-      - "8020:8000"
+      - "8000:8000"
     volumes:
-      - ./thesis_backend:/code  # Sync the backend code
-      - ./thesis_data:/code/thesis_data  # Mount thesis_data for file storage
+      # - ./thesis_backend:/code  # Sync the backend code
+      - ./persistent01:/persistent01  # Mount thesis_data for file storage
     environment:
-      - FRONTEND_ENDPOINT=http://localhost:3005
-      - PYTHONPATH=/code/app
+      # - FRONTEND_ENDPOINT=http://localhost:3000
+      - PYTHONPATH=/usr/src/app
   
-  thesis_frontend:
-    container_name: thesis-frontend
+  thesis_docker_frontend:
+    container_name: thesis-docker-frontend
     build:
-      context: ./thesis_frontend
+      context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_BACKEND_ENDPOINT: http://localhost:8000 
     ports:
-      - "3005:3000"
-    environment:
-      - NEXT_PUBLIC_BACKEND_ENDPOINT=https://localhost:8020
+      - "3000:3000"
+    # environment:
+    #   - NEXT_PUBLIC_BACKEND_ENDPOINT=https://localhost:8000
     depends_on:
-      - thesis_backend
+      - thesis_docker_backend

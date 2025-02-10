@@ -10,13 +10,13 @@ import {
  } from "next/navigation";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
+const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
 async function fetchFileHierarchy(fileID: string, callback: Dispatch<SetStateAction<zarrHierarchy | null>>) {
   
-  const endpoint = `http://localhost:8020/`;
-  const request = `get_file_hierarchy?file_id=${fileID}`;
+  const request = `${BACKEND_ENDPOINT}/get_file_hierarchy?file_id=${fileID}`;
   
-  fetch(`${endpoint}${request}`)
+  fetch(request)
   .then((response) => {
     if (!response.ok) {
       console.error("something fucky happened")
@@ -38,10 +38,9 @@ async function fetchFileObs(
   obs: string | null,
   callback: Dispatch<SetStateAction<obsData | null>>
 ) {
-  const endpoint = `http://localhost:8020/`;
-  const request = `get_file_obs?file_id=${fileID}&obs=${obs}`;
+  const request = `${BACKEND_ENDPOINT}/get_file_obs?file_id=${fileID}&obs=${obs}`;
 
-  fetch(`${endpoint}${request}`)
+  fetch(request)
     .then((response) => {
       if (!response.ok) {
         console.error("something fucky happened");
@@ -61,10 +60,9 @@ async function fetchFileObsm(
   obsm: string | null,
   callback: Dispatch<SetStateAction<obsmData | null>>
 ) {
-  const endpoint = `http://localhost:8020/`;
-  const request = `get_file_obsm?file_id=${fileID}&obsm=${obsm}`;
+  const request = `${BACKEND_ENDPOINT}/get_file_obsm?file_id=${fileID}&obsm=${obsm}`;
 
-  fetch(`${endpoint}${request}`)
+  fetch(request)
     .then((response) => {
       if (!response.ok) {
         console.error("something fucky happened");

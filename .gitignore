@@ -2,14 +2,14 @@
 /**/.env*
 
 # Data
-/thesis_data
+/persistent01
 
 # Backend
-/thesis_backend/.venv*
-/thesis_backend/**/__pycache__
-/thesis_backend/testing/
+/backend/.venv*
+/backend/**/__pycache__
+/backend/testing/
 
 # Frontend
-/thesis_frontend/package-lock.json
-/thesis_frontend/**/*.ico
-/thesis_frontend/**/*.svg
+/frontend/package-lock.json
+/frontend/**/*.ico
+/frontend/**/*.svg

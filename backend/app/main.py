@@ -22,7 +22,7 @@ app = FastAPI()
 config = dotenv_values(".env")
 adata = None
 
-UPLOAD_DIR = "/code/thesis_data"
+UPLOAD_DIR = "/persistent01"
 FRONTEND_ENDPOINT = os.environ.get("FRONTEND_ENDPOINT")
 ADATA_CHUNK_SIZE = 1000
 UPLOAD_CHUNK_SIZE = 1024 * 1024 * 10 # 1MB chunks
@@ -39,7 +39,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         FRONTEND_ENDPOINT,
-        "*"
+        # "*"
     ],
     allow_credentials=True,
     allow_methods=["*"],        # Allow all methods (GET, POST, etc.)
@@ -83,6 +83,7 @@ async def get_file_hierarchy(file_id: str):
   zarr_data = zarr.open(file_path, "r")
   
   # print(zarr_data.tree())
+  # print(zarr_data.shape())
 
   zarr_obj = {
       group_key: list(
@@ -149,7 +150,40 @@ async def get_file_obsm(file_id: str, obsm: str):
   }
   
   return JSONResponse(content=json.dumps(result))
+
+@app.get("/get_gene_expression")
+async def get_gene_expression(file_id: str):
   
+  # open X-group
+  X_path = os.path.join(UPLOAD_DIR, file_id, "X")
+  X_path_exists = os.path.exists(X_path)
+
+  if (not X_path_exists):
+    return JSONResponse(content={
+        "message": {
+            "path": X_path,
+            "path_exists": X_path_exists,
+        }
+    })
+    
+  X_group = zarr.open_group(X_path)
+  
+  # CSR-matrix pieces
+  data = X_group.data
+  col_index = X_group.indices
+  row_index = X_group.indptr
+  
+  n_cells = len(row_index)
+  # n_genes = 
+  
+  
+  # figure out if it's sparse or dense first
+  
+  # if indices, indptr and data exists, it's sparse.
+  
+  
+  
+
 
 @app.post("/upload_file_chunk/")
 async def upload_chunk(

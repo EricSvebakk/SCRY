@@ -25,9 +25,11 @@ const VisuallyHiddenInput = styled("input")({
   width: 1,
 });
 
+const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
 async function fetchFiles() {
-  const res = await fetch("http://localhost:8020/get_filenames");
+  console.log("fetchFiles", BACKEND_ENDPOINT)
+  const res = await fetch(`${BACKEND_ENDPOINT}/get_filenames`);
   const data = await res.json();
   return data;
 }
@@ -56,7 +58,7 @@ async function uploadFile(
     formData.append("total_chunks", totalChunks.toString());
     formData.append("file_id", fileId);
     
-    fetch(`http://localhost:8020/upload_file_chunk`, {
+    fetch(`${BACKEND_ENDPOINT}/upload_file_chunk`, {
       method: "POST",
       mode: "cors",
       body: formData,
@@ -81,7 +83,7 @@ async function finalizeFile(fileID: string) {
   
   
   
-  // fetch(`http://localhost:8020/convert_file`, {
+  // fetch(`${BACKEND_ENDPOINT}/convert_file`, {
   //   method: "POST",
   //   mode: "cors",
   //   body: formData,

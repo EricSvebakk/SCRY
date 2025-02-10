@@ -3,7 +3,7 @@
 FROM python:3.10-slim
 
 # Set the working directory inside the container
-WORKDIR /code/app
+WORKDIR /usr/src/app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -11,11 +11,15 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
-COPY ./requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
-    
+COPY ./requirements.txt /usr/src/app/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /usr/src/app/requirements.txt
+
+ARG FRONTEND_ENDPOINT
+
+ENV FRONTEND_ENDPOINT=${FRONTEND_ENDPOINT}
+
 # Copy project files into the container
-COPY ./app /code/app
+COPY ./app /usr/src/app
 
 # Expose the application port
 EXPOSE 8000
