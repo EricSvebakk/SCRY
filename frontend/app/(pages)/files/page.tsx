@@ -38,7 +38,12 @@ const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
 async function fetchFiles() {
   console.log("fetchFiles", BACKEND_ENDPOINT)
-  const res = await fetch(`${BACKEND_ENDPOINT}/get_filenames`);
+  const res = await fetch(`${BACKEND_ENDPOINT}/get_filenames`,
+    {
+      mode: "no-cors",
+      method: "GET"
+    }
+  );
   const data = await res.json();
   return data;
 }
@@ -99,7 +104,12 @@ async function uploadFile(
 
 async function finalizeFile(fileID: string) {
   
-  const result = await fetch(`${BACKEND_ENDPOINT}/assemble_file?file_id=${fileID}`);
+  const result = await fetch(`${BACKEND_ENDPOINT}/assemble_file?file_id=${fileID}`,
+    {
+      mode: "no-cors",
+      method: "GET"
+    }
+  );
   
   if (!result.ok) {
     console.error("error", result);
