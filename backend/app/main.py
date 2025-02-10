@@ -38,8 +38,8 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        FRONTEND_ENDPOINT,
-        # "*"
+        # FRONTEND_ENDPOINT,
+        "*"
     ],
     allow_credentials=True,
     allow_methods=["*"],        # Allow all methods (GET, POST, etc.)
