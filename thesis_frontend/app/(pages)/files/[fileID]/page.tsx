@@ -2,7 +2,8 @@
 "use client"
 
 import { Plot } from "@/lib/components/plot";
-import { Button, Divider, Grid, Stack } from "@mui/material";
+import { obsData, obsmData, TooltipKey, tooltips, zarrHierarchy } from "@/lib/types";
+import { Button, Divider, Grid, Stack, Tooltip } from "@mui/material";
 
 import { 
   useParams,
@@ -106,36 +107,88 @@ export default function FileIdPage({ }) {
         item
         xs={3}
         p={2}
+        height="100%"
         sx={{
           border: "1px solid grey",
         }}
+        overflow="clip"
       >
         <Stack direction="column" gap={2}>
+          
+          <Stack direction="column">
+            <Tooltip
+              title="Non-Linear Dimensionality Reduction"
+              placement="right"
+            >
+              <Button
+                variant="contained"
+                disabled={true}
+                onClick={() => {
+                  if (typeof fileID === "string") {
+                  }
+                }}
+                size="small"
+                sx={{
+                  justifyContent: "flex-start",
+                  overflow: "hidden",
+                  fontSize: 10,
+                }}
+              >
+                NLDR
+              </Button>
+            </Tooltip>
+            <Button
+              variant="contained"
+              disabled={true}
+              onClick={() => {
+                if (typeof fileID === "string") {
+                }
+              }}
+              size="small"
+              sx={{
+                justifyContent: "flex-start",
+                overflow: "hidden",
+                fontSize: 10,
+              }}
+            >
+              Gene Expression
+            </Button>
+          </Stack>
+
+          {hierarchy ? <Divider /> : <></>}
+
           <Stack direction="column">
             {hierarchy ? (
               hierarchy.obsm
                 .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
                 .map((e) => {
                   return (
-                    <Button
-                      key={`button_obsm_${e}`}
-                      variant="contained"
-                      disabled={selectedObs === e}
-                      onClick={() => {
-                        if (typeof fileID === "string") {
-                          setSelectedObs(e)
-                          fetchFileObsm(fileID, e, setObsmData);
-                        }
-                      }}
-                      size="small"
-                      sx={{
-                        justifyContent: "flex-start",
-                        overflow: "hidden",
-                        fontSize: 10,
-                      }}
+                    <Tooltip
+                      key={`tooltip_obsm_${e}`}
+                      title={tooltips[e as TooltipKey]}
+                      placement="right"
                     >
-                      {e}
-                    </Button>
+                      <Button
+                        key={`button_obsm_${e}`}
+                        variant="contained"
+                        disabled={selectedObs === e}
+                        onClick={() => {
+                          if (typeof fileID === "string") {
+                            console.log(tooltips[e as TooltipKey], e);
+                            setSelectedObs(e);
+                            fetchFileObsm(fileID, e, setObsmData);
+                          }
+                        }}
+                        size="small"
+                        sx={{
+                          justifyContent: "flex-start",
+                          overflow: "hidden",
+                          fontSize: 10,
+                        }}
+                      >
+                        {e}
+                      </Button>
+                    </Tooltip>
                   );
                 })
             ) : (
@@ -143,9 +196,11 @@ export default function FileIdPage({ }) {
             )}
           </Stack>
 
-          {hierarchy ? <Divider/> : <></>}
-
-          <Stack direction="column">
+          {hierarchy ? <Divider /> : <></>}
+          
+          <Stack
+            direction="column"
+          >
             {hierarchy ? (
               hierarchy.obs
                 .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
@@ -183,37 +238,15 @@ export default function FileIdPage({ }) {
         item
         width="fit-content"
         xs
-        p={2}
-        sx={{
-          border: "1px solid grey",
-        }}
+        height={600}
       >
-        <Plot obsData={obsData} obsmData={obsmData} />
+        <Plot
+          title={`${fileID} > ${selectedObs} > ${selectedObsm}`}
+          obsData={obsData}
+          obsmData={obsmData}
+        />
       </Grid>
     </Grid>
   );
   
-}
-
-
-export type obsData = {
-  labels: string[];
-  label_map: number[];
-}
-
-export type obsmData = {
-  coordinates: number[][]
-}
-
-type zarrHierarchy = {
-  X: string[];
-  layers: string[];
-  obs: string[];
-  obsm: string[];
-  obsp: string[];
-  raw: string[];
-  uns: string[];
-  var: string[];
-  varm: string[];
-  varp: string[];
 }

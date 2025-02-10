@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { obsData, obsmData } from "@/app/(pages)/files/[fileID]/page";
 
 export function Plot(props: {
+  title: string,
   obsData: obsData | null,
   obsmData: obsmData | null,
 }) {
@@ -23,6 +24,7 @@ export function Plot(props: {
     if (props.obsmData && svgRef.current && groupRefs.current.length !== 0) {
       
       cleanUpFunction = LargeDatasetCanvasPlot({
+        title: props.title,
         svgCurrent: svgRef.current,
         groupRefs: groupRefs.current,
         obsData: props.obsData,
@@ -42,7 +44,8 @@ export function Plot(props: {
       sx={{
         position: "relative",
         width: "100%",
-        height: 600,
+        height: "100%",
+        border: "1px solid grey"
       }}
     >
       {props.obsmData !== null ? (
@@ -58,9 +61,10 @@ export function Plot(props: {
                 style={{
                   position: "absolute",
                 }}
-                ref={(el) => {
-                  groupRefs.current[i] = el!;
-                  return el;
+                ref={(el: HTMLCanvasElement | null) => {
+                  if (el) {
+                    groupRefs.current[i] = el!;
+                  }
                 }}
               />
             );
@@ -75,9 +79,10 @@ export function Plot(props: {
             style={{
               position: "absolute",
             }}
-            ref={(el) => {
-              groupRefs.current[0] = el!;
-              return el;
+            ref={(el: HTMLCanvasElement | null) => {
+              if (el) {
+                groupRefs.current[0] = el!;
+              }
             }}
           />
         )
