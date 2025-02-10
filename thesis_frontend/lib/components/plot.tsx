@@ -3,7 +3,7 @@
 import { Box } from "@mui/material";
 import LargeDatasetCanvasPlot from "./scatterplot";
 import { useEffect, useRef } from "react";
-import { obsData, obsmData } from "@/app/(pages)/files/[fileID]/page";
+import { obsData, obsmData } from "../types";
 
 export function Plot(props: {
   title: string,
