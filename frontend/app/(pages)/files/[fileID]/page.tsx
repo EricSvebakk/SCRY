@@ -2,13 +2,19 @@
 "use client"
 
 import { Plot } from "@/lib/components/plot";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
+import { selectFile } from "@/lib/redux/reducers/reducer1";
+import { RootState } from "@/lib/redux/stores/store";
+// import { useAppSelector } from "@/lib/redux/hooks/hooks";
 import { obsData, obsmData, TooltipKey, tooltips, zarrHierarchy } from "@/lib/types";
 import { Button, Divider, Grid, Stack, Tooltip } from "@mui/material";
+// import { RootState } from "@reduxjs/toolkit/query";
 
 import { 
   useParams,
  } from "next/navigation";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
@@ -16,7 +22,11 @@ async function fetchFileHierarchy(fileID: string, callback: Dispatch<SetStateAct
   
   const request = `${BACKEND_ENDPOINT}/get_file_hierarchy?file_id=${fileID}`;
   
-  fetch(request)
+  fetch(request
+    // {
+    //   mode: "no-cors"
+    // }
+  )
   .then((response) => {
     if (!response.ok) {
       console.error("something fucky happened")
@@ -88,10 +98,21 @@ export default function FileIdPage({ }) {
   const { fileID } = useParams();
   const [hierarchy, setHierarchy] = useState<zarrHierarchy | null>(null);
   
+  const selectedFiles = useAppSelector((state: RootState) => state.fileReducer.selectedFiles);
+  const dispatch = useAppDispatch();
+  
+  // console.log(selectedFiles, fileID, typeof fileID === "string" ? selectedFiles.includes(fileID) : undefined)
+  
+  
   useEffect(() => {
     if (typeof fileID === "string") {
       fetchFileHierarchy(fileID, setHierarchy);
+      
+      // if (!selectedFiles.includes(fileID)) {
+      //   dispatch(selectFile(fileID));
+      // }
     }
+    
   }, [])
   
   return (
@@ -113,7 +134,7 @@ export default function FileIdPage({ }) {
       >
         <Stack direction="column" gap={2}>
           
-          <Stack direction="column">
+          {/* <Stack direction="column">
             <Tooltip
               title="Non-Linear Dimensionality Reduction"
               placement="right"
@@ -153,7 +174,7 @@ export default function FileIdPage({ }) {
             </Button>
           </Stack>
 
-          {hierarchy ? <Divider /> : <></>}
+          {hierarchy ? <Divider /> : <></>} */}
 
           <Stack direction="column">
             {hierarchy ? (

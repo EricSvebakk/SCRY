@@ -37,15 +37,18 @@ const VisuallyHiddenInput = styled("input")({
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
 async function fetchFiles() {
-  console.log("fetchFiles", BACKEND_ENDPOINT)
-  const res = await fetch(`${BACKEND_ENDPOINT}/get_filenames`,
-    {
-      mode: "no-cors",
-      method: "GET"
-    }
-  );
+  
+  const request = `${BACKEND_ENDPOINT}/get_filenames`;
+  console.log("fetchFiles", request)
+  
+  const res = await fetch(`${BACKEND_ENDPOINT}/get_filenames`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
   const data = await res.json();
-  return data;
+  return data.files;
 }
 
 async function uploadFile(
@@ -63,6 +66,9 @@ async function uploadFile(
   setUploadProgress(0);
   setUploadLimit(totalChunks);
 
+  const request = `${BACKEND_ENDPOINT}/upload_file_chunk/`;
+  console.log(request);
+  
   for (let i = 0; i < totalChunks; i++) {
     const chunk = file.slice(i * chunkSize, (i + 1) * chunkSize);
 
@@ -72,7 +78,7 @@ async function uploadFile(
     formData.append("total_chunks", totalChunks.toString());
     formData.append("file_id", fileId);
     
-    fetch(`${BACKEND_ENDPOINT}/upload_file_chunk`, {
+    fetch(request, {
       method: "POST",
       mode: "cors",
       body: formData,
@@ -90,7 +96,8 @@ async function uploadFile(
         const newProgress = progress + 1;
         
         if (newProgress === totalChunks) {
-          finalizeFile(fileId);
+          console.log("Autobots ASSEMBLE")
+          assembleFile(fileId, totalChunks);
         }
         
         return newProgress;
@@ -102,33 +109,54 @@ async function uploadFile(
   }
 }
 
-async function finalizeFile(fileID: string) {
+
+async function assembleFile(fileID: string, totalChunks: number) {
   
-  const result = await fetch(`${BACKEND_ENDPOINT}/assemble_file?file_id=${fileID}`,
-    {
-      mode: "no-cors",
-      method: "GET"
-    }
-  );
+  const request = `${BACKEND_ENDPOINT}/assemble_file?file_id=${fileID}&total_chunks=${totalChunks}`;
   
-  if (!result.ok) {
-    console.error("error", result);
-  }
-  
-  const data = await result.json();
-  
-  console.log(data);
-  
-  fetch(`${BACKEND_ENDPOINT}/convert_file?file_id=${fileID}`)
-  .then((response) => {
-    if (!response.ok) {
-      throw new Error("Network response was not ok for file_conversion");
-    }
-    return response.json();
+  fetch(request, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
   })
-  .then((e) => {
-    console.log("finalizeFinale", e);
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok for chunk");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log(data);
+      convertFile(fileID);
+    })
+    .catch((error) => {
+      console.error("There was a problem with the fetch operation:", error);
+    });
+}
+
+async function convertFile(fileID: string) {
+  
+  const request = `${BACKEND_ENDPOINT}/convert_file?file_id=${fileID}`;
+  
+  fetch(request, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
   })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok for file_conversion");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log(data);
+    })
+    .then((e) => {
+      console.log("finalizeFinale", e);
+    });
 }
 
 
@@ -141,11 +169,7 @@ export default function FilesPage() {
   const [file, setFile] = useState<File | null>(null);
   
   const dispatch = useDispatch();
-  const files = useSelector((state: RootState) => state.fileReducer.files);
-
-  // console.log(files);
-  
-  // console.log(uploadProgress, uploadLimit);
+  // const files = useSelector((state: RootState) => state.fileReducer.files);
   
   let cols: GridColDef[] = [
     { field: "name", headerName: "Name", width: 500 },

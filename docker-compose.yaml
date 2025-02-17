@@ -7,11 +7,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       args:
-        FRONTEND_ENDPOINT: http://localhost:3000
+        FRONTEND_ENDPOINT: https://tepohi.no
     ports:
       - "8000:8000"
     volumes:
-      # - ./thesis_backend:/code  # Sync the backend code
+      - ./backend/app:/usr/src/app # Sync the backend code
       - ./persistent01:/persistent01  # Mount thesis_data for file storage
     environment:
       # - FRONTEND_ENDPOINT=http://localhost:3000
@@ -23,10 +23,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_BACKEND_ENDPOINT: http://localhost:8000 
+        NEXT_PUBLIC_BACKEND_ENDPOINT: https://api.tepohi.no
     ports:
       - "3000:3000"
-    # environment:
-    #   - NEXT_PUBLIC_BACKEND_ENDPOINT=https://localhost:8000
+    volumes:
+      - ./frontend:/usr/src/app # Sync the frontend code
     depends_on:
       - thesis_docker_backend

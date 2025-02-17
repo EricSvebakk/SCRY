@@ -26,21 +26,26 @@ export default function PagesLayout({
   
   const selectedFiles = useSelector((state: RootState) => state.fileReducer.selectedFiles);
   
-  console.log(fileState)
+  // console.log(fileState)
 
   useEffect(() => {
     
     const selectedFileObjects = fileState
       .filter((file) => selectedFiles.includes(file.id))
-      .map((file) => ({
-        id: file.id,
-        path: `/files/${file.id}`,
-        name: file.name,
-      }));
+      .map((file) => {
+        console.log(file)
+        return {
+          id: file.id,
+          path: `/files/${file.id}`,
+          name: file.name,
+        };
+      });
     
     setNavItems([...BaseNavItems, ...selectedFileObjects]);
     
-  }, [selectedFiles]);
+    // console.log("testing", selectedFiles)
+    
+  }, [selectedFiles, fileState]);
   
   
   return (
