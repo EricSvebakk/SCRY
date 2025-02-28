@@ -2,11 +2,11 @@
 export type obsData = {
   labels: string[];
   label_map: number[];
-};
+}
 
 export type obsmData = {
   coordinates: number[][];
-};
+}
 
 export type zarrHierarchy = {
   X: string[];

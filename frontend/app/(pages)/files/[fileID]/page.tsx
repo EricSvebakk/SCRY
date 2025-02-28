@@ -1,13 +1,18 @@
 
 "use client"
 
+import CategoryAccordion from "@/lib/components/CategoryAccordion";
+import { Labels } from "@/lib/components/labels";
 import { Plot } from "@/lib/components/plot";
+import { my_colors } from "@/lib/components/scatterplot";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
-import { selectFile } from "@/lib/redux/reducers/reducer1";
+import { reset, setHierarchy, setObs, setObsm, setSelectedEmbedding } from "@/lib/redux/reducers/plotReducer";
+import { selectFile, setActiveFile } from "@/lib/redux/reducers/fileReducer";
 import { RootState } from "@/lib/redux/stores/store";
 // import { useAppSelector } from "@/lib/redux/hooks/hooks";
 import { obsData, obsmData, TooltipKey, tooltips, zarrHierarchy } from "@/lib/types";
-import { Button, Divider, Grid, Stack, Tooltip } from "@mui/material";
+import { Circle, Square } from "@mui/icons-material";
+import { Box, Button, Divider, Grid, Icon, Stack, Tooltip, Typography } from "@mui/material";
 // import { RootState } from "@reduxjs/toolkit/query";
 
 import { 
@@ -18,7 +23,12 @@ import { useSelector } from "react-redux";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
-async function fetchFileHierarchy(fileID: string, callback: Dispatch<SetStateAction<zarrHierarchy | null>>) {
+function fetchFileHierarchy(
+  fileID: string,
+  callback: Function
+) {
+  
+  // const dispatch = useAppDispatch();
   
   const request = `${BACKEND_ENDPOINT}/get_file_hierarchy?file_id=${fileID}`;
   
@@ -36,39 +46,20 @@ async function fetchFileHierarchy(fileID: string, callback: Dispatch<SetStateAct
   })
   .then((data) => {
     console.log(data);
-    callback(data);
+    
+    callback(setHierarchy(data));
+    // callback(data);
   })
   .catch((error) => {
     console.error("something fucky", error);
   })
 }
 
-async function fetchFileObs(
-  fileID: string,
-  obs: string | null,
-  callback: Dispatch<SetStateAction<obsData | null>>
-) {
-  const request = `${BACKEND_ENDPOINT}/get_file_obs?file_id=${fileID}&obs=${obs}`;
-
-  fetch(request)
-    .then((response) => {
-      if (!response.ok) {
-        console.error("something fucky happened");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      callback(JSON.parse(data));
-    })
-    .catch((error) => {
-      console.error("something fucky", error);
-    });
-}
 
 async function fetchFileObsm(
   fileID: string,
   obsm: string | null,
-  callback: Dispatch<SetStateAction<obsmData | null>>
+  callback: Function,
 ) {
   const request = `${BACKEND_ENDPOINT}/get_file_obsm?file_id=${fileID}&obsm=${obsm}`;
 
@@ -80,7 +71,8 @@ async function fetchFileObsm(
       return response.json();
     })
     .then((data) => {
-      callback(JSON.parse(data));
+      callback(setObsm(JSON.parse(data)));
+      // callback(JSON.parse(data));
     })
     .catch((error) => {
       console.error("something fucky", error);
@@ -92,22 +84,43 @@ export default function FileIdPage({ }) {
   const [selectedObs, setSelectedObs] = useState("");
   const [selectedObsm, setSelectedObsm] = useState("");
   
-  const [obsData, setObsData] = useState<obsData | null>(null);
-  const [obsmData, setObsmData] = useState<obsmData | null>(null);
+  // const [obsData, setObsData] = useState<obsData | null>(null);
+  // const [obsmData, setObsmData] = useState<obsmData | null>(null);
   
   const { fileID } = useParams();
-  const [hierarchy, setHierarchy] = useState<zarrHierarchy | null>(null);
+  // const [hierarchy, setHierarchy] = useState<zarrHierarchy | null>(null);
   
   const selectedFiles = useAppSelector((state: RootState) => state.fileReducer.selectedFiles);
+  
+  const hierarchy = useAppSelector((state: RootState) => state.plotReducer.hierarchy)
+  const obs = useAppSelector((state: RootState) => state.plotReducer.obs);
+  const obsm = useAppSelector((state: RootState) => state.plotReducer.obsm);
+  
+  const selectedEmbedding = useAppSelector((state: RootState) => state.plotReducer.selectedEmbedding);
+  
+  
+  
   const dispatch = useAppDispatch();
+  
+  console.log(hierarchy)
+  
+  const w1 = 3;
+  const w2 = 3;
+  const w3 = 3;
+  const w4 = 3;
   
   // console.log(selectedFiles, fileID, typeof fileID === "string" ? selectedFiles.includes(fileID) : undefined)
   
   
   useEffect(() => {
+    
+    if (obs) {
+      dispatch(reset(true));
+    }
+    
     if (typeof fileID === "string") {
-      fetchFileHierarchy(fileID, setHierarchy);
-      
+      fetchFileHierarchy(fileID, dispatch);
+      dispatch(setActiveFile(fileID));
       // if (!selectedFiles.includes(fileID)) {
       //   dispatch(selectFile(fileID));
       // }
@@ -116,69 +129,22 @@ export default function FileIdPage({ }) {
   }, [])
   
   return (
-    <Grid
-      container
-      direction="row"
-      mt={1}
-      columnGap={1}
-    >
+    <Grid container direction="row" mt={1} columnGap={1}>
       <Grid
         item
-        xs={3}
+        xs={w1}
         p={2}
+        width="fit-content"
         height="100%"
         sx={{
-          border: "1px solid grey",
+          border: "1px solid green",
         }}
         overflow="clip"
       >
         <Stack direction="column" gap={2}>
-          
-          {/* <Stack direction="column">
-            <Tooltip
-              title="Non-Linear Dimensionality Reduction"
-              placement="right"
-            >
-              <Button
-                variant="contained"
-                disabled={true}
-                onClick={() => {
-                  if (typeof fileID === "string") {
-                  }
-                }}
-                size="small"
-                sx={{
-                  justifyContent: "flex-start",
-                  overflow: "hidden",
-                  fontSize: 10,
-                }}
-              >
-                NLDR
-              </Button>
-            </Tooltip>
-            <Button
-              variant="contained"
-              disabled={true}
-              onClick={() => {
-                if (typeof fileID === "string") {
-                }
-              }}
-              size="small"
-              sx={{
-                justifyContent: "flex-start",
-                overflow: "hidden",
-                fontSize: 10,
-              }}
-            >
-              Gene Expression
-            </Button>
-          </Stack>
-
-          {hierarchy ? <Divider /> : <></>} */}
-
           <Stack direction="column">
             {hierarchy ? (
-              hierarchy.obsm
+              [...hierarchy.obsm]
                 .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
                 .map((e) => {
                   return (
@@ -190,12 +156,13 @@ export default function FileIdPage({ }) {
                       <Button
                         key={`button_obsm_${e}`}
                         variant="contained"
-                        disabled={selectedObs === e}
+                        disabled={selectedEmbedding === e}
                         onClick={() => {
                           if (typeof fileID === "string") {
                             console.log(tooltips[e as TooltipKey], e);
-                            setSelectedObs(e);
-                            fetchFileObsm(fileID, e, setObsmData);
+                            // setSelectedObs(e);
+                            dispatch(setSelectedEmbedding(e));
+                            fetchFileObsm(fileID, e, dispatch);
                           }
                         }}
                         size="small"
@@ -219,52 +186,38 @@ export default function FileIdPage({ }) {
           
           <Stack
             direction="column"
+            gap={2}
+            height="69vh"
+            sx={{
+              overflowY: "scroll",
+              scrollbarWidth: "thin"
+            }}
           >
-            {hierarchy ? (
-              hierarchy.obs
-                .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
-                .map((e) => {
-                  return (
-                    <Button
-                      key={`button_obs_${e}`}
-                      variant="contained"
-                      disabled={!obsmData || selectedObsm === e}
-                      onClick={() => {
-                        if (typeof fileID === "string") {
-                          setSelectedObsm(e);
-                          fetchFileObs(fileID, e, setObsData);
-                        }
-                      }}
-                      size="small"
-                      sx={{
-                        justifyContent: "flex-start",
-                        overflow: "hidden",
-                        fontSize: 10,
-                      }}
-                    >
-                      {e}
-                    </Button>
-                  );
-                })
-            ) : (
-              <></>
-            )}
+            <CategoryAccordion />
           </Stack>
         </Stack>
       </Grid>
 
       <Grid
         item
-        width="fit-content"
-        xs
-        height={600}
+        // xs
+        height={500}
+        width={500}
+        sx={{
+          border: "1px solid blue",
+        }}
       >
-        <Plot
-          title={`${fileID} > ${selectedObs} > ${selectedObsm}`}
-          obsData={obsData}
-          obsmData={obsmData}
-        />
+        <Plot />
       </Grid>
+
+      <Grid
+        item
+        xs
+        border="1px solid red"
+        padding={2}
+        textOverflow="ellipsis"
+        overflow="hidden"
+      ></Grid>
     </Grid>
   );
   

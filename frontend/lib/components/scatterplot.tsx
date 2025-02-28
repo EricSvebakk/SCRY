@@ -2,8 +2,10 @@
 
 import * as d3 from "d3";
 import { obsData, obsmData } from "../types";
+import { useAppDispatch } from "../redux/hooks/hooks";
+import { setLabelSize } from "../redux/reducers/plotReducer";
 
-let my_colors = [
+export const my_colors = [
   "#1f77b4",
   "#ff7f0e",
   "#2ca02c",
@@ -24,20 +26,41 @@ const LargeDatasetCanvasPlot = (props: {
   groupRefs: HTMLCanvasElement[],
   obsData: obsData | null,
   obsmData: obsmData,
+  dispatch: Function,
 }) => {
   
   const containerRect = props.svgCurrent.getBoundingClientRect();
   const height = containerRect.height;
   const width = containerRect.width;
   
-  const canvasWidth = ((width / 12) * 8)
-  const legendWidth = ((width / 12) * 3)
-  const paddingWidth = width - (canvasWidth + legendWidth)
+  const canvasWidth = height;
+  const canvasHeight = height;
+  // const canvasWidth = ((width / 12) * 8)
+  // const legendWidth = ((width / 12) * 3)
+  // const paddingWidth = width - (canvasWidth + legendWidth)
+  const paddingRatio = 15;
+  const paddingWidth = canvasWidth / paddingRatio;
+  const paddingHeight = canvasHeight / paddingRatio;
   
   let tempLabels = props.obsData ? props.obsData.labels : ["none"];
   let tempLabelMap = props.obsData ? props.obsData.label_map : props.obsmData.coordinates.map((e) => 0);
   let colorScheme = props.obsData ? my_colors : ["black"];
   let coordinates = props.obsmData.coordinates;
+  
+  let labelMap: {[key: string]: number} = {};
+  
+  props.obsData?.labels.forEach((e: string) => {
+    labelMap[e] = 0;
+  });
+  
+  props.obsData?.label_map.forEach((f: number) => {
+    const labelIndex = props.obsData?.labels[f]!;
+    labelMap[labelIndex] ++;
+  })
+  
+  props.dispatch(setLabelSize(labelMap))
+  
+  // const dispatch = useAppDispatch()
   
   const pointSize = 3.5 - (0.5 * Math.log10(coordinates.length))
 
@@ -50,12 +73,12 @@ const LargeDatasetCanvasPlot = (props: {
   const xScale = d3
     .scaleLinear()
     .domain(d3.extent(coordinates, (d: number[]) => d[0]) as [number, number]) // Assuming plotData is an array of [x, y] coordinates
-    .range([50, canvasWidth]); // Adjusted to leave space for the legend on the right
+    .range([paddingWidth, canvasWidth - paddingWidth]); // Adjusted to leave space for the legend on the right
 
   const yScale = d3
     .scaleLinear()
     .domain(d3.extent(coordinates, (d: number[]) => d[1]) as [number, number])
-    .range([height - 50, 50]);
+    .range([height - paddingHeight, paddingHeight]);
 
   // Context for drawing legends and title
   const svgContext = d3
@@ -74,9 +97,9 @@ const LargeDatasetCanvasPlot = (props: {
     .attr("transform", "translate(20, 20)")
     .text(props.title);
   
-  const legend = svgContext
-    .append("g")
-    .attr("transform", `translate(${canvasWidth + paddingWidth/2}, 50)`); // Position the legend on the right side
+  // const legend = svgContext
+  //   .append("g")
+  //   .attr("transform", `translate(${canvasWidth + paddingWidth/2}, 50)`); // Position the legend on the right side
     
   
   tempLabels.forEach((label, index) => {
@@ -99,61 +122,61 @@ const LargeDatasetCanvasPlot = (props: {
       someContext.closePath();
     })
     
-    const legendRow = legend
-      .append("g")
-      .attr("id", "legend_" + label)
-      .attr("transform", `translate(0, ${index * 30})`) // Space each legend item vertically
+    // const legendRow = legend
+    //   .append("g")
+    //   .attr("id", "legend_" + label)
+    //   .attr("transform", `translate(0, ${index * 30})`) // Space each legend item vertically
       
-    legendRow
-      .append("rect")
-      .attr("width", 20)
-      .attr("height", 20)
-      .attr("fill", colorScale(tempLabels[index]))
-      .style("padding", "5px");
+    // legendRow
+    //   .append("rect")
+    //   .attr("width", 20)
+    //   .attr("height", 20)
+    //   .attr("fill", colorScale(tempLabels[index]))
+    //   .style("padding", "5px");
 
-    legendRow
-      .append("text")
-      .attr("x", 20)
-      .attr("y", 12)
-      .attr("transform", "translate(5, 0)")
-      .attr("text-anchor", "start")
-      .style("alignment-baseline", "middle")
-      .style("font-size", "15px")
-      .text(label);
+    // legendRow
+    //   .append("text")
+    //   .attr("x", 20)
+    //   .attr("y", 12)
+    //   .attr("transform", "translate(5, 0)")
+    //   .attr("text-anchor", "start")
+    //   .style("alignment-baseline", "middle")
+    //   .style("font-size", "15px")
+    //   .text(label);
       
-    legendRow
-      .append("rect")
-      .attr("width", legendWidth)
-      .attr("height", 30)
-      .attr("transform", "translate(0, -5)")
-      .style("opacity", "0%")
-      .on("mouseover", () => {
-        props.groupRefs[index].style.zIndex = "8";
+    // legendRow
+    //   .append("rect")
+    //   .attr("width", legendWidth)
+    //   .attr("height", 30)
+    //   .attr("transform", "translate(0, -5)")
+    //   .style("opacity", "0%")
+    //   .on("mouseover", () => {
+    //     props.groupRefs[index].style.zIndex = "8";
 
-        tempLabels.forEach((label_temp, index_other) => {
-          if (label !== label_temp) {
-            props.groupRefs[index_other]!.style.filter = "grayscale(1)";
-          }
-        });
-      })
-      .on("mouseout", () => {
-        props.groupRefs[index].style.zIndex = "5";
+    //     tempLabels.forEach((label_temp, index_other) => {
+    //       if (label !== label_temp) {
+    //         props.groupRefs[index_other]!.style.filter = "grayscale(1)";
+    //       }
+    //     });
+    //   })
+    //   .on("mouseout", () => {
+    //     props.groupRefs[index].style.zIndex = "5";
         
-        tempLabels.forEach((label_temp, index_other) => {
-          if (label !== label_temp) {
-            props.groupRefs[index_other]!.style.filter = "grayscale(0)";
-            props.groupRefs[index_other]!.style.opacity = "100%";
-          }
-        });
-      })
-      .on("click", () => {
-        tempLabels.forEach((label_temp, index_other) => {
-          if (label !== label_temp) {
-            props.groupRefs[index_other]!.style.opacity = "0%"
-          }
-        });
+    //     tempLabels.forEach((label_temp, index_other) => {
+    //       if (label !== label_temp) {
+    //         props.groupRefs[index_other]!.style.filter = "grayscale(0)";
+    //         props.groupRefs[index_other]!.style.opacity = "100%";
+    //       }
+    //     });
+    //   })
+    //   .on("click", () => {
+    //     tempLabels.forEach((label_temp, index_other) => {
+    //       if (label !== label_temp) {
+    //         props.groupRefs[index_other]!.style.opacity = "0%"
+    //       }
+    //     });
         
-      })
+    //   })
       
   });
 

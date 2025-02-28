@@ -17,7 +17,7 @@ import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/lib/redux/stores/store";
-import { addFiles, selectFile } from "@/lib/redux/reducers/reducer1";
+import { addFiles, selectFile } from "@/lib/redux/reducers/fileReducer";
 import { CloudUpload } from "@mui/icons-material";
 import styled from "@emotion/styled";
 

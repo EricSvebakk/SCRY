@@ -8,7 +8,7 @@ import { store } from "@/lib/redux/stores/store";
 
 const inter = Inter({ subsets: ["latin"] });
 
-const theme = createTheme({
+export const theme = createTheme({
   palette: {
     action: {
       // disabledBackground:"rgb(147, 187, 227)",
@@ -30,7 +30,7 @@ export default function RootLayout({
         <ThemeProvider theme={theme}>          
           <Box>
             <Container
-              maxWidth="lg"
+              maxWidth="xl"
               component={Paper}
               elevation={4}
               square
@@ -40,6 +40,7 @@ export default function RootLayout({
               }}
             >
               <Container
+                maxWidth="xl"
                 disableGutters
                 sx={{
                   padding: 2,

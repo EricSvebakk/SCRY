@@ -1,56 +1,63 @@
 
 
-import { Box } from "@mui/material";
+import { Box, Stack } from "@mui/material";
 import LargeDatasetCanvasPlot from "./scatterplot";
 import { useEffect, useRef } from "react";
-import { obsData, obsmData } from "../types";
+import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
+import { RootState } from "../redux/stores/store";
 
-export function Plot(props: {
-  title: string,
-  obsData: obsData | null,
-  obsmData: obsmData | null,
-}) {
+export function Plot() {
+  
+  const obs = useAppSelector((state: RootState) => state.plotReducer.obs);
+  const obsm = useAppSelector((state: RootState) => state.plotReducer.obsm);
+  
+  const fileID = useAppSelector((state: RootState) => state.fileReducer.activeFile);
+  const embedding = useAppSelector((state: RootState) => state.plotReducer.selectedEmbedding);
+  const category = useAppSelector((state: RootState) => state.plotReducer.selectedCategory);
+  // const label = useAppSelector((state: RootState) => state.plotReducer.selectedLabel);
   
   const svgRef = useRef<SVGSVGElement>(null);
   const groupRefs = useRef<HTMLCanvasElement[]>([]);
-
+  
+  const dispatch = useAppDispatch();
+  
 
   useEffect(() => {
     
-    console.log(props.obsData, props.obsmData)
+    console.log(obs, obsm)
 
     let cleanUpFunction;
     
-    if (props.obsmData && svgRef.current && groupRefs.current.length !== 0) {
+    if (obsm && svgRef.current && groupRefs.current.length !== 0) {
       
       cleanUpFunction = LargeDatasetCanvasPlot({
-        title: props.title,
+        title: `${embedding} > ${category}`,
         svgCurrent: svgRef.current,
         groupRefs: groupRefs.current,
-        obsData: props.obsData,
-        obsmData: props.obsmData,
+        obsData: obs,
+        obsmData: obsm,
+        dispatch: dispatch,
       });
       
     }
     
     return cleanUpFunction
     
-  }, [props.obsData, props.obsmData]);
+  }, [obs, obsm]);
 
   
   
   return (
-    <Box
-      sx={{
-        position: "relative",
-        width: "100%",
-        height: "100%",
-        border: "1px solid grey"
-      }}
+    <Stack
+      direction="row"
+      columnGap={1}
+      position="relative"
+      height="100%"
+      width="100%"
     >
-      {props.obsmData !== null ? (
-        props.obsData !== null ? (
-          props.obsData.labels.map((e, i) => {
+      {obsm !== null ? (
+        obs !== null ? (
+          obs.labels.map((e, i) => {
             return (
               <Box
                 component="canvas"
@@ -60,6 +67,7 @@ export function Plot(props: {
                 width="100%"
                 style={{
                   position: "absolute",
+                  // border: "1px solid red",
                 }}
                 ref={(el: HTMLCanvasElement | null) => {
                   if (el) {
@@ -78,6 +86,7 @@ export function Plot(props: {
             width="100%"
             style={{
               position: "absolute",
+              // border: "1px solid red"
             }}
             ref={(el: HTMLCanvasElement | null) => {
               if (el) {
@@ -101,6 +110,7 @@ export function Plot(props: {
         id="svgHere"
         ref={svgRef}
       />
-    </Box>
+      
+    </Stack>
   );
 }

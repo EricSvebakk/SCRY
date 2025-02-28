@@ -14,6 +14,7 @@ import dask.array
 import zarr
 import json
 import time
+from scipy.sparse import csr_matrix
 
 load_dotenv()
 FRONTEND_ENDPOINT = os.environ.get("FRONTEND_ENDPOINT")
@@ -35,7 +36,7 @@ app.add_middleware(
     allow_headers=["*"],        # Allow all headers
 )
 
-adata = None
+# adata = None
 
 UPLOAD_DIR = "/persistent01"
 ADATA_CHUNK_SIZE = 1000
@@ -66,28 +67,72 @@ async def root():
     is_file = os.path.isfile(path)
     
     file_size_bytes = None
+    shape = None
+    
+    
     
     if (is_file):
       file_size_bytes = os.path.getsize(path)
+      
+      # ceil_log_size = ceil(log10(file_size_bytes) / 4)
+      # file_size = file_size_bytes * ((1/1024)**ceil_log_size)
+      # file_size_result = f"{file_size:.2f} {file_sizes[ceil_log_size-1]}"
+      
+      # if (file_size < 10 and path.split(".")[1].startswith("h5ad")):
+        
+      #   # print(path, os.path.exists(path))
+      #   # print(os.listdir(UPLOAD_DIR))
+        
+      #   try:
+      #     adata = ad.read_h5ad(path, backed="r")
+      #     shape = list(adata.shape)
+      #     print("shape h5ad", shape)
+      #   except:
+      #     pass
+        
+      
+      
     else:
       zarr_data = zarr.open_group(path)
       store = zarr_data.store
       file_size_bytes = sum(store.getsize(k) for k in store.keys())
+      
+      shape = await get_dims_zarr(zarr_data["X"])
+      
+      # chunks = zarr_data["X"]["shape"] # if hasattr(zarr_data["X"], "data") else None
     
     ceil_log_size = ceil(log10(file_size_bytes) / 4)
     file_size = file_size_bytes * ((1/1024)**ceil_log_size)
     file_size_result = f"{file_size:.2f} {file_sizes[ceil_log_size-1]}"
     
+    print(file_size)
+    
     result.append({
       "name": file_id,
+      "shape": shape,
       "file_size": file_size_result
     })
+    
+  result.sort(key=lambda x: x["name"])
     
   return JSONResponse(content={
       "message": "Thesis API",
       "files": result
   })
 
+async def get_dims_zarr(data: any):
+  if (isinstance(data, zarr.Group)):
+    
+    # result = csr_matrix((data["data"], data["indices"], data["indptr"]))
+    # print("result?", result)
+    
+    return [int(data["indptr"].shape[0]-1), int(data["indices"][-1]+1)]
+    return None
+  else:
+    return None
+
+async def get_csr_data(data):
+  pass
 
 @app.get("/get_filenames")
 async def get_filenames():

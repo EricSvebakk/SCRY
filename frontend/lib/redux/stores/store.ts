@@ -1,15 +1,17 @@
 
 import { configureStore } from "@reduxjs/toolkit";
-import fileReducer from "@/lib/redux/reducers/reducer1"
+import fileReducer from "@/lib/redux/reducers/fileReducer"
+import plotReducer from "../reducers/plotReducer";
 import { someApi } from "../api/api";
 import { setupListeners } from "@reduxjs/toolkit/query";
 
 export const store = configureStore({
   reducer: {
     fileReducer: fileReducer,
-    [someApi.reducerPath]: someApi.reducer
+    plotReducer: plotReducer,
+    // [someApi.reducerPath]: someApi.reducer
   },
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(someApi.middleware),
+  // middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(someApi.middleware),
 });
 
 // export const makeStore = () => {
