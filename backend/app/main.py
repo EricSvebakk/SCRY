@@ -210,7 +210,32 @@ async def get_file_obsm(file_id: str, obsm: str):
   }
   
   return JSONResponse(content=json.dumps(result))
+
+@app.get("/get_genes")
+async def get_genes(
+  file_id: str
+):
   
+  path = os.path.join(UPLOAD_DIR, file_id)
+  path_exists = os.path.exists(path)
+
+  if (not path_exists):
+    return JSONResponse(content={
+        "message": {
+            "path": path,
+            "path_exists": path_exists,
+        }
+    })
+  
+  var_path = os.path.join(UPLOAD_DIR, file_id, "var", "feature_name")
+  
+  var_group = zarr.open_group(var_path)
+  
+  gene_names = var_group.categories[:]
+  
+  return JSONResponse(content=list(gene_names))
+
+
 @app.post("/get_top_gene_expression/")
 async def get_top_gene_expression(
   file_id: str = File(...),

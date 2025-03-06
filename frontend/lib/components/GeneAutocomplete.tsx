@@ -2,20 +2,15 @@
 
 import {
   Autocomplete,
-  Box,
   createFilterOptions,
-  FilterOptionsState,
-  Stack,
   TextField,
-  Typography,
 } from "@mui/material";
+import { Dispatch, SetStateAction, useState } from "react";
 
 type GeneAutocompleteProps = {
-  label: string;
-  value: string;
+  values: string[];
   options: string[];
-  optionLabels: string[];
-  callback: Function;
+  callback: Dispatch<SetStateAction<string[]>>;
   error: any;
   isDisabled: boolean;
 };
@@ -23,44 +18,48 @@ type GeneAutocompleteProps = {
 export default function GeneAutocomplete(props: GeneAutocompleteProps) {
   
   const {
-    label,
-    value,
+    values,
     options,
-    optionLabels,
     callback,
     error,
     isDisabled
   } = props
   
-  // const maxSuggestions = options ? Math.min(options.length, 10) : 10;
-  // const filterOptions = createFilterOptions();
+  const structuredOptions = options.map((e, i) => ({ label: e, id: i }))
+  const structuredValues = structuredOptions.filter((e) => values.includes(e.label));
 
+  const filterOptions = createFilterOptions({
+    limit: 20,
+    
+  });
+  
   return (
     <Autocomplete
+      multiple
       disabled={isDisabled}
       size="small"
       fullWidth
-      disablePortal
-      value={value}
-      options={options}
-      onChange={(e, v) => {
-        callback(v);
+      value={structuredValues}
+      options={structuredOptions}
+      onChange={(event: any, value: any, reason, details) => {
+        const selectedOption = (details?.option as any).label;
+
+        if (reason === "selectOption") {
+          callback((f: any) => [...f, selectedOption]);
+        } else if (reason === "removeOption") {
+          callback((f: any[]) => f.filter((e) => e !== selectedOption));
+        }
       }}
-      renderOption={(props, option) => {
-        return (
-          <Box {...props} key={props.id} component="li">
-            <Stack direction="column" alignItems="start">
-              <Typography>
-                {option}
-              </Typography>
-            </Stack>
-          </Box>
-        );
-      }}
+      filterOptions={filterOptions}
       renderInput={(params) => {
         return (
-          <TextField {...params} label={label}/>
-        )
+          <TextField
+            {...params}
+            label="Select gene"
+            placeholder="gene name"
+            InputLabelProps={{ shrink: true }}
+          />
+        );
       }}
     />
   );

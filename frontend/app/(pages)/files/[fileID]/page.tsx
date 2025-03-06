@@ -3,6 +3,7 @@
 
 import {
   reset,
+  setGenes,
   setHierarchy,
   setObsm,
   setSelectedEmbedding,
@@ -50,6 +51,29 @@ function fetchFileHierarchy(
   })
 }
 
+function fetchGenes(
+  fileID: string,
+  callback: Function
+) {
+
+  const request = `${BACKEND_ENDPOINT}/get_genes?file_id=${fileID}`;
+
+  fetch(request)
+    .then((response) => {
+      if (!response.ok) {
+        console.error("something fucky happened");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      // console.log(data);
+      callback(setGenes(data));
+    })
+    .catch((error) => {
+      console.error("something fucky", error);
+    });
+  
+}
 
 async function fetchFileObsm(
   fileID: string,
@@ -77,10 +101,12 @@ export default function FileIdPage({ }) {
   
   const { fileID } = useParams();
   
-  const hierarchy = useAppSelector((state: RootState) => state.plotReducer.hierarchy)
-  const obs = useAppSelector((state: RootState) => state.plotReducer.obs);
+  const hierarchy = useAppSelector((state) => state.plotReducer.hierarchy)
+  const obs = useAppSelector((state) => state.plotReducer.obs);
+  const genes = useAppSelector((state) => state.plotReducer.genes);
   
-  const selectedEmbedding = useAppSelector((state: RootState) => state.plotReducer.selectedEmbedding);
+  const [selectedGene, setSelectedGene] = useState<string[]>([])
+  const selectedEmbedding = useAppSelector((state) => state.plotReducer.selectedEmbedding);
   
   const dispatch = useAppDispatch();
   
@@ -92,13 +118,20 @@ export default function FileIdPage({ }) {
     
     if (typeof fileID === "string") {
       fetchFileHierarchy(fileID, dispatch);
+      fetchGenes(fileID, dispatch);
       dispatch(setActiveFile(fileID));
     }
     
   }, [])
   
   return (
-    <Grid container direction="row" mt={1} columnGap={1}>
+    <Grid
+      container
+      direction="row"
+      mt={1}
+      columnGap={1}
+      height="100%"
+    >
       <Grid
         item
         xs={3}
@@ -150,14 +183,14 @@ export default function FileIdPage({ }) {
           </Stack>
 
           {hierarchy ? <Divider /> : <></>}
-          
+
           <Stack
             direction="column"
             gap={2}
             height="69vh"
             sx={{
               overflowY: "scroll",
-              scrollbarWidth: "thin"
+              scrollbarWidth: "thin",
             }}
           >
             <CategoryAccordion />
@@ -185,16 +218,16 @@ export default function FileIdPage({ }) {
         textOverflow="ellipsis"
         overflow="hidden"
       >
-        <GeneAutocomplete
-          label="Select gene"
-          value=""
-          options={[]}
-          optionLabels={[]}
-          callback={() => {}}
-          error={false}
-          isDisabled={false}
-        />
-        <DotPlot />
+        <Stack direction="column" gap={2} height="100%">     
+          <GeneAutocomplete
+            values={selectedGene}
+            options={genes}
+            callback={setSelectedGene}
+            error={false} // TODO: implement error-handling
+            isDisabled={genes.length === 0}
+          />
+          <DotPlot />
+        </Stack>
       </Grid>
     </Grid>
   );

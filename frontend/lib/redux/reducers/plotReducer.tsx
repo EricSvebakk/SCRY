@@ -8,6 +8,7 @@ type initialPlotStateProps = {
   hierarchy: zarrHierarchy | null;
   obs: obsData | null;
   obsm: obsmData | null;
+  genes: string[];
   obsExpression: obsExpressionData[];
   labelSize: {
     [key: string]: number;
@@ -23,6 +24,7 @@ const initialPlotState: initialPlotStateProps = {
   hierarchy: null,
   obs: null,
   obsm: null,
+  genes: [],
   obsExpression: [],
   labelSize: {},
   selectedEmbedding: "",
@@ -35,7 +37,7 @@ export const plotSlice = createSlice({
   initialState: initialPlotState,
   reducers: {
     reset: (state, action: PayloadAction<boolean>) => {
-      if (action.payload) {        
+      if (action.payload) {
         for (const key of Object.keys(initialPlotState)) {
           (state as any)[key] = (initialPlotState as any)[key];
         }
@@ -52,8 +54,11 @@ export const plotSlice = createSlice({
     setObsm: (state, action: PayloadAction<obsmData | null>) => {
       state.obsm = action.payload;
     },
+    setGenes: (state, action: PayloadAction<string[]>) => {
+      state.genes = action.payload;
+    },
     setObsExpression: (state, action: PayloadAction<obsExpressionData[]>) => {
-      state.obsExpression = action.payload
+      state.obsExpression = action.payload;
     },
     setLabelSize: (state, action: PayloadAction<{}>) => {
       state.labelSize = action.payload;
@@ -75,6 +80,7 @@ export const {
   setHierarchy,
   setObs,
   setObsm,
+  setGenes,
   setObsExpression,
   setLabelSize,
   setSelectedEmbedding,
