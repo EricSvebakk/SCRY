@@ -8,6 +8,12 @@ export type obsmData = {
   coordinates: number[][];
 }
 
+export type obsExpressionData = {
+  label: string;
+  mean_expr: { [subKey: string]: number };
+  num_expr: { [subKey: string]: number };
+};
+
 export type zarrHierarchy = {
   X: string[];
   layers: string[];

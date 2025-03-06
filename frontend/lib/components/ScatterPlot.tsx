@@ -1,36 +1,34 @@
 
 
 import { Box, Stack } from "@mui/material";
-import LargeDatasetCanvasPlot from "./scatterplot";
+import ScatterPlotGenerator from "./ScatterPlotGenerator";
 import { useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
 import { RootState } from "../redux/stores/store";
 
-export function Plot() {
+export function ScatterPlot() {
   
   const obs = useAppSelector((state: RootState) => state.plotReducer.obs);
   const obsm = useAppSelector((state: RootState) => state.plotReducer.obsm);
   
-  const fileID = useAppSelector((state: RootState) => state.fileReducer.activeFile);
   const embedding = useAppSelector((state: RootState) => state.plotReducer.selectedEmbedding);
   const category = useAppSelector((state: RootState) => state.plotReducer.selectedCategory);
-  // const label = useAppSelector((state: RootState) => state.plotReducer.selectedLabel);
   
   const svgRef = useRef<SVGSVGElement>(null);
   const groupRefs = useRef<HTMLCanvasElement[]>([]);
   
   const dispatch = useAppDispatch();
-  
 
   useEffect(() => {
     
-    console.log(obs, obsm)
+    console.log("obs", obs);
+    console.log("obsm", obsm);
 
     let cleanUpFunction;
     
     if (obsm && svgRef.current && groupRefs.current.length !== 0) {
       
-      cleanUpFunction = LargeDatasetCanvasPlot({
+      cleanUpFunction = ScatterPlotGenerator({
         title: `${embedding} > ${category}`,
         svgCurrent: svgRef.current,
         groupRefs: groupRefs.current,
@@ -66,8 +64,7 @@ export function Plot() {
                 height="100%"
                 width="100%"
                 style={{
-                  position: "absolute",
-                  // border: "1px solid red",
+                  position: "absolute"
                 }}
                 ref={(el: HTMLCanvasElement | null) => {
                   if (el) {
@@ -85,8 +82,7 @@ export function Plot() {
             height="100%"
             width="100%"
             style={{
-              position: "absolute",
-              // border: "1px solid red"
+              position: "absolute"
             }}
             ref={(el: HTMLCanvasElement | null) => {
               if (el) {

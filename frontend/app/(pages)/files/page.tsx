@@ -14,9 +14,7 @@ import {
 } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid"
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
-
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/lib/redux/stores/store";
+import { useDispatch } from "react-redux";
 import { addFiles, selectFile } from "@/lib/redux/reducers/fileReducer";
 import { CloudUpload } from "@mui/icons-material";
 import styled from "@emotion/styled";

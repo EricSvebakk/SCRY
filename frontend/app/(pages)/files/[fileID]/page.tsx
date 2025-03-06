@@ -1,25 +1,29 @@
 
 "use client"
 
+import {
+  reset,
+  setHierarchy,
+  setObsm,
+  setSelectedEmbedding,
+} from "@/lib/redux/reducers/plotReducer";
+import {
+  Button,
+  Divider,
+  Grid,
+  Stack,
+  Tooltip,
+} from "@mui/material";
 import CategoryAccordion from "@/lib/components/CategoryAccordion";
-import { Labels } from "@/lib/components/labels";
-import { Plot } from "@/lib/components/plot";
-import { my_colors } from "@/lib/components/scatterplot";
+import { ScatterPlot } from "@/lib/components/ScatterPlot";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
-import { reset, setHierarchy, setObs, setObsm, setSelectedEmbedding } from "@/lib/redux/reducers/plotReducer";
-import { selectFile, setActiveFile } from "@/lib/redux/reducers/fileReducer";
+import { setActiveFile } from "@/lib/redux/reducers/fileReducer";
 import { RootState } from "@/lib/redux/stores/store";
-// import { useAppSelector } from "@/lib/redux/hooks/hooks";
-import { obsData, obsmData, TooltipKey, tooltips, zarrHierarchy } from "@/lib/types";
-import { Circle, Square } from "@mui/icons-material";
-import { Box, Button, Divider, Grid, Icon, Stack, Tooltip, Typography } from "@mui/material";
-// import { RootState } from "@reduxjs/toolkit/query";
-
-import { 
-  useParams,
- } from "next/navigation";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { TooltipKey, tooltips } from "@/lib/types";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { DotPlot } from "@/lib/components/DotPlot";
+import GeneAutocomplete from "@/lib/components/GeneAutocomplete";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
@@ -28,27 +32,18 @@ function fetchFileHierarchy(
   callback: Function
 ) {
   
-  // const dispatch = useAppDispatch();
-  
   const request = `${BACKEND_ENDPOINT}/get_file_hierarchy?file_id=${fileID}`;
   
-  fetch(request
-    // {
-    //   mode: "no-cors"
-    // }
-  )
+  fetch(request)
   .then((response) => {
     if (!response.ok) {
       console.error("something fucky happened")
     }
-    
     return response.json();
   })
   .then((data) => {
     console.log(data);
-    
     callback(setHierarchy(data));
-    // callback(data);
   })
   .catch((error) => {
     console.error("something fucky", error);
@@ -72,7 +67,6 @@ async function fetchFileObsm(
     })
     .then((data) => {
       callback(setObsm(JSON.parse(data)));
-      // callback(JSON.parse(data));
     })
     .catch((error) => {
       console.error("something fucky", error);
@@ -81,36 +75,14 @@ async function fetchFileObsm(
 
 export default function FileIdPage({ }) {
   
-  const [selectedObs, setSelectedObs] = useState("");
-  const [selectedObsm, setSelectedObsm] = useState("");
-  
-  // const [obsData, setObsData] = useState<obsData | null>(null);
-  // const [obsmData, setObsmData] = useState<obsmData | null>(null);
-  
   const { fileID } = useParams();
-  // const [hierarchy, setHierarchy] = useState<zarrHierarchy | null>(null);
-  
-  const selectedFiles = useAppSelector((state: RootState) => state.fileReducer.selectedFiles);
   
   const hierarchy = useAppSelector((state: RootState) => state.plotReducer.hierarchy)
   const obs = useAppSelector((state: RootState) => state.plotReducer.obs);
-  const obsm = useAppSelector((state: RootState) => state.plotReducer.obsm);
   
   const selectedEmbedding = useAppSelector((state: RootState) => state.plotReducer.selectedEmbedding);
   
-  
-  
   const dispatch = useAppDispatch();
-  
-  console.log(hierarchy)
-  
-  const w1 = 3;
-  const w2 = 3;
-  const w3 = 3;
-  const w4 = 3;
-  
-  // console.log(selectedFiles, fileID, typeof fileID === "string" ? selectedFiles.includes(fileID) : undefined)
-  
   
   useEffect(() => {
     
@@ -121,9 +93,6 @@ export default function FileIdPage({ }) {
     if (typeof fileID === "string") {
       fetchFileHierarchy(fileID, dispatch);
       dispatch(setActiveFile(fileID));
-      // if (!selectedFiles.includes(fileID)) {
-      //   dispatch(selectFile(fileID));
-      // }
     }
     
   }, [])
@@ -132,7 +101,7 @@ export default function FileIdPage({ }) {
     <Grid container direction="row" mt={1} columnGap={1}>
       <Grid
         item
-        xs={w1}
+        xs={3}
         p={2}
         width="fit-content"
         height="100%"
@@ -159,8 +128,6 @@ export default function FileIdPage({ }) {
                         disabled={selectedEmbedding === e}
                         onClick={() => {
                           if (typeof fileID === "string") {
-                            console.log(tooltips[e as TooltipKey], e);
-                            // setSelectedObs(e);
                             dispatch(setSelectedEmbedding(e));
                             fetchFileObsm(fileID, e, dispatch);
                           }
@@ -207,7 +174,7 @@ export default function FileIdPage({ }) {
           border: "1px solid blue",
         }}
       >
-        <Plot />
+        <ScatterPlot />
       </Grid>
 
       <Grid
@@ -217,7 +184,18 @@ export default function FileIdPage({ }) {
         padding={2}
         textOverflow="ellipsis"
         overflow="hidden"
-      ></Grid>
+      >
+        <GeneAutocomplete
+          label="Select gene"
+          value=""
+          options={[]}
+          optionLabels={[]}
+          callback={() => {}}
+          error={false}
+          isDisabled={false}
+        />
+        <DotPlot />
+      </Grid>
     </Grid>
   );
   

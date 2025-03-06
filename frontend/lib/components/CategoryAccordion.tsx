@@ -1,10 +1,24 @@
-// import { RootState } from "@reduxjs/toolkit/query";
+
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Button,
+  CircularProgress,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import {
+  setObs,
+  setObsExpression,
+  setSelectedCategory,
+  setSelectedLabels,
+} from "../redux/reducers/plotReducer";
 import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
-import { Accordion, AccordionDetails, AccordionSummary, Button, CircularProgress, Divider, Stack, Tooltip, Typography } from "@mui/material";
 import { RootState } from "../redux/stores/store";
-import { setObs, setSelectedCategory } from "../redux/reducers/plotReducer";
 import { Square } from "@mui/icons-material";
-import { my_colors } from "./scatterplot";
+import { my_colors } from "./ScatterPlotGenerator";
 import { useState } from "react";
 import { theme } from "@/app/layout";
 
@@ -32,36 +46,61 @@ async function fetchFileObs(
     });
 }
 
-// const useStyles = makeStyles(() => ({
-//   expanded: {},
-//   content: {
-//     "&$expanded": {
-//       marginBottom: 0,
-//     },
-//   },
-// }));
+async function fetchObsLabelExpression(
+  fileID: string,
+  obs: string,
+  selectedLabels: string[],
+  callback: Function
+) {
+  
+  const request = `${BACKEND_ENDPOINT}/get_top_gene_expression/`;
+
+  const formData = new FormData();
+  formData.append("file_id", fileID);
+  formData.append("obs", obs);
+  
+  selectedLabels.forEach((label: string) => {
+    formData.append("labels", label);
+  })
+  
+  fetch(request, {
+    method: "POST",
+    mode: "cors",
+    body: formData,
+  })
+    .then((response) => {
+      if (!response.ok) {
+        console.error("something expression fucky happened");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      callback(setObsExpression(JSON.parse(data)));
+    })
+    .catch((error) => {
+      console.error("something fucky", error);
+    });
+}
+
 
 export default function CategoryAccordion() {
   
   const fileID = useAppSelector((state: RootState) => state.fileReducer.activeFile);
   
+  const obs = useAppSelector((state: RootState) => state.plotReducer.obs);
   const obsm = useAppSelector((state: RootState) => state.plotReducer.obsm);
+  
   const hierarchy = useAppSelector((state: RootState) => state.plotReducer.hierarchy);
   
   const selectedCategory = useAppSelector((state: RootState) => state.plotReducer.selectedCategory);
   const selectedEmbedding = useAppSelector((state: RootState) => state.plotReducer.selectedEmbedding);
   
   const labelSize = useAppSelector((state: RootState) => state.plotReducer.labelSize);
-
-  
-  const obs = useAppSelector((state: RootState) => state.plotReducer.obs);
+  const selectedLabels = useAppSelector((state) => state.plotReducer.selectedLabels);
   
   const dispatch = useAppDispatch();
   
-  // const [selectedCategory, setSelectedCategory] = useState("");
   const [expanded, setExpanded] = useState(false);
-  
-  // const classes = useStyles();
   
   return (
     <>
@@ -79,8 +118,6 @@ export default function CategoryAccordion() {
                   sx={{
                     backgroundColor: theme.palette.grey[100],
                     "& .Mui-disabled": {
-                      // color: "red",
-                      // border: undefined,
                       boxShadow: undefined,
                     },
                     "& .MuiPaper-root": {
@@ -100,14 +137,10 @@ export default function CategoryAccordion() {
                       minHeight: 0,
                       padding: 1,
                       boxShadow: undefined,
-                      // all: "initial",
                       "& .MuiAccordionSummary-content": {
                         margin: 0,
-                        // alignSelf: "start"
                       },
                       "& .Mui-disabled": {
-                        // color: "red",
-                        // border: undefined,
                         boxShadow: undefined,
                       },
                       overflow: "hidden",
@@ -133,7 +166,6 @@ export default function CategoryAccordion() {
                   >
                     <Typography
                       key={"accordion_summary_text" + e}
-                      // justifySelf="start"
                       variant="subtitle2"
                       fontWeight={selectedCategory === e ? "bold": ""}
                     >
@@ -158,12 +190,6 @@ export default function CategoryAccordion() {
                     >
                       {obs && selectedCategory === e ? (
                         [...obs.labels]
-                        // .sort((a, b) => {
-                        //   if (labelSize[a] && labelSize[b]) {
-                        //     return labelSize[b] - labelSize[a];
-                        //   }
-                        //   return 0
-                        // })
                         .map((label, i) => {
                           let label_color = my_colors[i % my_colors.length];
 
@@ -180,23 +206,38 @@ export default function CategoryAccordion() {
                                 sx={{ all: "initial" }}
                                 size="small"
                                 onClick={() => {
-                                  const canvas = document.getElementById(
-                                    "points_" + label
+                                  
+                                  const newLabels = [label, ...selectedLabels].filter(
+                                    (value, index, array) =>
+                                      array.indexOf(value) === index
                                   );
-
-                                  canvas!!.style.zIndex = "8";
-
-                                  obs!!.labels.forEach(
-                                    (label_temp, index_other) => {
-                                      if (label !== label_temp) {
-                                        const otherCanvas =
-                                          document.getElementById(
-                                            "points_" + label_temp
-                                          );
-                                        otherCanvas!.style.opacity = "0%";
-                                      }
-                                    }
+                                  
+                                  fetchObsLabelExpression(
+                                    fileID,
+                                    selectedCategory,
+                                    newLabels,
+                                    dispatch
                                   );
+                                  
+                                  dispatch(setSelectedLabels(newLabels));
+                                  
+                                  // const canvas = document.getElementById(
+                                  //   "points_" + label
+                                  // );
+
+                                  // canvas!!.style.zIndex = "8";
+
+                                  // obs!!.labels.forEach(
+                                  //   (label_temp, index_other) => {
+                                  //     if (label !== label_temp) {
+                                  //       const otherCanvas =
+                                  //         document.getElementById(
+                                  //           "points_" + label_temp
+                                  //         );
+                                  //       otherCanvas!.style.opacity = "0%";
+                                  //     }
+                                  //   }
+                                  // );
                                 }}
                                 onMouseEnter={() => {
                                   const canvas = document.getElementById(
@@ -245,7 +286,6 @@ export default function CategoryAccordion() {
                                   direction="row"
                                   alignItems="center"
                                   justifyContent="left"
-                                  // width="fit-content"
                                 >
                                   <Square
                                     key={"label_square" + label}
@@ -259,10 +299,6 @@ export default function CategoryAccordion() {
                                   <Typography
                                     key={"label_typography" + label}
                                     variant="subtitle2"
-                                    // noWrap
-                                    // width=""
-                                    // textOverflow="ellipsis"
-                                    // overflow="hidden"
                                     color={label_color}
                                   >
                                     {label}

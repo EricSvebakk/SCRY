@@ -1,5 +1,5 @@
 import { Button, Stack, Tooltip, Typography } from "@mui/material";
-import { my_colors } from "./scatterplot";
+import { my_colors } from "./ScatterPlotGenerator";
 import { useAppSelector } from "../redux/hooks/hooks";
 import { RootState } from "../redux/stores/store";
 import { Square } from "@mui/icons-material";

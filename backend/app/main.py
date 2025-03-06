@@ -14,7 +14,8 @@ import dask.array
 import zarr
 import json
 import time
-from scipy.sparse import csr_matrix
+import numpy as np
+import pandas as pd
 
 load_dotenv()
 FRONTEND_ENDPOINT = os.environ.get("FRONTEND_ENDPOINT")
@@ -35,8 +36,6 @@ app.add_middleware(
     allow_methods=["*"],        # Allow all methods (GET, POST, etc.)
     allow_headers=["*"],        # Allow all headers
 )
-
-# adata = None
 
 UPLOAD_DIR = "/persistent01"
 ADATA_CHUNK_SIZE = 1000
@@ -69,28 +68,8 @@ async def root():
     file_size_bytes = None
     shape = None
     
-    
-    
     if (is_file):
       file_size_bytes = os.path.getsize(path)
-      
-      # ceil_log_size = ceil(log10(file_size_bytes) / 4)
-      # file_size = file_size_bytes * ((1/1024)**ceil_log_size)
-      # file_size_result = f"{file_size:.2f} {file_sizes[ceil_log_size-1]}"
-      
-      # if (file_size < 10 and path.split(".")[1].startswith("h5ad")):
-        
-      #   # print(path, os.path.exists(path))
-      #   # print(os.listdir(UPLOAD_DIR))
-        
-      #   try:
-      #     adata = ad.read_h5ad(path, backed="r")
-      #     shape = list(adata.shape)
-      #     print("shape h5ad", shape)
-      #   except:
-      #     pass
-        
-      
       
     else:
       zarr_data = zarr.open_group(path)
@@ -98,18 +77,14 @@ async def root():
       file_size_bytes = sum(store.getsize(k) for k in store.keys())
       
       shape = await get_dims_zarr(zarr_data["X"])
-      
-      # chunks = zarr_data["X"]["shape"] # if hasattr(zarr_data["X"], "data") else None
     
     ceil_log_size = ceil(log10(file_size_bytes) / 4)
     file_size = file_size_bytes * ((1/1024)**ceil_log_size)
     file_size_result = f"{file_size:.2f} {file_sizes[ceil_log_size-1]}"
     
-    print(file_size)
-    
     result.append({
       "name": file_id,
-      "shape": shape,
+      # "shape": shape,
       "file_size": file_size_result
     })
     
@@ -235,38 +210,124 @@ async def get_file_obsm(file_id: str, obsm: str):
   }
   
   return JSONResponse(content=json.dumps(result))
-
-@app.get("/get_gene_expression")
-async def get_gene_expression(file_id: str):
   
-  # open X-group
-  X_path = os.path.join(UPLOAD_DIR, file_id, "X")
-  X_path_exists = os.path.exists(X_path)
+@app.post("/get_top_gene_expression/")
+async def get_top_gene_expression(
+  file_id: str = File(...),
+  obs: str = File(...),
+  labels: list[str] = File(...),
+  top_genes: int = 20
+  ):
+  
+  print(file_id, obs, labels)
+  
+  path = os.path.join(UPLOAD_DIR, file_id)
+  path_exists = os.path.exists(path)
 
-  if (not X_path_exists):
+  if (not path_exists):
     return JSONResponse(content={
         "message": {
-            "path": X_path,
-            "path_exists": X_path_exists,
+            "path": path,
+            "path_exists": path_exists,
         }
     })
     
+  X_path = os.path.join(UPLOAD_DIR, file_id, "X")
+  obs_path = os.path.join(UPLOAD_DIR, file_id, "obs", obs)
+  var_path = os.path.join(UPLOAD_DIR, file_id, "var", "feature_name")
+    
   X_group = zarr.open_group(X_path)
+  obs_group = zarr.open_group(obs_path)
+  var_group = zarr.open_group(var_path)
+  
+  cell_type_cats = obs_group.categories[:]
+  cell_type_codes = obs_group.codes[:]
   
   # CSR-matrix pieces
   data = X_group.data
   col_index = X_group.indices
   row_index = X_group.indptr
   
-  n_cells = len(row_index)
-  # n_genes = 
+  # n_cells = len(row_index) - 1
+  gene_names = var_group.categories[:]
+  n_genes = len(gene_names)
   
+  logger.debug(["# genes", n_genes])
   
-  # figure out if it's sparse or dense first
+  chunk_size = 5000
   
-  # if indices, indptr and data exists, it's sparse.
+  results = {}
+
+  # for cat in cell_type_cats:
   
+  for label in labels:
+    
+    results[label] = {}
+    
+    col_sums = np.zeros(n_genes, dtype=np.float64)
+    num_expr = np.zeros(n_genes, dtype=np.float64)
+    
+    cat_index = np.where(cell_type_cats == label)[0]
+    cell_indices = np.where(cell_type_codes == cat_index)[0]
+    
+    for i in range(0, len(cell_indices), chunk_size):
+      
+      batch = cell_indices[i : i + chunk_size]
+      
+      # For each cell in this batch:
+      for row in batch:
+        start = row_index[row]
+        end   = row_index[row + 1]
+        
+        row_data = data[start:end]
+        row_cols = col_index[start:end]
+        
+        for c, val in zip(row_cols, row_data):
+          if (val > 0):
+            num_expr[c] += 1
+            
+          col_sums[c] += val
+    
+    # Then compute means
+    mean_expr = col_sums / len(cell_indices)
+    
+    results[label]["mean_expr"] = mean_expr
+    results[label]["num_expr"] = num_expr
+    
+  df_expr = pd.DataFrame(
+    data = [ x["mean_expr"] for x in results.values() ],
+    index = labels,
+    columns = gene_names
+  )
   
+  df_num = pd.DataFrame(
+    data = [ x["num_expr"] for x in results.values() ],
+    index = labels,
+    columns = gene_names
+  )
+  
+  expr_max = df_expr.max(axis=0)
+  top_expr = expr_max.nlargest(top_genes).index
+  
+  json_top_expr = df_expr[top_expr].to_dict("index")
+  json_top_num = df_num[top_expr].to_dict("index")
+  
+  print("df_expr")
+  print(json_top_expr)
+  
+  print("df_num")
+  print(json_top_num)
+  
+  content = [
+    {
+      "label": x,
+      "mean_expr": json_top_expr[x],
+      "num_expr": json_top_num[x]
+    }
+    for x in json_top_expr.keys()
+  ]
+  
+  return JSONResponse(content=json.dumps(content))
   
 @app.get("/measure_access_time")
 async def measure_access_time(file_id: str, attr: str):

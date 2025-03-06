@@ -25,8 +25,6 @@ export default function PagesLayout({
   const fileState = useSelector((state: RootState) => state.fileReducer.files);
   
   const selectedFiles = useSelector((state: RootState) => state.fileReducer.selectedFiles);
-  
-  // console.log(fileState)
 
   useEffect(() => {
     
@@ -42,8 +40,6 @@ export default function PagesLayout({
       });
     
     setNavItems([...BaseNavItems, ...selectedFileObjects]);
-    
-    // console.log("testing", selectedFiles)
     
   }, [selectedFiles, fileState]);
   

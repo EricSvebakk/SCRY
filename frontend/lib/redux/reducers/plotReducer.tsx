@@ -1,4 +1,4 @@
-import { obsData, obsmData, zarrHierarchy } from "@/lib/types";
+import { obsData, obsExpressionData, obsmData, zarrHierarchy } from "@/lib/types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RefObject, useRef } from "react";
 
@@ -8,13 +8,14 @@ type initialPlotStateProps = {
   hierarchy: zarrHierarchy | null;
   obs: obsData | null;
   obsm: obsmData | null;
+  obsExpression: obsExpressionData[];
   labelSize: {
-    [key: string]: number,
-  }
+    [key: string]: number;
+  };
   selectedEmbedding: string;
   selectedCategory: string;
-  selectedLabel: string;
-}
+  selectedLabels: string[];
+};
 
 const initialPlotState: initialPlotStateProps = {
   svgRef: null,
@@ -22,10 +23,11 @@ const initialPlotState: initialPlotStateProps = {
   hierarchy: null,
   obs: null,
   obsm: null,
+  obsExpression: [],
   labelSize: {},
   selectedEmbedding: "",
   selectedCategory: "",
-  selectedLabel: "",
+  selectedLabels: [],
 }
 
 export const plotSlice = createSlice({
@@ -33,12 +35,10 @@ export const plotSlice = createSlice({
   initialState: initialPlotState,
   reducers: {
     reset: (state, action: PayloadAction<boolean>) => {
-      if (action.payload) {
-        state.selectedCategory = "";
-        state.selectedEmbedding = "";
-        state.selectedLabel = "";
-        state.obs = null;
-        state.obsm = null;
+      if (action.payload) {        
+        for (const key of Object.keys(initialPlotState)) {
+          (state as any)[key] = (initialPlotState as any)[key];
+        }
       }
     },
     setSVGRef: (state, action: PayloadAction<{}>) => {},
@@ -52,6 +52,9 @@ export const plotSlice = createSlice({
     setObsm: (state, action: PayloadAction<obsmData | null>) => {
       state.obsm = action.payload;
     },
+    setObsExpression: (state, action: PayloadAction<obsExpressionData[]>) => {
+      state.obsExpression = action.payload
+    },
     setLabelSize: (state, action: PayloadAction<{}>) => {
       state.labelSize = action.payload;
     },
@@ -61,8 +64,8 @@ export const plotSlice = createSlice({
     setSelectedCategory: (state, action: PayloadAction<string>) => {
       state.selectedCategory = action.payload;
     },
-    setSelectedLabel: (state, action: PayloadAction<string>) => {
-      state.selectedLabel = action.payload;
+    setSelectedLabels: (state, action: PayloadAction<string[]>) => {
+      state.selectedLabels = action.payload;
     },
   },
 });
@@ -72,10 +75,11 @@ export const {
   setHierarchy,
   setObs,
   setObsm,
+  setObsExpression,
   setLabelSize,
   setSelectedEmbedding,
   setSelectedCategory,
-  setSelectedLabel,
+  setSelectedLabels,
 } = plotSlice.actions
 
 export default plotSlice.reducer;
