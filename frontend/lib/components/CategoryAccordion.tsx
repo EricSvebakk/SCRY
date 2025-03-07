@@ -4,6 +4,7 @@ import {
   AccordionDetails,
   AccordionSummary,
   Button,
+  Checkbox,
   CircularProgress,
   Stack,
   Tooltip,
@@ -45,43 +46,6 @@ async function fetchFileObs(
       console.error("something fucky", error);
     });
 }
-
-async function fetchObsLabelExpression(
-  fileID: string,
-  obs: string,
-  selectedLabels: string[],
-  callback: Function
-) {
-  
-  const request = `${BACKEND_ENDPOINT}/get_top_gene_expression/`;
-
-  const formData = new FormData();
-  formData.append("file_id", fileID);
-  formData.append("obs", obs);
-  
-  selectedLabels.forEach((label: string) => {
-    formData.append("labels", label);
-  })
-  
-  fetch(request, {
-    method: "POST",
-    mode: "cors",
-    body: formData,
-  })
-    .then((response) => {
-      if (!response.ok) {
-        console.error("something expression fucky happened");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      callback(setObsExpression(JSON.parse(data)));
-    })
-    .catch((error) => {
-      console.error("something fucky", error);
-    });
-}
-
 
 export default function CategoryAccordion() {
   
@@ -206,21 +170,16 @@ export default function CategoryAccordion() {
                                 sx={{ all: "initial" }}
                                 size="small"
                                 onClick={() => {
-                                  
-                                  const newLabels = [label, ...selectedLabels].filter(
+                                  const newLabels = [
+                                    label,
+                                    ...selectedLabels,
+                                  ].filter(
                                     (value, index, array) =>
                                       array.indexOf(value) === index
                                   );
-                                  
-                                  fetchObsLabelExpression(
-                                    fileID,
-                                    selectedCategory,
-                                    newLabels,
-                                    dispatch
-                                  );
-                                  
+
                                   dispatch(setSelectedLabels(newLabels));
-                                  
+
                                   // const canvas = document.getElementById(
                                   //   "points_" + label
                                   // );
@@ -282,32 +241,53 @@ export default function CategoryAccordion() {
                                 }}
                               >
                                 <Stack
-                                  key={"label_stack" + label}
                                   direction="row"
-                                  alignItems="center"
-                                  justifyContent="left"
+                                  justifyContent="space-between"
                                 >
-                                  <Square
-                                    key={"label_square" + label}
-                                    sx={{
-                                      width: 22,
-                                      height: 22,
-                                      marginRight: 1,
-                                      color: label_color,
-                                    }}
-                                  />
-                                  <Typography
-                                    key={"label_typography" + label}
-                                    variant="subtitle2"
-                                    color={label_color}
+                                  <Stack
+                                    key={"label_stack" + label}
+                                    direction="row"
+                                    alignItems="center"
+                                    justifyContent="left"
                                   >
-                                    {label}
-                                    {
-                                      labelSize[label]
-                                      ? ` (${labelSize[label].toLocaleString(undefined, { minimumIntegerDigits: 3 })})`
-                                      : ""
-                                    }
-                                  </Typography>
+                                    <Square
+                                      key={"label_square" + label}
+                                      sx={{
+                                        width: 22,
+                                        height: 22,
+                                        marginRight: 1,
+                                        color: label_color,
+                                      }}
+                                    />
+                                    <Typography
+                                      key={"label_typography" + label}
+                                      variant="subtitle2"
+                                      color={label_color}
+                                    >
+                                      {label}
+                                    </Typography>
+                                  </Stack>
+                                  <Stack
+                                    direction="row"
+                                    alignItems="center"
+                                  >
+                                    <Typography
+                                      key={"label_typography" + label}
+                                      variant="subtitle2"
+                                      color={label_color}
+                                    >
+                                      {labelSize[label]
+                                        ? ` (${labelSize[label].toLocaleString(
+                                            undefined,
+                                            { minimumIntegerDigits: 3 }
+                                          )})`
+                                        : ""}
+                                    </Typography>
+                                    <Checkbox
+                                      size="small"
+                                      checked={selectedLabels.includes(label)}
+                                    />
+                                  </Stack>
                                 </Stack>
                               </Button>
                             </Tooltip>

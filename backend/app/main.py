@@ -241,6 +241,7 @@ async def get_top_gene_expression(
   file_id: str = File(...),
   obs: str = File(...),
   labels: list[str] = File(...),
+  genes: list[str] = File(...),
   top_genes: int = 20
   ):
   
@@ -265,70 +266,105 @@ async def get_top_gene_expression(
   obs_group = zarr.open_group(obs_path)
   var_group = zarr.open_group(var_path)
   
-  cell_type_cats = obs_group.categories[:]
-  cell_type_codes = obs_group.codes[:]
+  obs_categories = obs_group.categories[:]
+  obs_codes = obs_group.codes[:]
+  
+  all_gene_names = var_group.categories[:]
+  
+  # global gene indices
+  gene_to_index = {gene_name: i for i, gene_name in enumerate(all_gene_names)}
+  
+  # selected gene indices
+  selected_gene_to_index = []
+  
+  # Iterate global indices and store the selected gene indices
+  for g in genes:  
+    if g in gene_to_index:
+      selected_gene_to_index.append(gene_to_index[g])
+  
+  # convert to numpy 
+  selected_gene_to_index = np.array(selected_gene_to_index, dtype=int)
+  selected_gene_index_set = set(selected_gene_to_index)
+  
+  subset_gene_names = all_gene_names[selected_gene_to_index]
+  
+  # global-to-local mapping for CSR-matrix
+  global_to_local = {
+    global_index: local_index
+    for local_index, global_index in enumerate(selected_gene_index_set)
+  }
+  
+  n_genes = len(selected_gene_index_set)
+  
+  logger.debug(["# genes", n_genes])
+  logger.debug(["genes", selected_gene_to_index])
+  
+  chunk_size = 5000
+  
+  results = {}
   
   # CSR-matrix pieces
   data = X_group.data
   col_index = X_group.indices
   row_index = X_group.indptr
   
-  # n_cells = len(row_index) - 1
-  gene_names = var_group.categories[:]
-  n_genes = len(gene_names)
-  
-  logger.debug(["# genes", n_genes])
-  
-  chunk_size = 5000
-  
-  results = {}
-
-  # for cat in cell_type_cats:
-  
   for label in labels:
     
     results[label] = {}
     
+    # allocate space for the results of the selected genes
     col_sums = np.zeros(n_genes, dtype=np.float64)
     num_expr = np.zeros(n_genes, dtype=np.float64)
     
-    cat_index = np.where(cell_type_cats == label)[0]
-    cell_indices = np.where(cell_type_codes == cat_index)[0]
+    # Identify which cells (rows) belong to the current label
+    cat_index = np.where(obs_categories == label)[0]
+    cell_indices = np.where(obs_codes == cat_index)[0]
     
+    # Loop over the related cells in chunks
     for i in range(0, len(cell_indices), chunk_size):
       
-      batch = cell_indices[i : i + chunk_size]
+      chunk = cell_indices[i : i + chunk_size]
       
-      # For each cell in this batch:
-      for row in batch:
+      # For each cell in the current batch:
+      for row in chunk:
         start = row_index[row]
         end   = row_index[row + 1]
         
-        row_data = data[start:end]
-        row_cols = col_index[start:end]
+        row_cols = col_index[start:end] # non-zero columns
+        row_data = data[start:end] # non-zero column data
         
+        # Iterate over non-zero columns in the current row
         for c, val in zip(row_cols, row_data):
-          if (val > 0):
-            num_expr[c] += 1
+          
+          # update sums if the current column is in the subset
+          if c in selected_gene_index_set:
             
-          col_sums[c] += val
+            local_index = global_to_local[c]
+            
+            col_sums[local_index] += val
+            
+            if (val > 0):
+              num_expr[local_index] += 1
     
     # Then compute means
     mean_expr = col_sums / len(cell_indices)
     
     results[label]["mean_expr"] = mean_expr
     results[label]["num_expr"] = num_expr
-    
+  
+  logger.debug(["lens", len(selected_gene_index_set), [len(x["mean_expr"]) for x in results.values()]])
+  logger.debug(["res", [x["mean_expr"] for x in results.values()]])
+  
   df_expr = pd.DataFrame(
     data = [ x["mean_expr"] for x in results.values() ],
     index = labels,
-    columns = gene_names
+    columns = subset_gene_names
   )
   
   df_num = pd.DataFrame(
     data = [ x["num_expr"] for x in results.values() ],
     index = labels,
-    columns = gene_names
+    columns = subset_gene_names
   )
   
   expr_max = df_expr.max(axis=0)

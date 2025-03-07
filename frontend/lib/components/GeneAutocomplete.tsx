@@ -1,53 +1,44 @@
 
-
 import {
   Autocomplete,
   createFilterOptions,
   TextField,
 } from "@mui/material";
-import { Dispatch, SetStateAction, useState } from "react";
+import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
+import { setSelectedGenes } from "../redux/reducers/plotReducer";
 
-type GeneAutocompleteProps = {
-  values: string[];
-  options: string[];
-  callback: Dispatch<SetStateAction<string[]>>;
-  error: any;
-  isDisabled: boolean;
-};
 
-export default function GeneAutocomplete(props: GeneAutocompleteProps) {
+export default function GeneAutocomplete() {
   
-  const {
-    values,
-    options,
-    callback,
-    error,
-    isDisabled
-  } = props
+  const dispatch = useAppDispatch();
   
-  const structuredOptions = options.map((e, i) => ({ label: e, id: i }))
-  const structuredValues = structuredOptions.filter((e) => values.includes(e.label));
+  const genes = useAppSelector((state) => state.plotReducer.genes);
+  const selectedGenes = useAppSelector((state) => state.plotReducer.selectedGenes);
+  
+  const structuredOptions = genes.map((e, i) => ({ label: e, id: i }));
+  const structuredValues = structuredOptions.filter((e) => selectedGenes.includes(e.label));
 
-  const filterOptions = createFilterOptions({
-    limit: 20,
-    
-  });
+  const filterOptions = createFilterOptions({ limit: 20 });
   
   return (
     <Autocomplete
       multiple
-      disabled={isDisabled}
+      disabled={genes.length === 0}
       size="small"
       fullWidth
       value={structuredValues}
       options={structuredOptions}
       onChange={(event: any, value: any, reason, details) => {
-        const selectedOption = (details?.option as any).label;
+        const selectedOption = (details?.option as any)?.label;
 
+        console.log(reason, details)
+        
         if (reason === "selectOption") {
-          callback((f: any) => [...f, selectedOption]);
+          dispatch(setSelectedGenes([...selectedGenes, selectedOption]))
         } else if (reason === "removeOption") {
-          callback((f: any[]) => f.filter((e) => e !== selectedOption));
+          dispatch(setSelectedGenes(selectedGenes.filter((e) => e !== selectedOption)))
+        } else if (reason === "clear") {
+          dispatch(setSelectedGenes([]));
         }
       }}
       filterOptions={filterOptions}

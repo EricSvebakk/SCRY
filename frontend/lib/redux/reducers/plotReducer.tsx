@@ -16,6 +16,7 @@ type initialPlotStateProps = {
   selectedEmbedding: string;
   selectedCategory: string;
   selectedLabels: string[];
+  selectedGenes: string[];
 };
 
 const initialPlotState: initialPlotStateProps = {
@@ -30,6 +31,7 @@ const initialPlotState: initialPlotStateProps = {
   selectedEmbedding: "",
   selectedCategory: "",
   selectedLabels: [],
+  selectedGenes: []
 }
 
 export const plotSlice = createSlice({
@@ -72,6 +74,9 @@ export const plotSlice = createSlice({
     setSelectedLabels: (state, action: PayloadAction<string[]>) => {
       state.selectedLabels = action.payload;
     },
+    setSelectedGenes: (state, action: PayloadAction<string[]>) => {
+      state.selectedGenes = action.payload;
+    },
   },
 });
 
@@ -86,6 +91,7 @@ export const {
   setSelectedEmbedding,
   setSelectedCategory,
   setSelectedLabels,
-} = plotSlice.actions
+  setSelectedGenes
+} = plotSlice.actions;
 
 export default plotSlice.reducer;

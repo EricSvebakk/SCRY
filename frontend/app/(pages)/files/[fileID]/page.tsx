@@ -5,6 +5,7 @@ import {
   reset,
   setGenes,
   setHierarchy,
+  setObsExpression,
   setObsm,
   setSelectedEmbedding,
 } from "@/lib/redux/reducers/plotReducer";
@@ -14,6 +15,7 @@ import {
   Grid,
   Stack,
   Tooltip,
+  Typography,
 } from "@mui/material";
 import CategoryAccordion from "@/lib/components/CategoryAccordion";
 import { ScatterPlot } from "@/lib/components/ScatterPlot";
@@ -25,6 +27,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DotPlot } from "@/lib/components/DotPlot";
 import GeneAutocomplete from "@/lib/components/GeneAutocomplete";
+import { theme } from "@/app/layout";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
@@ -97,16 +100,57 @@ async function fetchFileObsm(
     });
 }
 
+async function fetchObsLabelExpression(
+  fileID: string,
+  selectedCategory: string,
+  selectedLabels: string[],
+  selectedGenes: string[],
+  callback: Function
+) {
+  const request = `${BACKEND_ENDPOINT}/get_top_gene_expression/`;
+
+  const formData = new FormData();
+  formData.append("file_id", fileID);
+  formData.append("obs", selectedCategory);
+
+  selectedLabels.forEach((label: string) => {
+    formData.append("labels", label);
+  });
+  
+  selectedGenes.forEach((gene: string) => {
+    formData.append("genes", gene);
+  });
+
+  fetch(request, {
+    method: "POST",
+    mode: "cors",
+    body: formData,
+  })
+    .then((response) => {
+      if (!response.ok) {
+        console.error("something expression fucky happened");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      callback(setObsExpression(JSON.parse(data)));
+    })
+    .catch((error) => {
+      console.error("something fucky", error);
+    });
+}
+
 export default function FileIdPage({ }) {
   
   const { fileID } = useParams();
   
   const hierarchy = useAppSelector((state) => state.plotReducer.hierarchy)
   const obs = useAppSelector((state) => state.plotReducer.obs);
-  const genes = useAppSelector((state) => state.plotReducer.genes);
   
-  const [selectedGene, setSelectedGene] = useState<string[]>([])
   const selectedEmbedding = useAppSelector((state) => state.plotReducer.selectedEmbedding);
+  const selectedCategory = useAppSelector((state) => state.plotReducer.selectedCategory);
+  const selectedLabels = useAppSelector((state) => state.plotReducer.selectedLabels);
+  const selectedGenes = useAppSelector((state) => state.plotReducer.selectedGenes);
   
   const dispatch = useAppDispatch();
   
@@ -122,24 +166,24 @@ export default function FileIdPage({ }) {
       dispatch(setActiveFile(fileID));
     }
     
-  }, [])
+  }, []);
+  
+  useEffect(() => {
+    
+    
+    
+  }, [selectedGenes, selectedLabels])
   
   return (
-    <Grid
-      container
-      direction="row"
-      mt={1}
-      columnGap={1}
-      height="100%"
-    >
+    <Grid container direction="row" mt={1} columnGap={1} height="100%">
       <Grid
         item
         xs={3}
-        p={2}
+        p={1}
         width="fit-content"
         height="100%"
         sx={{
-          border: "1px solid green",
+          border: "1px solid green"
         }}
         overflow="clip"
       >
@@ -201,10 +245,10 @@ export default function FileIdPage({ }) {
       <Grid
         item
         // xs
-        height={500}
-        width={500}
+        height={600}
+        width={600}
         sx={{
-          border: "1px solid blue",
+          border: "1px solid blue"
         }}
       >
         <ScatterPlot />
@@ -217,17 +261,44 @@ export default function FileIdPage({ }) {
         padding={2}
         textOverflow="ellipsis"
         overflow="hidden"
+        sx={
+          {
+            // backgroundColor: theme.palette.background.paper,
+          }
+        }
       >
-        <Stack direction="column" gap={2} height="100%">     
-          <GeneAutocomplete
-            values={selectedGene}
-            options={genes}
-            callback={setSelectedGene}
-            error={false} // TODO: implement error-handling
-            isDisabled={genes.length === 0}
-          />
-          <DotPlot />
-        </Stack>
+        <Grid container direction="column" gap={1} height="100%">
+          <Grid item>
+            <GeneAutocomplete />
+          </Grid>
+          <Grid item>
+            <Tooltip
+              title="Generate Differential Gene Expression with the selected genes"
+              placement="right"
+            >
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => {
+                  fetchObsLabelExpression(
+                    fileID as string,
+                    selectedCategory,
+                    selectedLabels,
+                    selectedGenes,
+                    dispatch
+                  );
+                }}
+              >
+                <Typography variant="subtitle2">
+                  Generate DGE
+                </Typography>
+              </Button>
+            </Tooltip>
+          </Grid>
+          <Grid item xs>
+            <DotPlot />
+          </Grid>
+        </Grid>
       </Grid>
     </Grid>
   );

@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/lib/redux/stores/store";
+import { theme } from "../layout";
 
 const BaseNavItems = [
   { id: "home", path: "/", name: "Home" },
@@ -49,7 +50,7 @@ export default function PagesLayout({
       <Grid
         container
         direction="row"
-        p={2}
+        p={1}
         sx={{ border: "1px solid grey" }}
       >
         {navItems.map((e) => {
