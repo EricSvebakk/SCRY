@@ -48,7 +48,7 @@ export default function RootLayout({
               maxWidth={false}
               disableGutters
               sx={{
-                padding: 2,
+                padding: 1,
                 minHeight: "100%",
               }}
             >

@@ -29,17 +29,33 @@ export function DotPlot() {
   
   return (
     <Box
-      component="svg"
+      position="relative"
       width="100%"
       height="100%"
-      sx={{
-        position: "relative",
-        border: "1px solid orange",
-        zIndex: 1
-      }}
-      id="bigtest"
-      ref={svgRef}
-    />
+    >
+      <Box
+        component="svg"
+        width="100%"
+        height="100%"
+        sx={{
+          position: "absolute",
+          border: "1px solid orange",
+          zIndex: 1,
+        }}
+        id="bigtest"
+        ref={svgRef}
+      />
+      <Box
+        component="div"
+        width="100%"
+        height="100%"
+        id="tooltip_box"
+        sx={{
+          position: "absolute",
+          zIndex: 0
+        }}
+      />
+    </Box>
   );
   
 }

@@ -11,8 +11,6 @@ import {
   Typography,
 } from "@mui/material";
 import {
-  setObs,
-  setObsExpression,
   setSelectedCategory,
   setSelectedLabels,
 } from "../redux/reducers/plotReducer";
@@ -22,30 +20,7 @@ import { Square } from "@mui/icons-material";
 import { my_colors } from "./ScatterPlotGenerator";
 import { useState } from "react";
 import { theme } from "@/app/layout";
-
-const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
-
-async function fetchFileObs(
-  fileID: string,
-  obs: string | null,
-  callback: Function
-) {
-  const request = `${BACKEND_ENDPOINT}/get_file_obs?file_id=${fileID}&obs=${obs}`;
-
-  fetch(request)
-    .then((response) => {
-      if (!response.ok) {
-        console.error("something fucky happened");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      callback(setObs(JSON.parse(data)));
-    })
-    .catch((error) => {
-      console.error("something fucky", error);
-    });
-}
+import { get_file_obs } from "../fetch/get_file_obs";
 
 export default function CategoryAccordion() {
   
@@ -121,7 +96,8 @@ export default function CategoryAccordion() {
                         setExpanded(true);
                         
                         dispatch(setSelectedCategory(e));
-                        fetchFileObs(fileID, e, dispatch);
+                        get_file_obs(fileID, e, dispatch);
+                        // fetchFileObs(fileID, e, dispatch);
                       }
                       else {
                         setExpanded(!expanded);
@@ -170,33 +146,14 @@ export default function CategoryAccordion() {
                                 sx={{ all: "initial" }}
                                 size="small"
                                 onClick={() => {
-                                  const newLabels = [
-                                    label,
-                                    ...selectedLabels,
-                                  ].filter(
-                                    (value, index, array) =>
-                                      array.indexOf(value) === index
-                                  );
 
+                                  const newLabels = selectedLabels.includes(label)
+                                    ? selectedLabels.filter((e) => e !== label)
+                                    : [ ...selectedLabels, label ]
+
+                                  // check for dups .filter((value, index, array) => array.indexOf(value) === index)
+                                    
                                   dispatch(setSelectedLabels(newLabels));
-
-                                  // const canvas = document.getElementById(
-                                  //   "points_" + label
-                                  // );
-
-                                  // canvas!!.style.zIndex = "8";
-
-                                  // obs!!.labels.forEach(
-                                  //   (label_temp, index_other) => {
-                                  //     if (label !== label_temp) {
-                                  //       const otherCanvas =
-                                  //         document.getElementById(
-                                  //           "points_" + label_temp
-                                  //         );
-                                  //       otherCanvas!.style.opacity = "0%";
-                                  //     }
-                                  //   }
-                                  // );
                                 }}
                                 onMouseEnter={() => {
                                   const canvas = document.getElementById(

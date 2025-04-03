@@ -6,7 +6,7 @@ interface FileState {
   files: {
     id: string;
     name: string;
-    col2: string;
+    // col2: string;
   }[];
   selectedFiles: string[];
   activeFile: string;
@@ -25,7 +25,7 @@ export const fileSlice = createSlice({
     addFile: (state, action: PayloadAction<{
       id: string;
       name: string;
-      col2: string;
+      // col2: string;
     }>) => {
       
       // console.log("addFile", action.payload);

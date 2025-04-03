@@ -3,10 +3,6 @@
 
 import {
   reset,
-  setGenes,
-  setHierarchy,
-  setObsExpression,
-  setObsm,
   setSelectedEmbedding,
 } from "@/lib/redux/reducers/plotReducer";
 import {
@@ -21,124 +17,13 @@ import CategoryAccordion from "@/lib/components/CategoryAccordion";
 import { ScatterPlot } from "@/lib/components/ScatterPlot";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { setActiveFile } from "@/lib/redux/reducers/fileReducer";
-import { RootState } from "@/lib/redux/stores/store";
 import { TooltipKey, tooltips } from "@/lib/types";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { DotPlot } from "@/lib/components/DotPlot";
 import GeneAutocomplete from "@/lib/components/GeneAutocomplete";
-import { theme } from "@/app/layout";
-
-const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
-
-function fetchFileHierarchy(
-  fileID: string,
-  callback: Function
-) {
-  
-  const request = `${BACKEND_ENDPOINT}/get_file_hierarchy?file_id=${fileID}`;
-  
-  fetch(request)
-  .then((response) => {
-    if (!response.ok) {
-      console.error("something fucky happened")
-    }
-    return response.json();
-  })
-  .then((data) => {
-    console.log(data);
-    callback(setHierarchy(data));
-  })
-  .catch((error) => {
-    console.error("something fucky", error);
-  })
-}
-
-function fetchGenes(
-  fileID: string,
-  callback: Function
-) {
-
-  const request = `${BACKEND_ENDPOINT}/get_genes?file_id=${fileID}`;
-
-  fetch(request)
-    .then((response) => {
-      if (!response.ok) {
-        console.error("something fucky happened");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      // console.log(data);
-      callback(setGenes(data));
-    })
-    .catch((error) => {
-      console.error("something fucky", error);
-    });
-  
-}
-
-async function fetchFileObsm(
-  fileID: string,
-  obsm: string | null,
-  callback: Function,
-) {
-  const request = `${BACKEND_ENDPOINT}/get_file_obsm?file_id=${fileID}&obsm=${obsm}`;
-
-  fetch(request)
-    .then((response) => {
-      if (!response.ok) {
-        console.error("something fucky happened");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      callback(setObsm(JSON.parse(data)));
-    })
-    .catch((error) => {
-      console.error("something fucky", error);
-    });
-}
-
-async function fetchObsLabelExpression(
-  fileID: string,
-  selectedCategory: string,
-  selectedLabels: string[],
-  selectedGenes: string[],
-  callback: Function
-) {
-  const request = `${BACKEND_ENDPOINT}/get_top_gene_expression/`;
-
-  const formData = new FormData();
-  formData.append("file_id", fileID);
-  formData.append("obs", selectedCategory);
-
-  selectedLabels.forEach((label: string) => {
-    formData.append("labels", label);
-  });
-  
-  selectedGenes.forEach((gene: string) => {
-    formData.append("genes", gene);
-  });
-
-  fetch(request, {
-    method: "POST",
-    mode: "cors",
-    body: formData,
-  })
-    .then((response) => {
-      if (!response.ok) {
-        console.error("something expression fucky happened");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      callback(setObsExpression(JSON.parse(data)));
-    })
-    .catch((error) => {
-      console.error("something fucky", error);
-    });
-}
+import { get_file_hierarchy } from "@/lib/fetch/get_file_hierarchy";
+import { get_file_obsm } from "@/lib/fetch/get_file_obsm";
 
 export default function FileIdPage({ }) {
   
@@ -161,21 +46,16 @@ export default function FileIdPage({ }) {
     }
     
     if (typeof fileID === "string") {
-      fetchFileHierarchy(fileID, dispatch);
-      fetchGenes(fileID, dispatch);
       dispatch(setActiveFile(fileID));
+      
+      get_file_hierarchy(fileID, dispatch);
     }
     
   }, []);
-  
-  useEffect(() => {
-    
-    
-    
-  }, [selectedGenes, selectedLabels])
+
   
   return (
-    <Grid container direction="row" mt={1} columnGap={1} height="100%">
+    <Grid container direction="row" columnGap={1} height="100%">
       <Grid
         item
         xs={3}
@@ -206,7 +86,8 @@ export default function FileIdPage({ }) {
                         onClick={() => {
                           if (typeof fileID === "string") {
                             dispatch(setSelectedEmbedding(e));
-                            fetchFileObsm(fileID, e, dispatch);
+                            get_file_obsm(fileID, e, dispatch);
+                            // fetchFileObsm(fileID, e, dispatch);
                           }
                         }}
                         size="small"
@@ -245,8 +126,8 @@ export default function FileIdPage({ }) {
       <Grid
         item
         // xs
-        height={600}
-        width={600}
+        height={500}
+        width={500}
         sx={{
           border: "1px solid blue"
         }}
@@ -280,13 +161,13 @@ export default function FileIdPage({ }) {
                 variant="contained"
                 size="small"
                 onClick={() => {
-                  fetchObsLabelExpression(
-                    fileID as string,
-                    selectedCategory,
-                    selectedLabels,
-                    selectedGenes,
-                    dispatch
-                  );
+                  // fetchObsLabelExpression(
+                  //   fileID as string,
+                  //   selectedCategory,
+                  //   selectedLabels,
+                  //   selectedGenes,
+                  //   dispatch
+                  // );
                 }}
               >
                 <Typography variant="subtitle2">

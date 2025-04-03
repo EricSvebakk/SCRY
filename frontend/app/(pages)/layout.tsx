@@ -1,18 +1,18 @@
 
 "use client"
 
-import { Box, Grid, ListItem, ListItemButton, ListItemText } from "@mui/material";
+import { Grid, ListItem, ListItemButton, ListItemText, Stack } from "@mui/material";
 import { green, grey, red } from "@mui/material/colors";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import { RootState } from "@/lib/redux/stores/store";
-import { theme } from "../layout";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
+import { addFile } from "@/lib/redux/reducers/fileReducer";
 
 const BaseNavItems = [
-  { id: "home", path: "/", name: "Home" },
-  { id: "files", path: "/files", name: "Files" },
+  { id: "file_selection", path: "/", name: "File Selection" },
+  // { id: "files", path: "/files", name: "Files" },
 ];
 
 export default function PagesLayout({
@@ -23,14 +23,26 @@ export default function PagesLayout({
   
   const [navItems, setNavItems] = useState(BaseNavItems);
   const pathname = usePathname();
-  const fileState = useSelector((state: RootState) => state.fileReducer.files);
   
-  const selectedFiles = useSelector((state: RootState) => state.fileReducer.selectedFiles);
+  const dispatch = useAppDispatch();
+  
+  const files = useAppSelector((state: RootState) => state.fileReducer.files);
+  const activeFile = useAppSelector((state: RootState) => state.fileReducer.activeFile);
+  const selectedFiles = useAppSelector((state: RootState) => state.fileReducer.selectedFiles);
 
   useEffect(() => {
     
-    const selectedFileObjects = fileState
-      .filter((file) => selectedFiles.includes(file.id))
+    console.log("BRUH", pathname)
+    
+    if ((activeFile !== "") && !files.map((e) => e.id).includes(activeFile)) {
+      dispatch(addFile({
+        id: activeFile,
+        name: activeFile
+      }));
+    }
+    
+    const selectedFileObjects = files
+      .filter((file) => selectedFiles.includes(file.id) || (file.id === activeFile))
       .map((file) => {
         console.log(file)
         return {
@@ -42,29 +54,30 @@ export default function PagesLayout({
     
     setNavItems([...BaseNavItems, ...selectedFileObjects]);
     
-  }, [selectedFiles, fileState]);
+  }, [activeFile, selectedFiles, files]);
   
   
   return (
-    <Box>
+    <Stack direction="column" rowGap={1}>
       <Grid
         container
         direction="row"
         p={1}
         sx={{ border: "1px solid grey" }}
       >
-        {navItems.map((e) => {
+        {navItems.map((item) => {
           return (
             <Grid
-              key={`nav_${e.id}`}
+              key={`nav_${item.id}`}
               item
-              width={150}
+              // width={180}
+              width="fit-content"
               overflow="hidden"
             >
               {CustomNavItem({
-                id: e.id,
-                title: e.name,
-                path: e.path,
+                id: item.id,
+                title: item.name,
+                path: item.path,
                 curPath: pathname,
               })}
             </Grid>
@@ -73,7 +86,7 @@ export default function PagesLayout({
       </Grid>
       
       {children}
-    </Box>
+    </Stack>
   );
 }
 
@@ -108,6 +121,11 @@ function CustomNavItem({ id, title, path, curPath }: CustomNavItemProps) {
             key={`nav_item_text_${id}`}
             primary={title}
             sx={{
+              "& .MuiListItemText-primary": {
+                fontFamily: ["Roboto", "Helvetica", "Arial", "sans - serif"],
+                lineHeight: undefined,
+                fontSize: "0.8125rem",
+              },
               color: curPath === path ? red : green,
             }}
             primaryTypographyProps={{ noWrap: true }}

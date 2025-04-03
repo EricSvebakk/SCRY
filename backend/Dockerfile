@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install dependencies
 COPY ./requirements.txt /usr/src/app/requirements.txt
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir --upgrade -r /usr/src/app/requirements.txt
 
 ARG FRONTEND_ENDPOINT
