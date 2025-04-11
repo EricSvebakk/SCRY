@@ -1,5 +1,5 @@
 
-import { addFiles } from "../redux/reducers/fileReducer";
+import { addFiles, fileType } from "../redux/reducers/fileReducer";
 import { AppDispatch } from "../redux/stores/store";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
@@ -25,10 +25,13 @@ export function get_filenames(dispatch: AppDispatch) {
   .then((data) => {
     console.log("get_filenames() result:", data)
     
-    const fileRows = data.h5ad.map((e: string) => ({
-      id: e,
-      name: e,
-    }))
+    const fileRows = data.h5ad
+      .map((e: string) => ({
+        id: e,
+        name: e,
+        fileType: e.split(".")[1],
+      }))
+      .sort((a: fileType, b: fileType) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
     
     dispatch(addFiles(fileRows))
   })

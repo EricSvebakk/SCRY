@@ -169,8 +169,8 @@ export default function CategoryAccordion() {
                                           document.getElementById(
                                             "points_" + label_temp
                                           );
-                                        otherCanvas!.style.filter =
-                                          "grayscale(1)";
+                                        otherCanvas!.style.filter = "grayscale(1)";
+                                        otherCanvas!.style.opacity = "0%";
                                       }
                                     }
                                   );

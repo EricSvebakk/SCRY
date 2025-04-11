@@ -4,6 +4,7 @@ import dask.array
 from fastapi.responses import JSONResponse
 from fastapi import FastAPI
 from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv, dotenv_values
 import logging
@@ -210,10 +211,72 @@ async def get_file_obsm(file_id: str, obsm: str):
   
   return JSONResponse(content=json.dumps(obj))
 
-# @app.get("/get_genes")
-# async def get_genes(
-#   file_id: str
-# ):
+@app.post("/generate_umap/")
+async def generate_umap(
+  file_id: str = File(...),
+  adata_key: str = File(...),
+  n_pcs: int = File(...),
+  min_dist: float = File(...),
+  spread: float = File(...),
+  n_neighbors: int =File(...),
+):
+  
+  file_path = os.path.join(UPLOAD_DIR, file_id)
+  obj = "Something went wrong while generating UMAP"
+  
+  if (not os.path.exists(file_path)):
+    return JSONResponse(content=f"File ID '{file_id}' is not a valid.")
+  
+  # if (file_path.endswith(".zarr")):
+    # obj = zu.get_zarr_file_obsm(file_path, obsm)
+  
+  elif (file_path.endswith(".h5ad")):
+    obj = au.generate_umap_h5ad(file_path, adata_key, n_pcs, min_dist, spread, n_neighbors)
+  
+  return JSONResponse(content={
+    "response": "File has been successfully updated." if (obj) else "Something went wrong.",
+    "data": obj
+  })
+
+@app.post("/generate_leiden/")
+async def generate_leiden(
+  file_id: str = File(...),
+  adata_key: str = File(...),
+  resolution: float = File(...),
+):
+  
+  file_path = os.path.join(UPLOAD_DIR, file_id)
+  obj = "Something went wrong while generating leiden"
+  
+  if (not os.path.exists(file_path)):
+    return JSONResponse(content=f"File ID '{file_id}' is not a valid.")
+  
+  # if (file_path.endswith(".zarr")):
+    # obj = zu.get_zarr_file_obsm(file_path, obsm)
+  
+  elif (file_path.endswith(".h5ad")):
+    obj = au.generate_leiden_h5ad(file_path, adata_key, resolution)
+  
+  return JSONResponse(content={
+    "response": "File has been successfully updated." if (obj) else "Something went wrong.",
+    "data": obj
+  })
+
+@app.get("/get_genes")
+async def get_genes(
+  file_id: str
+):
+  
+  file_path = os.path.join(UPLOAD_DIR, file_id)
+  obj = "Something went wrong while generating leiden"
+  
+  if (not os.path.exists(file_path)):
+    return JSONResponse(content=f"File ID '{file_id}' is not a valid.")
+  
+  if (file_path.endswith(".h5ad")):
+    obj = au.get_genes_h5ad(file_path)
+  
+  return JSONResponse(content=obj)
   
 #   path = os.path.join(UPLOAD_DIR, file_id)
 #   path_exists = os.path.exists(path)

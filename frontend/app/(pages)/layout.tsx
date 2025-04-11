@@ -37,7 +37,8 @@ export default function PagesLayout({
     if ((activeFile !== "") && !files.map((e) => e.id).includes(activeFile)) {
       dispatch(addFile({
         id: activeFile,
-        name: activeFile
+        name: activeFile,
+        fileType: activeFile.split(".")[1]
       }));
     }
     

@@ -58,7 +58,7 @@ python-multipart==0.0.9
 pytz==2024.2
 PyYAML==6.0.2
 rich==13.8.1
-scanpy==1.10.2
+scanpy==1.11.1
 scikit-learn==1.5.2
 scipy==1.13.1
 seaborn==0.13.2
@@ -81,3 +81,4 @@ watchfiles==0.24.0
 websockets==13.0.1
 zarr==2.13.6
 zipp==3.20.2
+igraph==0.11.8

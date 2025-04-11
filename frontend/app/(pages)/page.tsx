@@ -17,18 +17,21 @@ export default function RootPage() {
   
   let cols: GridColDef[] = [
     { field: "name", headerName: "Name", width: 500 },
+    { field: "fileType", headerName: "File type" },
     {
       field: "actions",
       headerName: "Actions",
       width: 150,
       renderCell: (params) => {
         const fileName: string = params.row.id;
-        const isZarr = fileName.endsWith("h5ad");
+        const isH5AD = fileName.endsWith("h5ad");
+        // const isZarr = true
 
         return (
           <Button
             variant="contained"
-            disabled={!isZarr}
+            // disabled={!isZarr}
+            color={isH5AD ? "primary" : "secondary"}
             onClick={() => {
               dispatch(selectFile(params.row.id));
             }}

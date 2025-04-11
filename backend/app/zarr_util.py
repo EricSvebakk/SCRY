@@ -10,11 +10,14 @@ def get_zarr_file_hierarchy(file_path: str) -> dict[str, object]:
   zarr_data = zarr.open(file_path, "r")
 
   zarr_obj = {
-      group_key: list(
-          zarr_data[group_key].keys()
-          if isinstance(zarr_data[group_key], zarr.Group)
-          else []
-      )
+      group_key: list(filter(
+          lambda x: not x.startswith("_"),
+          list(
+            zarr_data[group_key].keys()
+            if isinstance(zarr_data[group_key], zarr.Group)
+            else []
+          )
+      ))
       for group_key in zarr_data.keys()
   }
   
@@ -41,6 +44,20 @@ def get_zarr_file_obs(file_path: str, obs: str) -> dict[str, object]:
   
   return obs_data
 
-def get_zarr_file_obs(file_path: str, obs: str) -> dict[str, list]:
+def get_zarr_file_obsm(file_path: str, obsm: str) -> dict[str, list]:
+    
+  obsm_path = os.path.join(file_path, "obsm", obsm)
   
-  return None
+  obsm_path_exists = os.path.exists(obsm_path)
+  obsm_dir_exists = os.path.isdir(obsm_path)
+  
+  if (not obsm_path_exists or not obsm_dir_exists):
+    return None
+  
+  obsm_group = zarr.open_array(obsm_path, "r")
+  
+  obsm_data = {
+    "coordinates": [x.tolist() for x in obsm_group]
+  }
+  
+  return obsm_data

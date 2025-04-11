@@ -1,6 +1,16 @@
 import { obsData, obsExpressionData, obsmData, zarrHierarchy } from "@/lib/types";
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { RefObject, useRef } from "react";
+import { createSlice, Draft, PayloadAction } from "@reduxjs/toolkit";
+import { RefObject } from "react";
+
+type ProgressOptions = {
+  generate_leiden: boolean;
+  generate_umap: boolean;
+  get_file_hierarchy: boolean;
+  get_file_obs: boolean;
+  get_file_obsm: boolean;
+  get_filenames: boolean;
+  get_genes: boolean;
+};
 
 type initialPlotStateProps = {
   svgRef: RefObject<SVGSVGElement> | null;
@@ -17,6 +27,9 @@ type initialPlotStateProps = {
   selectedCategory: string;
   selectedLabels: string[];
   selectedGenes: string[];
+  inProgress: {
+    [key in keyof ProgressOptions]: ProgressOptions[key]
+  }
 };
 
 const initialPlotState: initialPlotStateProps = {
@@ -31,8 +44,17 @@ const initialPlotState: initialPlotStateProps = {
   selectedEmbedding: "",
   selectedCategory: "",
   selectedLabels: [],
-  selectedGenes: []
-}
+  selectedGenes: [],
+  inProgress: {
+    generate_leiden: false,
+    generate_umap: false,
+    get_file_hierarchy: false,
+    get_file_obs: false,
+    get_file_obsm: false,
+    get_filenames: false,
+    get_genes: false
+  },
+};
 
 export const plotSlice = createSlice({
   name: "plotSomethingidk",
@@ -77,6 +99,12 @@ export const plotSlice = createSlice({
     setSelectedGenes: (state, action: PayloadAction<string[]>) => {
       state.selectedGenes = action.payload;
     },
+    setInProgress<K extends keyof ProgressOptions>(
+      state: Draft<initialPlotStateProps>,
+      action: PayloadAction<{ type: K, value: ProgressOptions[K] }>
+    ) {
+      state.inProgress[action.payload.type] = action.payload.value;
+    }
   },
 });
 
@@ -91,7 +119,8 @@ export const {
   setSelectedEmbedding,
   setSelectedCategory,
   setSelectedLabels,
-  setSelectedGenes
+  setSelectedGenes,
+  setInProgress
 } = plotSlice.actions;
 
 export default plotSlice.reducer;

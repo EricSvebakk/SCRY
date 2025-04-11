@@ -7,23 +7,30 @@ import {
 } from "@/lib/redux/reducers/plotReducer";
 import {
   Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   Divider,
   Grid,
+  Input,
   Stack,
+  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
+import LoadingButton from '@mui/lab/LoadingButton';
 import CategoryAccordion from "@/lib/components/CategoryAccordion";
 import { ScatterPlot } from "@/lib/components/ScatterPlot";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { setActiveFile } from "@/lib/redux/reducers/fileReducer";
 import { TooltipKey, tooltips } from "@/lib/types";
 import { useParams } from "next/navigation";
-import { useEffect } from "react";
-import { DotPlot } from "@/lib/components/DotPlot";
-import GeneAutocomplete from "@/lib/components/GeneAutocomplete";
+import { useEffect, useState } from "react";
 import { get_file_hierarchy } from "@/lib/fetch/get_file_hierarchy";
 import { get_file_obsm } from "@/lib/fetch/get_file_obsm";
+import UMAPDialog from "@/lib/components/UMAPDialog";
+import LeidenDialog from "@/lib/components/LeidenDialog";
+import { get_genes } from "@/lib/fetch/get_genes";
 
 export default function FileIdPage({ }) {
   
@@ -37,7 +44,12 @@ export default function FileIdPage({ }) {
   const selectedLabels = useAppSelector((state) => state.plotReducer.selectedLabels);
   const selectedGenes = useAppSelector((state) => state.plotReducer.selectedGenes);
   
+  const inProgress = useAppSelector((state) => state.plotReducer.inProgress);
+  
   const dispatch = useAppDispatch();
+  
+  const [isUMAPDialogOpen, setIsUMAPDialogOpen] = useState(false);
+  const [isLeidenDialogOpen, setIsLeidenDialogOpen] = useState(false);
   
   useEffect(() => {
     
@@ -49,6 +61,7 @@ export default function FileIdPage({ }) {
       dispatch(setActiveFile(fileID));
       
       get_file_hierarchy(fileID, dispatch);
+      get_genes(fileID, dispatch);
     }
     
   }, []);
@@ -63,7 +76,7 @@ export default function FileIdPage({ }) {
         width="fit-content"
         height="100%"
         sx={{
-          border: "1px solid green"
+          border: "1px solid green",
         }}
         overflow="clip"
       >
@@ -87,7 +100,6 @@ export default function FileIdPage({ }) {
                           if (typeof fileID === "string") {
                             dispatch(setSelectedEmbedding(e));
                             get_file_obsm(fileID, e, dispatch);
-                            // fetchFileObsm(fileID, e, dispatch);
                           }
                         }}
                         size="small"
@@ -112,7 +124,7 @@ export default function FileIdPage({ }) {
           <Stack
             direction="column"
             gap={2}
-            height="69vh"
+            height="65vh"
             sx={{
               overflowY: "scroll",
               scrollbarWidth: "thin",
@@ -129,7 +141,7 @@ export default function FileIdPage({ }) {
         height={500}
         width={500}
         sx={{
-          border: "1px solid blue"
+          border: "1px solid blue",
         }}
       >
         <ScatterPlot />
@@ -139,7 +151,7 @@ export default function FileIdPage({ }) {
         item
         xs
         border="1px solid red"
-        padding={2}
+        padding={1}
         textOverflow="ellipsis"
         overflow="hidden"
         sx={
@@ -150,6 +162,62 @@ export default function FileIdPage({ }) {
       >
         <Grid container direction="column" gap={1} height="100%">
           <Grid item>
+            <LoadingButton
+              variant="outlined"
+              onClick={() => setIsUMAPDialogOpen(true)}
+              loading={inProgress.generate_umap}
+              fullWidth
+            >
+              Generate UMAP
+            </LoadingButton>
+            <LoadingButton
+              variant="outlined"
+              onClick={() => setIsLeidenDialogOpen(true)}
+              loading={inProgress.generate_leiden}
+              fullWidth
+            >
+              Generate Leiden
+            </LoadingButton>
+            {/* <Button variant="outlined">click this</Button> */}
+          </Grid>
+          
+          <UMAPDialog
+            isOpen={isUMAPDialogOpen}
+            setIsOpen={setIsUMAPDialogOpen}
+          />
+          
+          <LeidenDialog
+            isOpen={isLeidenDialogOpen}
+            setIsOpen={setIsLeidenDialogOpen}
+          />
+          
+          {/* <Dialog
+            open={isDialogOpen}
+            onClose={() => setIsDialogOpen(false)}
+          >
+            <DialogTitle>
+              Please provide an attribute key
+            </DialogTitle>
+            <DialogContent>
+              <Stack direction="row">
+                <TextField
+                  variant="outlined"
+                  size="small"
+                  placeholder="User-added key"
+                  // value=""
+                />
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => generate_pca(fileID, ) }
+                >
+                  Start
+                </Button>
+              </Stack>
+            </DialogContent>
+          </Dialog> */}
+
+          {/* <Grid item>
             <GeneAutocomplete />
           </Grid>
           <Grid item>
@@ -178,7 +246,7 @@ export default function FileIdPage({ }) {
           </Grid>
           <Grid item xs>
             <DotPlot />
-          </Grid>
+          </Grid> */}
         </Grid>
       </Grid>
     </Grid>
