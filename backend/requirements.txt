@@ -82,3 +82,4 @@ websockets==13.0.1
 zarr==2.13.6
 zipp==3.20.2
 igraph==0.11.8
+ipykernel==6.29.5
