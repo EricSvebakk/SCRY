@@ -5,6 +5,7 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 export type fileType = {
   id: string;
   name: string;
+  fileSize: number;
   fileType: string;
 }
 
@@ -26,12 +27,7 @@ export const fileSlice = createSlice({
   reducers: {
     addFile: (
       state,
-      action: PayloadAction<{
-        id: string;
-        name: string;
-        fileType: string;
-        // col2: string;
-      }>
+      action: PayloadAction<fileType>
     ) => {
       // console.log("addFile", action.payload);
 
@@ -41,13 +37,7 @@ export const fileSlice = createSlice({
     },
     addFiles: (
       state,
-      action: PayloadAction<
-        {
-          id: string;
-          name: string;
-          fileType: string;
-        }[]
-      >
+      action: PayloadAction<fileType[]>
     ) => {
       // console.log("addFiles", action.payload, state.files);
 

@@ -26,9 +26,10 @@ export function get_filenames(dispatch: AppDispatch) {
     console.log("get_filenames() result:", data)
     
     const fileRows = data.h5ad
-      .map((e: string) => ({
+      .map((e: string, i: number) => ({
         id: e,
         name: e,
+        fileSize: data.h5ad_sizes[i],
         fileType: e.split(".")[1],
       }))
       .sort((a: fileType, b: fileType) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))

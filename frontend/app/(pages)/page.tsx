@@ -18,6 +18,23 @@ export default function RootPage() {
   let cols: GridColDef[] = [
     { field: "name", headerName: "Name", width: 500 },
     { field: "fileType", headerName: "File type" },
+    { field: "fileSize",
+      headerName: "File size",
+      // sortComparator: (v1, v2)
+      valueFormatter: (value) => {
+        
+        const suffixes = ["KB", "MB", "GB"]
+        
+        const ceilLogSize = Math.ceil(Math.log10(value) / 4)
+        const fileSize = value * ((1/1024)**ceilLogSize)
+        const fileSizeResult = fileSize.toLocaleString(
+          undefined,
+          { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+        )
+        
+        return fileSizeResult + " " + suffixes[ceilLogSize - 1]
+      }
+    },
     {
       field: "actions",
       headerName: "Actions",

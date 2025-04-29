@@ -119,12 +119,19 @@ async def get_filenames():
   """
   
   files = os.listdir(UPLOAD_DIR)
+  files_h5ad = list(filter(lambda x: x.endswith("h5ad"), files))
+  
+  files_h5ad_sizes = []
+  
+  for file_id in files_h5ad:
+    files_h5ad_sizes.append(os.path.getsize(os.path.join(UPLOAD_DIR, file_id)))
   
   return JSONResponse(
     content={
+      "files": files,
+      "h5ad": files_h5ad,
+      "h5ad_sizes": files_h5ad_sizes,
       "zarr": list(filter(lambda x: x.endswith("zarr"), files)),
-      "h5ad": list(filter(lambda x: x.endswith("h5ad"), files)),
-      "files": list(files),
     }
   )
 
