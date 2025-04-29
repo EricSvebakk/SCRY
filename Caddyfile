@@ -1,0 +1,12 @@
+
+thesis.tepohi.no {
+  reverse_proxy thesis_docker_frontend:3000
+}
+
+api.thesis.tepohi.no {
+  reverse_proxy thesis_docker_backend:8000
+}
+
+test.tepohi.no {
+  respond "I am a test"
+}

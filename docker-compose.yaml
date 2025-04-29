@@ -1,6 +1,20 @@
 
 services:
-        
+  
+  thesis_docker_caddy:
+    image: caddy:2.10.0-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./site:/srv
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - caddy_net
+  
   thesis_docker_backend:
     container_name: thesis-docker-backend
     build:
@@ -17,6 +31,8 @@ services:
     environment:
       # - FRONTEND_ENDPOINT=http://localhost:3000
       - PYTHONPATH=/usr/src/app
+    networks:
+      - caddy_net
   
   thesis_docker_frontend:
     container_name: thesis-docker-frontend
@@ -29,5 +45,14 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/usr/src/app # Sync the frontend code
+    networks:
+      - caddy_net
     depends_on:
       - thesis_docker_backend
+
+volumes:
+  caddy_data:
+  caddy_config:
+  
+networks:
+  caddy_net:
