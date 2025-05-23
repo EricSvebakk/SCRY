@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import DotPlotGenerator from "./DotPlotGenerator";
 import { useAppSelector } from "../redux/hooks/hooks";
 import { RootState } from "../redux/stores/store";
@@ -10,22 +10,32 @@ export function DotPlot() {
   
   const svgRef = useRef<SVGSVGElement>(null);
   
-  const obsExpressionData = useAppSelector((state: RootState) => state.plotReducer.obsExpression);
+  const geneExpressionData = useAppSelector((state: RootState) => state.plotReducer.geneExpression);
+  const [counter, setCounter] = useState(0);
   
   useEffect(() => {
     
     let cleanUpFunction;
     
-    if (svgRef.current && obsExpressionData.length > 0) {
+    if (svgRef.current && geneExpressionData.length > 0) {
       cleanUpFunction = DotPlotGenerator({
         current: svgRef.current,
-        plotData: obsExpressionData
+        plotData: geneExpressionData
       });
     }
     
     return cleanUpFunction;
     
-  }, [obsExpressionData])
+  }, [geneExpressionData, counter]);
+  
+  const updateCounter = () => {
+    setCounter((counter) => counter += 1);
+  }
+  
+  useEffect(() => {
+    window.addEventListener("resize", updateCounter);
+    return () => window.removeEventListener("resize", updateCounter);
+  }, [updateCounter]);
   
   return (
     <Box

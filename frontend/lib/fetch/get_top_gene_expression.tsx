@@ -1,4 +1,4 @@
-import { setObsExpression } from "../redux/reducers/plotReducer";
+import { setGeneExpression } from "../redux/reducers/plotReducer";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
@@ -35,7 +35,7 @@ function get_top_gene_expression(
       return response.json();
     })
     .then((data) => {
-      callback(setObsExpression(JSON.parse(data)));
+      callback(setGeneExpression(JSON.parse(data)));
     })
     .catch((error) => {
       console.error("something fucky", error);

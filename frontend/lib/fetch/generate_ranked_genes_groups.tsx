@@ -3,22 +3,20 @@ import { get_file_hierarchy } from "./get_file_hierarchy";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
-export function generate_leiden(
+export function generate_ranked_genes_groups(
   fileID: string,
   uns_key: string,
-  resolution: number,
   callback: Function,
 ) {
   
-  const request = `${BACKEND_ENDPOINT}/generate_leiden/`;
+  const request = `${BACKEND_ENDPOINT}/generate_ranked_genes_groups/`;
   
   const formData = new FormData();
   formData.append("file_id", fileID);
   formData.append("uns_key", uns_key);
-  formData.append("resolution", resolution.toString());
   
   callback(setInProgress({
-    type: "generate_leiden",
+    type: "generate_ranked_genes_groups",
     value: true,
   }));
   
@@ -29,24 +27,24 @@ export function generate_leiden(
   })
     .then((response) => {
       if (!response.ok) {
-        console.error("Something went wrong with generate_leiden(): not ok");
+        console.error("Something went wrong with generate_ranked_genes_groups(): not ok");
       }
       return response.json();
     })
     .then((data) => {
-      console.log("generate_leiden() result", data);
+      console.log("generate_ranked_genes_groups() result", data);
       callback(setInProgress({
-        type: "generate_leiden",
+        type: "generate_ranked_genes_groups",
         value: false,
       }));
       
       get_file_hierarchy(fileID, callback);
     })
     .catch((error) => {
-      console.error("Something went wrong with generate_leiden()", error);
+      console.error("Something went wrong with generate_ranked_genes_groups()", error);
       callback(
         setInProgress({
-          type: "generate_leiden",
+          type: "generate_ranked_genes_groups",
           value: false,
         })
       );

@@ -2,6 +2,7 @@
 services:
   
   thesis_docker_caddy:
+    container_name: thesis-docker-caddy
     image: caddy:2.10.0-alpine
     restart: unless-stopped
     ports:

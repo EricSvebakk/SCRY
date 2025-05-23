@@ -7,16 +7,10 @@ import {
 } from "@/lib/redux/reducers/plotReducer";
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogTitle,
   Divider,
   Grid,
-  Input,
   Stack,
-  TextField,
   Tooltip,
-  Typography,
 } from "@mui/material";
 import LoadingButton from '@mui/lab/LoadingButton';
 import CategoryAccordion from "@/lib/components/CategoryAccordion";
@@ -28,9 +22,12 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { get_file_hierarchy } from "@/lib/fetch/get_file_hierarchy";
 import { get_file_obsm } from "@/lib/fetch/get_file_obsm";
-import UMAPDialog from "@/lib/components/UMAPDialog";
-import LeidenDialog from "@/lib/components/LeidenDialog";
+import UMAPDialog from "@/lib/components/modals/UMAPDialog";
+import LeidenDialog from "@/lib/components/modals/LeidenDialog";
 import { get_genes } from "@/lib/fetch/get_genes";
+import RGGDialog from "@/lib/components/modals/RGGDialog";
+import { DotPlot } from "@/lib/components/DotPlot";
+import DotplotDialog from "@/lib/components/modals/DotplotDialog";
 
 export default function FileIdPage({ }) {
   
@@ -50,6 +47,8 @@ export default function FileIdPage({ }) {
   
   const [isUMAPDialogOpen, setIsUMAPDialogOpen] = useState(false);
   const [isLeidenDialogOpen, setIsLeidenDialogOpen] = useState(false);
+  const [isRGGDialogOpen, setIsRGGDialogOpen] = useState(false);
+  const [isDotplotDialogOpen, setIsDotplotDialogOpen] = useState(false);
   
   useEffect(() => {
     
@@ -164,6 +163,7 @@ export default function FileIdPage({ }) {
           <Grid item>
             <LoadingButton
               variant="outlined"
+              size="small"
               onClick={() => setIsUMAPDialogOpen(true)}
               loading={inProgress.generate_umap}
               fullWidth
@@ -172,13 +172,39 @@ export default function FileIdPage({ }) {
             </LoadingButton>
             <LoadingButton
               variant="outlined"
+              size="small"
               onClick={() => setIsLeidenDialogOpen(true)}
               loading={inProgress.generate_leiden}
               fullWidth
             >
               Generate Leiden
             </LoadingButton>
-            {/* <Button variant="outlined">click this</Button> */}
+            <LoadingButton
+              variant="outlined"
+              size="small"
+              onClick={() => setIsRGGDialogOpen(true)}
+              loading={inProgress.generate_ranked_genes_groups}
+              fullWidth
+            >
+              Generate RGG
+            </LoadingButton>
+            
+            <Tooltip
+              title="Fetch Differential Gene Expression"
+              placement="right"
+            >
+              <LoadingButton
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  setIsDotplotDialogOpen(true)
+                }}
+                loading={inProgress.get_rgg_dotplot}
+                fullWidth
+              >
+                Fetch Dotplot
+              </LoadingButton>
+            </Tooltip>
           </Grid>
           
           <UMAPDialog
@@ -191,62 +217,19 @@ export default function FileIdPage({ }) {
             setIsOpen={setIsLeidenDialogOpen}
           />
           
-          {/* <Dialog
-            open={isDialogOpen}
-            onClose={() => setIsDialogOpen(false)}
-          >
-            <DialogTitle>
-              Please provide an attribute key
-            </DialogTitle>
-            <DialogContent>
-              <Stack direction="row">
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  placeholder="User-added key"
-                  // value=""
-                />
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => generate_pca(fileID, ) }
-                >
-                  Start
-                </Button>
-              </Stack>
-            </DialogContent>
-          </Dialog> */}
+          <RGGDialog
+            isOpen={isRGGDialogOpen}
+            setIsOpen={setIsRGGDialogOpen}
+          />
+          
+          <DotplotDialog
+            isOpen={isDotplotDialogOpen}
+            setIsOpen={setIsDotplotDialogOpen}
+          />
 
-          {/* <Grid item>
-            <GeneAutocomplete />
-          </Grid>
-          <Grid item>
-            <Tooltip
-              title="Generate Differential Gene Expression with the selected genes"
-              placement="right"
-            >
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => {
-                  // fetchObsLabelExpression(
-                  //   fileID as string,
-                  //   selectedCategory,
-                  //   selectedLabels,
-                  //   selectedGenes,
-                  //   dispatch
-                  // );
-                }}
-              >
-                <Typography variant="subtitle2">
-                  Generate DGE
-                </Typography>
-              </Button>
-            </Tooltip>
-          </Grid>
           <Grid item xs>
             <DotPlot />
-          </Grid> */}
+          </Grid>
         </Grid>
       </Grid>
     </Grid>

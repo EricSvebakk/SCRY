@@ -1,16 +1,16 @@
 import { Button, Dialog, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
 import { useState } from "react";
-import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
-import { generate_umap } from "../fetch/generate_umap";
+import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
+import { generate_umap } from "../../fetch/generate_umap";
 
 export default function UMAPDialog(props: {
   isOpen: boolean;
   setIsOpen: Function
 }) {
   
-  const dispatch = useAppDispatch();
   const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
   
+  const dispatch = useAppDispatch();
   const [adataKey, setAdataKey] = useState<string>("");
   const [numPCs, setNumPCs] = useState<number>(30);
   const [minDist, setMinDist] = useState<number>(0.5);

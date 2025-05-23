@@ -1,36 +1,5 @@
-import { obsData, obsExpressionData, obsmData, zarrHierarchy } from "@/lib/types";
+import { obsData, geneExpressionData, obsmData, zarrHierarchy, initialPlotStateProps, ProgressOptions } from "@/lib/types";
 import { createSlice, Draft, PayloadAction } from "@reduxjs/toolkit";
-import { RefObject } from "react";
-
-type ProgressOptions = {
-  generate_leiden: boolean;
-  generate_umap: boolean;
-  get_file_hierarchy: boolean;
-  get_file_obs: boolean;
-  get_file_obsm: boolean;
-  get_filenames: boolean;
-  get_genes: boolean;
-};
-
-type initialPlotStateProps = {
-  svgRef: RefObject<SVGSVGElement> | null;
-  groupRefs: RefObject<HTMLCanvasElement[]> | null;
-  hierarchy: zarrHierarchy | null;
-  obs: obsData | null;
-  obsm: obsmData | null;
-  genes: string[];
-  obsExpression: obsExpressionData[];
-  labelSize: {
-    [key: string]: number;
-  };
-  selectedEmbedding: string;
-  selectedCategory: string;
-  selectedLabels: string[];
-  selectedGenes: string[];
-  inProgress: {
-    [key in keyof ProgressOptions]: ProgressOptions[key]
-  }
-};
 
 const initialPlotState: initialPlotStateProps = {
   svgRef: null,
@@ -38,16 +7,19 @@ const initialPlotState: initialPlotStateProps = {
   hierarchy: null,
   obs: null,
   obsm: null,
-  genes: [],
-  obsExpression: [],
+  genes: null,
+  geneExpression: [],
   labelSize: {},
   selectedEmbedding: "",
   selectedCategory: "",
   selectedLabels: [],
   selectedGenes: [],
   inProgress: {
+    generate_ranked_genes_groups: false,
     generate_leiden: false,
     generate_umap: false,
+    get_rgg_dotplot: false,
+    get_ranked_genes_groups: false,
     get_file_hierarchy: false,
     get_file_obs: false,
     get_file_obsm: false,
@@ -78,11 +50,14 @@ export const plotSlice = createSlice({
     setObsm: (state, action: PayloadAction<obsmData | null>) => {
       state.obsm = action.payload;
     },
-    setGenes: (state, action: PayloadAction<string[]>) => {
+    setGenes: (
+      state: Draft<initialPlotStateProps>,
+      action: PayloadAction<string[]>
+    ) => {
       state.genes = action.payload;
     },
-    setObsExpression: (state, action: PayloadAction<obsExpressionData[]>) => {
-      state.obsExpression = action.payload;
+    setGeneExpression: (state, action: PayloadAction<geneExpressionData[]>) => {
+      state.geneExpression = action.payload;
     },
     setLabelSize: (state, action: PayloadAction<{}>) => {
       state.labelSize = action.payload;
@@ -114,7 +89,7 @@ export const {
   setObs,
   setObsm,
   setGenes,
-  setObsExpression,
+  setGeneExpression,
   setLabelSize,
   setSelectedEmbedding,
   setSelectedCategory,

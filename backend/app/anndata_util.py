@@ -3,6 +3,7 @@ import anndata as ad
 import scanpy as sc
 import os
 import numpy as np
+import pandas as pd
 
 def get_anndata_file_hierarchy(file_path: str) -> dict[str, object]:
   
@@ -15,17 +16,35 @@ def get_anndata_file_hierarchy(file_path: str) -> dict[str, object]:
   def notStartWith(s1: str):
     return not s1.startswith("_")
   
+  def make_safe(obj):
+    if isinstance(obj, np.ndarray):
+      return None
+    elif isinstance(obj, pd.DataFrame):
+      return obj.to_dict(orient="records")
+    elif isinstance(obj, (np.integer, np.floating)):
+      return obj.item()
+    elif isinstance(obj, dict):
+      return {k: make_safe(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+      return None
+    elif isinstance(obj, (str, int, float, bool)) or obj is None:
+      return obj
+    else:
+      return f"<<unsupported: {type(obj).__name__}>>"
+  
   return {
     "obs":  list(filter(notStartWith, adata.obs_keys())),
     "var":  list(filter(notStartWith, adata.var_keys())),
     "obsm": list(filter(notStartWith, adata.obsm_keys())),
+    "obsp": list(filter(notStartWith, list(adata.obsp.keys()))),
     "varm": list(filter(notStartWith, adata.varm_keys())),
     "uns": list(filter(notStartWith, adata.uns_keys())),
+    "uns": make_safe(adata.uns),
   }
 
 def get_genes_h5ad(file_path: str):
   
-  adata = sc.read_h5ad(file_path)
+  adata = sc.read_h5ad(file_path, backed="r")
   
   genes = list(adata.var_names)
   
@@ -95,9 +114,9 @@ def generate_umap_h5ad(
       # key_added=f"X_pca_{adata_key}",
       # n_comps=n_pcs,
       chunked=True,
-      chunk_size=1000,
-      zero_center=True,
-      svd_solver='arpack',
+      # chunk_size=1000,
+      # zero_center=True,
+      # svd_solver='arpack',
     )
 
   # stores [adata_key]_distances and [adata_key]_connectivities to obsp
@@ -140,7 +159,9 @@ def generate_leiden_h5ad(file_path: str, key: str, resolution: float = 1):
   adata = sc.read_h5ad(file_path)
   
   res_to_string = f"{resolution}".replace(".", "_")
-  resolution_key = f"{key}_leiden_{res_to_string}"
+  resolution_key = f"leiden_{res_to_string}_{key}"
+  
+  print(file_path, resolution_key, key, resolution)
   
   # Stores leiden_resolutions[key] to obs and uns
   sc.tl.leiden(
@@ -156,3 +177,111 @@ def generate_leiden_h5ad(file_path: str, key: str, resolution: float = 1):
   adata.file.close()
   
   return os.path.exists(file_path)
+
+def generate_ranked_genes_groups(file_path: str, key: str):
+  
+  adata = sc.read_h5ad(file_path)
+  
+  sc.tl.rank_genes_groups(adata, groupby=key)
+  
+  sc.write(file_path, adata)
+  
+  adata.file.close()
+  
+  return os.path.exists(file_path)
+
+def get_ranked_genes_groups(file_path: str, num_results: int = 20):
+  
+  adata = sc.read_h5ad(file_path)
+  
+  # result = adata.uns["rank_genes_groups"].keys()
+  
+  result = adata.uns["rank_genes_groups"]
+  groups = result["names"].dtype.names
+  # groups = result["names"].dtype.names
+  
+  all_results = {}
+
+  for group_key in groups:
+    all_results[group_key] = {
+      'names': result['names'][group_key][:num_results].tolist(),
+      'scores': result['scores'][group_key][:num_results].tolist(),
+      'logfoldchanges': result['logfoldchanges'][group_key][:num_results].tolist(),
+      'pvals': result['pvals'][group_key][:num_results].tolist(),
+      'pvals_adj': result['pvals_adj'][group_key][:num_results].tolist(),
+    }
+  
+  # return {
+  #   'names': result['names'][group_key][:num_results].tolist(),
+  #   'scores': result['scores'][group_key][:num_results].tolist(),
+  #   'logfoldchanges': result['logfoldchanges'][group_key][:num_results].tolist(),
+  #   'pvals': result['pvals'][group_key][:num_results].tolist(),
+  #   'pvals_adj': result['pvals_adj'][group_key][:num_results].tolist(),
+  # }
+  
+  # groups = result["names"].dtype.names
+  
+  # print(result)
+  # print(groups)
+  
+  # sc.tl.rank_genes_groups(adata, groupby=key)
+  
+  # sc.write(file_path, adata)
+  
+  adata.file.close()
+  
+  return all_results
+
+def get_rgg_dotplot(
+  file_path: str,
+  uns_key: str,
+  n_genes: int = 10,
+  n_groups: int = 4,
+):
+  
+  adata = sc.read_h5ad(file_path)
+  
+  top_genes = set()
+  for group in adata.uns["rank_genes_groups"]["names"].dtype.names:
+    top_genes.update(adata.uns["rank_genes_groups"]["names"][group][:n_groups])  # top_n = 4
+  
+  dp = sc.pl.DotPlot(adata, groupby=uns_key, var_names=sorted(top_genes))
+  
+  mean_expr_df = dp.dot_color_df # mean expression
+  frac_expr_df = dp.dot_size_df # fraction expression
+  
+  adata.file.close()
+  
+  combined_df = mean_expr_df.stack().to_frame("mean_expr").join(
+    frac_expr_df.stack().to_frame("frac_expr")
+  ).reset_index().rename(columns={"level_0": "group", "level_1": "gene"})
+  
+  sorted_df = combined_df.sort_values(["mean_expr", "gene"], ascending=False)
+  filtered_df = sorted_df.drop_duplicates("gene", keep="first")
+  
+  genes = filtered_df["gene"].head(n_genes)
+  
+  filtered_df = filtered_df.drop_duplicates("group", keep="first")
+  
+  groups = filtered_df["group"].head(n_groups)
+  
+  results_df = sorted_df[sorted_df["gene"].isin(genes) & sorted_df["group"].isin(groups)]
+  
+  return results_df.to_dict(orient="records")
+  # return combined_df.to_dict(orient="records")
+
+def make_safe(obj):
+  if isinstance(obj, np.ndarray):
+    return obj.tolist()
+  elif isinstance(obj, pd.DataFrame):
+    return obj.to_dict(orient="records")
+  elif isinstance(obj, (np.integer, np.floating)):
+    return obj.item()
+  elif isinstance(obj, dict):
+    return {k: make_safe(v) for k, v in obj.items()}
+  elif isinstance(obj, list):
+    return [make_safe(v) for v in obj]
+  elif isinstance(obj, (str, int, float, bool)) or obj is None:
+    return obj
+  else:
+    return f"<<unsupported: {type(obj).__name__}>>"

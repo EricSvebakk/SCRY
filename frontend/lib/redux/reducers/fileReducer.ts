@@ -1,19 +1,7 @@
 
+import { FileState, fileType } from "@/lib/types";
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
-
-export type fileType = {
-  id: string;
-  name: string;
-  fileSize: number;
-  fileType: string;
-}
-
-interface FileState {
-  files: fileType[];
-  selectedFiles: string[];
-  activeFile: string;
-}
 
 const initialFileState: FileState = {
   files: [],
@@ -25,22 +13,12 @@ export const fileSlice = createSlice({
   name: "file",
   initialState: initialFileState,
   reducers: {
-    addFile: (
-      state,
-      action: PayloadAction<fileType>
-    ) => {
-      // console.log("addFile", action.payload);
-
+    addFile: (state, action: PayloadAction<fileType>) => {
       if (!state.files.includes(action.payload)) {
         state.files.push(action.payload);
       }
     },
-    addFiles: (
-      state,
-      action: PayloadAction<fileType[]>
-    ) => {
-      // console.log("addFiles", action.payload, state.files);
-
+    addFiles: (state, action: PayloadAction<fileType[]>) => {
       const newFiles = action.payload.filter((file) => {
         const fileIDs = state.files.map((f) => f.id);
         return !fileIDs.includes(file.id);
@@ -48,28 +26,17 @@ export const fileSlice = createSlice({
 
       state.files = state.files.concat(newFiles);
     },
-    deleteFile: (
-      state,
-      action: PayloadAction<{
-        id: string;
-        name: string;
-        col2: string;
-      }>
-    ) => {
+    deleteFile: (state, action: PayloadAction<fileType>) => {
       state.files = state.files.filter((file) => file.id !== action.payload.id);
     },
     selectFile: (state, action: PayloadAction<string>) => {
       state.selectedFiles.push(action.payload);
     },
     selectFiles: (state, action: PayloadAction<string[]>) => {
-      console.log("selectFiles", action.payload);
-
       state.selectedFiles = action.payload;
     },
     deselectFile: (state, action: PayloadAction<string>) => {
-      state.selectedFiles = state.selectedFiles.filter(
-        (id) => id !== action.payload
-      );
+      state.selectedFiles = state.selectedFiles.filter((id) => id !== action.payload);
     },
     setActiveFile: (state, action: PayloadAction<string>) => {
       state.activeFile = action.payload;

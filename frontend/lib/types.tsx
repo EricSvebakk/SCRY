@@ -1,3 +1,45 @@
+import { RefObject } from "react";
+
+export type initialPlotStateProps = {
+  svgRef: RefObject<SVGSVGElement> | null;
+  groupRefs: RefObject<HTMLCanvasElement[]> | null;
+  hierarchy: zarrHierarchy | null;
+  obs: obsData | null;
+  obsm: obsmData | null;
+  genes: string[] | null;
+  geneExpression: geneExpressionData[];
+  labelSize: {
+    [key: string]: number;
+  };
+  selectedEmbedding: string;
+  selectedCategory: string;
+  selectedLabels: string[];
+  selectedGenes: string[];
+  inProgress: {
+    [key in keyof ProgressOptions]: ProgressOptions[key]
+  }
+};
+
+export type ProgressOptions = {
+  generate_leiden: boolean;
+  generate_umap: boolean;
+  generate_ranked_genes_groups: boolean;
+  get_rgg_dotplot: boolean;
+  get_ranked_genes_groups: boolean;
+  get_file_hierarchy: boolean;
+  get_file_obs: boolean;
+  get_file_obsm: boolean;
+  get_filenames: boolean;
+  get_genes: boolean;
+};
+
+export type dgeAttributes = {
+  names: string[];
+  scores: number[];
+  logfoldchanges: number[];
+  pvals: number[];
+  pvals_adj: number[];
+};
 
 export type obsData = {
   labels: string[];
@@ -8,10 +50,11 @@ export type obsmData = {
   coordinates: number[][];
 }
 
-export type obsExpressionData = {
-  label: string;
-  mean_expr: { [subKey: string]: number };
-  num_expr: { [subKey: string]: number };
+export type geneExpressionData = {
+  gene: string;
+  group: string;
+  mean_expr: number;
+  frac_expr: number;
 };
 
 export type zarrHierarchy = {
@@ -21,7 +64,9 @@ export type zarrHierarchy = {
   obsm: string[];
   obsp: string[];
   raw: string[];
-  uns: string[];
+  uns: {
+    [key: string]: any;
+  }
   var: string[];
   varm: string[];
   varp: string[];
@@ -34,3 +79,21 @@ export const tooltips: Record<TooltipKey, string> = {
   X_tsne: "T-distributed Stochastic Neighbor Embedding",
   X_pca: "Principal Component Analysis",
 };
+
+export type fileType = {
+  id: string;
+  name: string;
+  fileSize: number;
+  fileType: string;
+}
+
+export interface FileState {
+  files: fileType[];
+  selectedFiles: string[];
+  activeFile: string;
+}
+
+export type AutocompleteOption = {
+  label: string;
+  id: number;
+}

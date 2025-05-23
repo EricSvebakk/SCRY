@@ -13,7 +13,7 @@ export function get_genes(fileID: string, callback: Function) {
       return response.json();
     })
     .then((data) => {
-      callback(setGenes(data));
+      callback(setGenes(data.genes));
     })
     .catch((error) => {
       console.error("something fucky", error);
