@@ -2,10 +2,9 @@
 "use client"
 
 import { Inter } from "next/font/google";
-import { Box, Container, createTheme, Paper, ThemeProvider } from "@mui/material";
+import { Container, createTheme, Paper, ThemeProvider } from "@mui/material";
 import { Provider } from "react-redux";
 import { store } from "@/lib/redux/stores/store";
-import { grey } from "@mui/material/colors";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -47,12 +46,15 @@ export default function RootLayout({
             <Container
               maxWidth={false}
               disableGutters
+              className="layout_outer"
               sx={{
-                padding: 1,
-                minHeight: "100%",
+                padding: "1vh",
+                minHeight: "98vh",
               }}
             >
-              <Provider store={store}>{children}</Provider>
+              <Provider store={store}>
+                {children}
+              </Provider>
             </Container>
           </Container>
         </ThemeProvider>

@@ -1,6 +1,6 @@
 
 
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, CircularProgress, Stack } from "@mui/material";
 import ScatterPlotGenerator from "./ScatterPlotGenerator";
 import { useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
@@ -13,6 +13,7 @@ export function ScatterPlot() {
   
   const embedding = useAppSelector((state: RootState) => state.plotReducer.selectedEmbedding);
   const category = useAppSelector((state: RootState) => state.plotReducer.selectedCategory);
+  const inProgressObsm = useAppSelector((state: RootState) => state.plotReducer.inProgress.get_file_obsm);
   
   const svgRef = useRef<SVGSVGElement>(null);
   const groupRefs = useRef<HTMLCanvasElement[]>([]);
@@ -43,83 +44,83 @@ export function ScatterPlot() {
     
   }, [obs, obsm]);
 
-  
+  if (inProgressObsm) {
+    return (
+      <Stack
+        sx={{
+          height: "100%",
+          width: "100%",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+      >
+        <CircularProgress size={100} color="primary"/>
+      </Stack>
+    );
+  }
   
   return (
     <Stack
-      direction="column"
+      direction="row"
+      columnGap={1}
+      position="relative"
       height="100%"
       width="100%"
-    >      
-      <Stack
-        direction="row"
-        columnGap={1}
-        position="relative"
-        height="100%"
-        width="100%"
-        border="1px solid red"
-      >
-        {obsm !== null ? (
-          obs !== null ? (
-            obs.labels.map((e, i) => {
-              return (
-                <Box
-                  component="canvas"
-                  key={"points_" + e}
-                  id={"points_" + e}
-                  height="100%"
-                  width="100%"
-                  style={{
-                    position: "absolute"
-                  }}
-                  ref={(el: HTMLCanvasElement | null) => {
-                    if (el) {
-                      groupRefs.current[i] = el!;
-                    }
-                  }}
-                />
-              );
-            })
-          ) : (
-            <Box
-              component="canvas"
-              key={"points_single"}
-              id={"points_single"}
-              height="100%"
-              width="100%"
-              style={{
-                position: "absolute"
-              }}
-              ref={(el: HTMLCanvasElement | null) => {
-                if (el) {
-                  groupRefs.current[0] = el!;
-                }
-              }}
-            />
-          )
+    >
+      {obsm !== null ? (
+        obs !== null ? (
+          obs.labels.map((e, i) => {
+            return (
+              <Box
+                component="canvas"
+                key={"points_" + e}
+                id={"points_" + e}
+                height="100%"
+                width="100%"
+                style={{
+                  position: "absolute"
+                }}
+                ref={(el: HTMLCanvasElement | null) => {
+                  if (el) {
+                    groupRefs.current[i] = el!;
+                  }
+                }}
+              />
+            );
+          })
         ) : (
-          <></>
-        )}
+          <Box
+            component="canvas"
+            key={"points_single"}
+            id={"points_single"}
+            height="100%"
+            width="100%"
+            style={{
+              position: "absolute"
+            }}
+            ref={(el: HTMLCanvasElement | null) => {
+              if (el) {
+                groupRefs.current[0] = el!;
+              }
+            }}
+          />
+        )
+      ) : (
+        <></>
+      )}
 
-        <Box
-          component="svg"
-          sx={{
-            position: "relative",
-            width: "100%",
-            height: "100%",
-            zIndex: 10,
-          }}
-          id="svgHere"
-          ref={svgRef}
-        />
-        
-      </Stack>
+      <Box
+        component="svg"
+        sx={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          zIndex: 10,
+        }}
+        id="svgHere"
+        ref={svgRef}
+      />
       
-      <Stack>
-        <Typography>
-          heyyy
-        </Typography>
-      </Stack>
     </Stack>
   );
 }

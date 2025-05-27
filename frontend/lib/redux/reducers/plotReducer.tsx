@@ -1,4 +1,4 @@
-import { obsData, geneExpressionData, obsmData, zarrHierarchy, initialPlotStateProps, ProgressOptions } from "@/lib/types";
+import { obsData, geneExpressionData, obsmData, zarrHierarchy, initialPlotStateProps, ProgressOptions, geneDendrogramData } from "@/lib/types";
 import { createSlice, Draft, PayloadAction } from "@reduxjs/toolkit";
 
 const initialPlotState: initialPlotStateProps = {
@@ -9,6 +9,7 @@ const initialPlotState: initialPlotStateProps = {
   obsm: null,
   genes: null,
   geneExpression: [],
+  geneDendrogram: null,
   labelSize: {},
   selectedEmbedding: "",
   selectedCategory: "",
@@ -59,6 +60,9 @@ export const plotSlice = createSlice({
     setGeneExpression: (state, action: PayloadAction<geneExpressionData[]>) => {
       state.geneExpression = action.payload;
     },
+    setGeneDendrogram: (state, action: PayloadAction<geneDendrogramData>) => {
+      state.geneDendrogram = action.payload;
+    },
     setLabelSize: (state, action: PayloadAction<{}>) => {
       state.labelSize = action.payload;
     },
@@ -90,6 +94,7 @@ export const {
   setObsm,
   setGenes,
   setGeneExpression,
+  setGeneDendrogram,
   setLabelSize,
   setSelectedEmbedding,
   setSelectedCategory,

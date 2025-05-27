@@ -29,10 +29,10 @@ const ScatterPlotGenerator = (props: {
   const height = containerRect.height;
   const width = containerRect.width;
   
-  const canvasWidth = height;
+  const canvasWidth = width;
   const canvasHeight = height;
   
-  const paddingRatio = 15;
+  const paddingRatio = 24;
   const paddingWidth = canvasWidth / paddingRatio;
   const paddingHeight = canvasHeight / paddingRatio;
   
@@ -77,15 +77,6 @@ const ScatterPlotGenerator = (props: {
     .attr("id", "herewego")
     .attr("width", width)
     .attr("height", height);
-    
-  const title = svgContext
-    .append("text")
-    .attr("text-anchor", "start")
-    .style("alignment-baseline", "middle")
-    .style("font-size", "15px")
-    .attr("transform", "translate(20, 20)")
-    .text(props.title);
-    
   
   labels.forEach((label, labelIndex) => {
     

@@ -3,43 +3,37 @@
 
 import {
   reset,
-  setSelectedEmbedding,
 } from "@/lib/redux/reducers/plotReducer";
 import {
   Button,
-  Divider,
   Grid,
   Stack,
-  Tooltip,
 } from "@mui/material";
 import LoadingButton from '@mui/lab/LoadingButton';
-import CategoryAccordion from "@/lib/components/CategoryAccordion";
+import ListLabels from "@/lib/components/controls/ListLabels";
 import { ScatterPlot } from "@/lib/components/ScatterPlot";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { setActiveFile } from "@/lib/redux/reducers/fileReducer";
-import { TooltipKey, tooltips } from "@/lib/types";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { get_file_hierarchy } from "@/lib/fetch/get_file_hierarchy";
-import { get_file_obsm } from "@/lib/fetch/get_file_obsm";
 import UMAPDialog from "@/lib/components/modals/UMAPDialog";
 import LeidenDialog from "@/lib/components/modals/LeidenDialog";
 import { get_genes } from "@/lib/fetch/get_genes";
 import RGGDialog from "@/lib/components/modals/RGGDialog";
 import { DotPlot } from "@/lib/components/DotPlot";
 import DotplotDialog from "@/lib/components/modals/DotplotDialog";
+import { ListLabelOptions } from "@/lib/components/controls/ListLabelOptions";
+import ListEmbeddings from "@/lib/components/controls/ListEmbeddings";
+import MergeDialog from "@/lib/components/modals/MergeDialog";
+import d3ToPng from "d3-svg-to-png";
+import { GeneGroupTable } from "@/lib/components/GeneGroupTable";
 
 export default function FileIdPage({ }) {
   
   const { fileID } = useParams();
   
-  const hierarchy = useAppSelector((state) => state.plotReducer.hierarchy)
   const obs = useAppSelector((state) => state.plotReducer.obs);
-  
-  const selectedEmbedding = useAppSelector((state) => state.plotReducer.selectedEmbedding);
-  const selectedCategory = useAppSelector((state) => state.plotReducer.selectedCategory);
-  const selectedLabels = useAppSelector((state) => state.plotReducer.selectedLabels);
-  const selectedGenes = useAppSelector((state) => state.plotReducer.selectedGenes);
   
   const inProgress = useAppSelector((state) => state.plotReducer.inProgress);
   
@@ -49,6 +43,7 @@ export default function FileIdPage({ }) {
   const [isLeidenDialogOpen, setIsLeidenDialogOpen] = useState(false);
   const [isRGGDialogOpen, setIsRGGDialogOpen] = useState(false);
   const [isDotplotDialogOpen, setIsDotplotDialogOpen] = useState(false);
+  const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
   
   useEffect(() => {
     
@@ -59,108 +54,45 @@ export default function FileIdPage({ }) {
     if (typeof fileID === "string") {
       dispatch(setActiveFile(fileID));
       
-      get_file_hierarchy(fileID, dispatch);
-      get_genes(fileID, dispatch);
+      if (!inProgress.get_file_hierarchy) {
+        get_file_hierarchy(fileID, dispatch);
+      }
+      if (!inProgress.get_genes) {
+        get_genes(fileID, dispatch);
+      }
     }
     
   }, []);
 
   
   return (
-    <Grid container direction="row" columnGap={1} height="100%">
+    <Grid
+      container
+      direction="row"
+      columnGap={1}
+      height="100%"
+      xs
+    >
       <Grid
         item
-        xs={3}
-        p={1}
-        width="fit-content"
+        xs={2}
         height="100%"
-        sx={{
-          border: "1px solid green",
-        }}
+        width="fit-content"
         overflow="clip"
-      >
-        <Stack direction="column" gap={2}>
-          <Stack direction="column">
-            {hierarchy ? (
-              [...hierarchy.obsm]
-                .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
-                .map((e) => {
-                  return (
-                    <Tooltip
-                      key={`tooltip_obsm_${e}`}
-                      title={tooltips[e as TooltipKey]}
-                      placement="right"
-                    >
-                      <Button
-                        key={`button_obsm_${e}`}
-                        variant="contained"
-                        disabled={selectedEmbedding === e}
-                        onClick={() => {
-                          if (typeof fileID === "string") {
-                            dispatch(setSelectedEmbedding(e));
-                            get_file_obsm(fileID, e, dispatch);
-                          }
-                        }}
-                        size="small"
-                        sx={{
-                          justifyContent: "flex-start",
-                          overflow: "hidden",
-                          fontSize: 10,
-                        }}
-                      >
-                        {e}
-                      </Button>
-                    </Tooltip>
-                  );
-                })
-            ) : (
-              <></>
-            )}
-          </Stack>
-
-          {hierarchy ? <Divider /> : <></>}
-
+        >
+        <Stack
+          direction="column"
+          height="100%"
+          rowGap={1}
+        >
           <Stack
             direction="column"
-            gap={2}
-            height="65vh"
+            rowGap={1}
+            p={1}
             sx={{
-              overflowY: "scroll",
-              scrollbarWidth: "thin",
+              border: "1px solid grey",
             }}
           >
-            <CategoryAccordion />
-          </Stack>
-        </Stack>
-      </Grid>
-
-      <Grid
-        item
-        // xs
-        height={500}
-        width={500}
-        sx={{
-          border: "1px solid blue",
-        }}
-      >
-        <ScatterPlot />
-      </Grid>
-
-      <Grid
-        item
-        xs
-        border="1px solid red"
-        padding={1}
-        textOverflow="ellipsis"
-        overflow="hidden"
-        sx={
-          {
-            // backgroundColor: theme.palette.background.paper,
-          }
-        }
-      >
-        <Grid container direction="column" gap={1} height="100%">
-          <Grid item>
             <LoadingButton
               variant="outlined"
               size="small"
@@ -189,49 +121,129 @@ export default function FileIdPage({ }) {
               Generate RGG
             </LoadingButton>
             
-            <Tooltip
-              title="Fetch Differential Gene Expression"
-              placement="right"
+            <LoadingButton
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                setIsDotplotDialogOpen(true)
+              }}
+              loading={inProgress.get_rgg_dotplot}
+              fullWidth
             >
-              <LoadingButton
-                variant="outlined"
-                size="small"
-                onClick={() => {
-                  setIsDotplotDialogOpen(true)
-                }}
-                loading={inProgress.get_rgg_dotplot}
-                fullWidth
-              >
-                Fetch Dotplot
-              </LoadingButton>
-            </Tooltip>
-          </Grid>
+              Fetch RGG Dotplot
+            </LoadingButton>
+            
+            <LoadingButton
+              variant="outlined"
+              size="small"
+              onClick={() => setIsMergeDialogOpen(true)}
+              loading={inProgress.generate_ranked_genes_groups}
+              fullWidth
+            >
+              Merge groups
+            </LoadingButton>
+            
+            <UMAPDialog
+              isOpen={isUMAPDialogOpen}
+              setIsOpen={setIsUMAPDialogOpen}
+            />
+            
+            <LeidenDialog
+              isOpen={isLeidenDialogOpen}
+              setIsOpen={setIsLeidenDialogOpen}
+            />
+            
+            <RGGDialog
+              isOpen={isRGGDialogOpen}
+              setIsOpen={setIsRGGDialogOpen}
+            />
+            
+            <DotplotDialog
+              isOpen={isDotplotDialogOpen}
+              setIsOpen={setIsDotplotDialogOpen}
+            />
+            
+            <MergeDialog
+              isOpen={isMergeDialogOpen}
+              setIsOpen={setIsMergeDialogOpen}
+            />
+          </Stack>
           
-          <UMAPDialog
-            isOpen={isUMAPDialogOpen}
-            setIsOpen={setIsUMAPDialogOpen}
-          />
+          <Stack
+            direction="column"
+            height="100%"
+            rowGap={1}
+            p={1}
+            sx={{
+              border: "1px solid grey",
+            }}
+          >
+            WIP
+          </Stack>
           
-          <LeidenDialog
-            isOpen={isLeidenDialogOpen}
-            setIsOpen={setIsLeidenDialogOpen}
-          />
-          
-          <RGGDialog
-            isOpen={isRGGDialogOpen}
-            setIsOpen={setIsRGGDialogOpen}
-          />
-          
-          <DotplotDialog
-            isOpen={isDotplotDialogOpen}
-            setIsOpen={setIsDotplotDialogOpen}
-          />
-
-          <Grid item xs>
-            <DotPlot />
-          </Grid>
-        </Grid>
+        </Stack>
       </Grid>
+      
+      <Grid
+        item
+        xs={2}
+      >
+        <Stack
+          direction="column"
+          rowGap={1}
+        >
+          <ListEmbeddings />
+          <ListLabels />
+          <ListLabelOptions />
+        </Stack>
+      </Grid>
+
+      <Grid
+        item
+        // width={500}
+        xs
+        sx={{
+          border: "1px solid grey",
+        }}
+      >
+        <Stack direction="column" height="100%">
+          <Button variant="outlined" onClick={() => {
+            d3ToPng("#svgHere", "newImage", {
+              scale: 3,
+              format: "png",
+              // quality: 
+              download: true,
+            })
+          }}>
+            Download
+          </Button>
+          <ScatterPlot />
+        </Stack>
+      </Grid>
+      
+      <Grid
+        item
+        xs
+        sx={{
+          border: "1px solid grey",
+        }}
+      >
+        <Stack direction="column" height="100%">
+          <Button variant="outlined" onClick={() => {
+            d3ToPng("#bigtest", "newImage", {
+              scale: 3,
+              format: "png",
+              // quality: 
+              download: true,
+              background: "white"
+            })
+          }}>
+            Download
+          </Button>
+          <DotPlot />
+        </Stack>
+      </Grid>
+      
     </Grid>
   );
   

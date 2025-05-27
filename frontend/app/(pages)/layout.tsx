@@ -38,6 +38,7 @@ export default function PagesLayout({
       dispatch(addFile({
         id: activeFile,
         name: activeFile,
+        fileSize: 0,
         fileType: activeFile.split(".")[1]
       }));
     }
@@ -59,19 +60,27 @@ export default function PagesLayout({
   
   
   return (
-    <Stack direction="column" rowGap={1}>
+    <Stack
+      direction="column"
+      rowGap={1}
+      className="layout_inner"
+      sx={{
+        minHeight: "98vh",
+      }}
+    >
       <Grid
         container
         direction="row"
         p={1}
-        sx={{ border: "1px solid grey" }}
+        sx={{
+          border: "1px solid orange"
+        }}
       >
         {navItems.map((item) => {
           return (
             <Grid
               key={`nav_${item.id}`}
               item
-              // width={180}
               width="fit-content"
               overflow="hidden"
             >

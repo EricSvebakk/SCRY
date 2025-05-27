@@ -8,6 +8,7 @@ export type initialPlotStateProps = {
   obsm: obsmData | null;
   genes: string[] | null;
   geneExpression: geneExpressionData[];
+  geneDendrogram: geneDendrogramData | null
   labelSize: {
     [key: string]: number;
   };
@@ -56,6 +57,12 @@ export type geneExpressionData = {
   mean_expr: number;
   frac_expr: number;
 };
+
+export type geneDendrogramData = {
+  name: string | null;
+  children: geneDendrogramData[];
+  distance: number
+}
 
 export type zarrHierarchy = {
   X: string[];

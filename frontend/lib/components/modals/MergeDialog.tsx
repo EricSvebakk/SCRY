@@ -6,7 +6,7 @@ import { get_rgg_dotplot } from "@/lib/fetch/get_rgg_dotplot";
 import { AutocompleteOption } from "@/lib/types";
 
 
-export default function DotplotDialog(props: {
+export default function MergeDialog(props: {
   isOpen: boolean;
   setIsOpen: Function
 }) {
@@ -40,7 +40,7 @@ export default function DotplotDialog(props: {
   
   return (
     <Dialog open={props.isOpen} onClose={() => props.setIsOpen(false)}>
-      <DialogTitle>Please provide an attribute key</DialogTitle>
+      <DialogTitle>WIP</DialogTitle>
       <DialogContent>
         <Stack direction="column" rowGap={2} pt={2}>
           <Autocomplete
