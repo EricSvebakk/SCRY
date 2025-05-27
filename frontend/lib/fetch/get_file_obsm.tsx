@@ -1,4 +1,4 @@
-import { setObsm } from "../redux/reducers/plotReducer";
+import { setInProgress, setObsm } from "../redux/reducers/plotReducer";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
@@ -9,6 +9,11 @@ export function get_file_obsm(
 ) {
   const request = `${BACKEND_ENDPOINT}/get_file_obsm?file_id=${fileID}&obsm=${obsm}`;
 
+  callback(setInProgress({
+    type: "get_file_obsm",
+    value: true,
+  }));
+  
   fetch(request)
     .then((response) => {
       if (!response.ok) {
@@ -17,9 +22,18 @@ export function get_file_obsm(
       return response.json();
     })
     .then((data) => {
+      callback(setInProgress({
+        type: "get_file_obsm",
+        value: false,
+      }));
+      
       callback(setObsm(JSON.parse(data)));
     })
     .catch((error) => {
-      console.error("something fucky", error);
+      console.error("Something went wrong with get_file_obsm()", error);
+      callback(setInProgress({
+        type: "get_file_obsm",
+        value: false,
+      }));
     });
 }

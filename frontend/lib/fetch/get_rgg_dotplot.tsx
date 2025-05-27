@@ -1,6 +1,7 @@
 
 
-import { setGeneExpression, setInProgress } from "../redux/reducers/plotReducer";
+import { setGeneDendrogram, setGeneExpression, setInProgress } from "../redux/reducers/plotReducer";
+import { geneDendrogramData, geneExpressionData } from "../types";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
@@ -22,22 +23,29 @@ export function get_rgg_dotplot(
   fetch(request)
   .then((response) => {
     if (!response.ok) {
-      console.error("something fucky happened")
+      console.error("Something went wrong with get_rgg_dotplot()");
     }
     return response.json();
   })
   .then((data) => {
-    const parsedData = JSON.parse(data);
-    console.log(parsedData, parsedData.length);
     
-    callback(setGeneExpression(parsedData));
+    type parsedDataType = {
+      data: geneExpressionData[],
+      dendro: geneDendrogramData,
+    }
+    
+    const parsedData: parsedDataType = JSON.parse(data);
+    console.log(parsedData);
+    
+    callback(setGeneExpression(parsedData.data));
+    callback(setGeneDendrogram(parsedData.dendro));
     callback(setInProgress({
       type: "get_rgg_dotplot",
       value: false,
     }));
   })
   .catch((error) => {
-    console.error("something fucky", error);
+    console.error("Something went wrong with get_rgg_dotplot()", error);
     callback(setInProgress({
       type: "get_rgg_dotplot",
       value: false,

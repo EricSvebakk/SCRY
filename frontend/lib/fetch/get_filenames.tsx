@@ -1,6 +1,8 @@
 
-import { addFiles, fileType } from "../redux/reducers/fileReducer";
+import { addFiles } from "../redux/reducers/fileReducer";
+import { setInProgress } from "../redux/reducers/plotReducer";
 import { AppDispatch } from "../redux/stores/store";
+import { fileType } from "../types";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
@@ -10,6 +12,11 @@ export function get_filenames(dispatch: AppDispatch) {
   
   console.log("get_filenames() query:", request);
 
+  dispatch(setInProgress({
+    type: "get_filenames",
+    value: true,
+  }));
+  
   fetch(`${BACKEND_ENDPOINT}/get_filenames`, {
     method: "GET",
     headers: {
@@ -35,5 +42,18 @@ export function get_filenames(dispatch: AppDispatch) {
       .sort((a: fileType, b: fileType) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
     
     dispatch(addFiles(fileRows))
+    
+    dispatch(setInProgress({
+      type: "get_filenames",
+      value: false,
+    }));
   })
+  .catch((error) => {
+    console.error("Something went wrong with get_filenames()", error);
+    
+    dispatch(setInProgress({
+      type: "get_filenames",
+      value: false,
+    }));
+  });
 }
