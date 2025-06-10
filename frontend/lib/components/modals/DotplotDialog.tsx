@@ -1,9 +1,10 @@
 
-import { Autocomplete, Button, createFilterOptions, Dialog, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
+import { Autocomplete, Button, createFilterOptions, Dialog, DialogContent, DialogTitle, Divider, Stack, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { get_rgg_dotplot } from "@/lib/fetch/get_rgg_dotplot";
 import { AutocompleteOption } from "@/lib/types";
+import { setDotplotOptions } from "@/lib/redux/reducers/plotReducer";
 
 
 export default function DotplotDialog(props: {
@@ -15,12 +16,12 @@ export default function DotplotDialog(props: {
   const uns = useAppSelector((state) => state.plotReducer.hierarchy?.uns);
   const obs = useAppSelector((state) => state.plotReducer.hierarchy?.obs);
   const genes = useAppSelector((state) => state.plotReducer.genes);
+  const dpOptions = useAppSelector((state) => state.plotReducer.dotplotOptions);
  
   const dispatch = useAppDispatch();
   const [selectedUns, setSelectedUns] = useState<AutocompleteOption | null>(null);
   const [optionsFiltered, setOptionsFiltered] = useState<AutocompleteOption[]>([]);
-  const [nGroups, setNGroups] = useState<number>(30);
-  const [nGenes, setNGenes] = useState<number>(30);
+  const [nGenes, setNGenes] = useState<number>(2);
 
   const filterOptions = createFilterOptions({ limit: 20 });
   
@@ -43,6 +44,7 @@ export default function DotplotDialog(props: {
       <DialogTitle>Please provide an attribute key</DialogTitle>
       <DialogContent>
         <Stack direction="column" rowGap={2} pt={2}>
+          
           <Autocomplete
             disabled={optionsFiltered.length === 0}
             size="small"
@@ -77,6 +79,9 @@ export default function DotplotDialog(props: {
               );
             }}
           />
+          
+          <Divider></Divider>
+          
           <TextField
             variant="outlined"
             size="small"
@@ -84,7 +89,7 @@ export default function DotplotDialog(props: {
             InputLabelProps={{
               shrink: true,
             }}
-            label="# of genes"
+            label="# of top genes per cluster"
             value={nGenes}
             onChange={(event) => {
               if (!genes) {
@@ -97,24 +102,17 @@ export default function DotplotDialog(props: {
               }
             }}
           />
-          <TextField
-            variant="outlined"
-            size="small"
-            type="number"
-            InputLabelProps={{
-              shrink: true,
-            }}
-            label="# of groups"
-            value={nGroups}
-            onChange={(event) => setNGroups(parseFloat(event.target.value))}
-          />
           <Button
             variant="outlined"
             size="medium"
             onClick={() => {
               console.log(selectedUns)
               if (selectedUns) {
-                get_rgg_dotplot(activeFile, selectedUns?.label, nGenes, nGroups, dispatch);
+                dispatch(setDotplotOptions({
+                  ...dpOptions,
+                  title: selectedUns.label
+                }));
+                get_rgg_dotplot(activeFile, selectedUns.label, nGenes, dispatch);
                 props.setIsOpen(false);
               }
             }}

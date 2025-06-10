@@ -1,4 +1,4 @@
-import { obsData, geneExpressionData, obsmData, zarrHierarchy, initialPlotStateProps, ProgressOptions, geneDendrogramData } from "@/lib/types";
+import { obsData, geneExpressionData, obsmData, zarrHierarchy, initialPlotStateProps, ProgressOptions, geneDendrogramData, colorTypes, DotplotOptions } from "@/lib/types";
 import { createSlice, Draft, PayloadAction } from "@reduxjs/toolkit";
 
 const initialPlotState: initialPlotStateProps = {
@@ -10,7 +10,19 @@ const initialPlotState: initialPlotStateProps = {
   genes: null,
   geneExpression: [],
   geneDendrogram: null,
+  nGenes: null,
+  nClusters: null,
   labelSize: {},
+  dotplotOptions: {
+    title: "",
+    coloring: "mean_expr",
+    highlight: "cluster",
+    expressionMin: 0,
+    expressionMax: 0,
+    expressionMinDefault: 0,
+    expressionMaxDefault: 0,
+    expressionIsDefault: true
+  },
   selectedEmbedding: "",
   selectedCategory: "",
   selectedLabels: [],
@@ -63,8 +75,17 @@ export const plotSlice = createSlice({
     setGeneDendrogram: (state, action: PayloadAction<geneDendrogramData>) => {
       state.geneDendrogram = action.payload;
     },
+    setNGenes: (state, action: PayloadAction<number>) => {
+      state.nGenes = action.payload;
+    },
+    setNClusters: (state, action: PayloadAction<number>) => {
+      state.nClusters = action.payload;
+    },
     setLabelSize: (state, action: PayloadAction<{}>) => {
       state.labelSize = action.payload;
+    },
+    setDotplotOptions: (state, action: PayloadAction<DotplotOptions>) => {
+      state.dotplotOptions = action.payload;
     },
     setSelectedEmbedding: (state, action: PayloadAction<string>) => {
       state.selectedEmbedding = action.payload;
@@ -95,7 +116,10 @@ export const {
   setGenes,
   setGeneExpression,
   setGeneDendrogram,
+  setNGenes,
+  setNClusters,
   setLabelSize,
+  setDotplotOptions,
   setSelectedEmbedding,
   setSelectedCategory,
   setSelectedLabels,

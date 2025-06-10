@@ -5,6 +5,8 @@ import os
 import numpy as np
 import pandas as pd
 from scipy.cluster.hierarchy import linkage, to_tree
+from anndata import AnnData
+import json
 
 def get_anndata_file_hierarchy(file_path: str) -> dict[str, object]:
   
@@ -109,13 +111,13 @@ def generate_umap_h5ad(
   adata = sc.read_h5ad(file_path)
   
   # Adds X_pca_[adata_key] to obsm, varm and uns
-  if ("X_pca" not in adata.obsm):    
+  if ("X_pca" not in adata.obsm_keys()):
     sc.pp.pca(
       adata,
       # key_added=f"X_pca_{adata_key}",
       # n_comps=n_pcs,
       chunked=True,
-      # chunk_size=1000,
+      chunk_size=1000,
       # zero_center=True,
       # svd_solver='arpack',
     )
@@ -185,6 +187,8 @@ def generate_ranked_genes_groups(file_path: str, key: str):
   
   sc.tl.rank_genes_groups(
     adata,
+    method="wilcoxon",
+    # pval
     groupby=key,
     key_added= "rank_genes_groups_" + key
   )
@@ -237,76 +241,201 @@ def get_ranked_genes_groups(file_path: str, num_results: int = 20):
   
   return all_results
 
+def build_dendrogram_tree(linkage_matrix, labels: list[str]):
+  
+  tree, nodes = to_tree(linkage_matrix, rd=True)
+  
+  def add_node(node):
+    if node.is_leaf():
+      return {"name": node.id}
+    else:
+      return {
+        "name": None,
+        "children": [add_node(node.left), add_node(node.right)],
+        "distance": node.dist  # Optional: include distance info
+      }
+
+  return add_node(tree)
+
+
+def get_dendro_tree(adata: AnnData, uns_key: str):
+  """
+  DOES NOT CLOSE ANNDATA
+  """
+  
+  key_dendro = f"dendrogram_{uns_key}"
+  
+  # checks if dendrogram is already computed
+  if (not key_dendro in adata.uns_keys()):
+    sc.tl.dendrogram(adata, groupby=uns_key)
+  
+  dendro_data = adata.uns[key_dendro]   
+  dendro_tree = build_dendrogram_tree(dendro_data["linkage"], dendro_data["categories_ordered"])
+  
+  return dendro_tree
+
+def sort_by_dendro_rgg_rbb_order(df: pd.DataFrame, dendro_order: list[str], n_genes: int):
+  
+  # Sorts dataframe by dendro-order, then by rgg-order
+  sorted_df = (
+    df
+    .assign(dendro_order=pd.Categorical(df["cluster"], categories=dendro_order, ordered=True))
+    .sort_values(by=["dendro_order", "rgg_order"])
+  )
+
+  # Sorts dataframe further by round-robin-batch-order
+  # NOTE: within_cluster_rank is reliant on the correct previous sorting given by rgg_order and rank
+  sorted_df = (
+    sorted_df
+      .assign(
+        within_cluster_rank=sorted_df.groupby("cluster").cumcount(),
+        batch=lambda temp_df: temp_df["within_cluster_rank"] // n_genes
+      )
+      .sort_values(
+        by=[
+          "batch",
+          "dendro_order",
+        ],
+        ascending=[
+          True,
+          True,
+        ]
+      )
+      # .drop(columns=["dendro_order", "within_cluster_rank", "batch"])
+  )
+  
+  return sorted_df
+
 def get_rgg_dotplot(
   file_path: str,
   uns_key: str,
-  n_genes: int = 10,
-  # n_groups: int = 4,
+  n_genes: int = 1,
 ):
   
   adata = sc.read_h5ad(file_path)
   
-  top_genes = set()
-  for group in adata.uns["rank_genes_groups"]["names"].dtype.names:
-    top_genes.update(adata.uns["rank_genes_groups"]["names"][group][:n_genes])
+  key_dotplot = f"dotplot_stats_g{n_genes}_{uns_key}"
   
-  sc.tl.dendrogram(adata, groupby=uns_key)
-  
-  def build_dendrogram_tree(linkage_matrix, labels: list[str]):
+  # Dotplot and dendrogram have already been generated
+  if (key_dotplot in adata.uns_keys()):
     
-    tree, nodes = to_tree(linkage_matrix, rd=True)
+    results = adata.uns[key_dotplot]
+    dendro_order = adata.uns[f"dendrogram_{uns_key}"]["categories_ordered"]
+    sorted_records = (
+      sort_by_dendro_rgg_rbb_order(
+        pd.DataFrame(results["data"]),
+        dendro_order,
+        n_genes
+      )
+      .to_dict(orient="records")
+    )
     
-    def add_node(node):
-      if node.is_leaf():
-          return {"name": node.id}
-      else:
-          return {
-              "name": None,
-              "children": [add_node(node.left), add_node(node.right)],
-              "distance": node.dist  # Optional: include distance info
-          }
-
-    return add_node(tree)
+    return {
+      "data": sorted_records,
+      "dendro": json.loads(results["dendro"]),
+      "n_genes": int(results["n_genes"]),
+      "n_clusters": int(len(dendro_order))
+    }
   
-  dendrogram_data = adata.uns[f"dendrogram_{uns_key}"]
-  dendrogram_order = dendrogram_data["categories_ordered"]
-  # n_groups = len(dendrogram_order)
-    
-  dendrogram_tree = build_dendrogram_tree(dendrogram_data["linkage"], dendrogram_order)
-    
-  # group_order = adata.uns[f"dendrogram_{uns_key}"]["categories_ordered"]
-  # dendrogram = 
+  # Neither Dotplot or dendrogram have been generated
+  key_rgg = f"rank_genes_groups_{uns_key}"
   
-  
-  dp = sc.pl.DotPlot(adata, groupby=uns_key, var_names=sorted(top_genes))
-  
-  mean_expr_df = dp.dot_color_df # mean expression
-  frac_expr_df = dp.dot_size_df # fraction expression
-  
-  adata.file.close()
-  
-  mean_expr_df = mean_expr_df.loc[dendrogram_order]
-  frac_expr_df = frac_expr_df.loc[dendrogram_order]
-  
-  combined_df = (
-    mean_expr_df
-    .stack()
-    .to_frame("mean_expr")
-    .join(frac_expr_df.stack().to_frame("frac_expr"))
-    .reset_index()
-    .rename(columns={"level_0": "group", "level_1": "gene"})
+  # Coompute rgg dataframes
+  fig = sc.pl.rank_genes_groups_dotplot(
+    adata,
+    key=key_rgg,
+    n_genes=n_genes,
+    return_fig=True
   )
   
-  genes = combined_df.drop_duplicates("gene", keep="first")["gene"].head(n_genes)
-  groups = combined_df.drop_duplicates("group", keep="first")["group"].head(n_groups)
+  mean_expr_df = fig.dot_color_df
+  frac_expr_df = fig.dot_size_df
   
-  results_df = combined_df[combined_df["gene"].isin(genes) & combined_df["group"].isin(groups)]
+  # Remove duplicate columns from n_genes > 1
+  mean_expr_df_no_dup = mean_expr_df.loc[:, ~mean_expr_df.T.duplicated()]
+  frac_expr_df_no_dup = frac_expr_df.loc[:, ~frac_expr_df.T.duplicated()]
+  
+  n_genes_actual = len(mean_expr_df_no_dup.columns)
+  
+  # Convert dfs to long-format
+  mean_expr_long = mean_expr_df_no_dup.reset_index().melt(id_vars="index", var_name="gene", value_name="mean_expr").rename(columns={"index": "cluster"})
+  frac_expr_long = frac_expr_df_no_dup.reset_index().melt(id_vars="index", var_name="gene", value_name="frac_expr").rename(columns={"index": "cluster"})
 
+  # Combine dataframes
+  merged_expr = mean_expr_long.merge(frac_expr_long, on=["gene", "cluster"])
+  
+  # Get remaining data not provided by fig
+  rgg = adata.uns[key_rgg]
+  pvals = []
+  logfcs = []
+  ranks = []
+
+  # Generates lists for pvals, logfolds and rank to match longform-df
+  for index, row in merged_expr.iterrows():
+    
+    gene, group = row["gene"], row["cluster"]
+    
+    try:
+      gene_list = rgg["names"][group]
+      
+      index = list(gene_list).index(gene)
+      
+      pval = rgg["pvals_adj"][group][index]
+      logfc = rgg["logfoldchanges"][group][index]
+      rank = index
+      
+    except ValueError:
+      pval = None
+      logfc = None
+      rank = None
+      
+    pvals.append(pval)
+    logfcs.append(logfc)
+    ranks.append(rank)
+  
+  # Add corresponding results to longform-df
+  merged_expr["pvals_adj"] = pvals
+  merged_expr["logfoldchange"] = logfcs
+  merged_expr["rgg_order"] = ranks
+  
+  # Remove insignificant pval results
+  filtered_df = merged_expr[merged_expr["pvals_adj"] < 0.05]
+  
+  # Generate tree <3
+  dendro_tree = get_dendro_tree(adata, uns_key)
+  
+  # Convert types for storing in anndata
+  results = {
+    "data": filtered_df.to_dict(orient="list"),
+    "n_genes": int(n_genes_actual),
+    "dendro": json.dumps(make_safe(dendro_tree))
+  }
+  
+  # Store computed results
+  adata.uns[key_dotplot] = results
+  sc.write(file_path, adata)
+  adata.file.close()    
+  
+  dendro_order = adata.uns[f"dendrogram_{uns_key}"]["categories_ordered"]
+  
+  # Sort results based on dendrogram-rgg-rbb-order, similar to scanpy's rgg_dotplot
+  sorted_records = (
+    sort_by_dendro_rgg_rbb_order(
+      pd.DataFrame(results["data"]),
+      dendro_order,
+      n_genes
+    )
+    .to_dict(orient="records")
+  )
+  
   return {
-    "data": results_df.to_dict(orient="records"),
-    "dendro": dendrogram_tree
+    "data": sorted_records,
+    "dendro": json.loads(results["dendro"]),
+    "n_genes": int(results["n_genes"]),
+    "n_clusters": int(len(dendro_order)),
   }
 
+# Serialize object
 def make_safe(obj):
   if isinstance(obj, np.ndarray):
     return obj.tolist()

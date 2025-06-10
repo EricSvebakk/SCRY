@@ -300,7 +300,7 @@ async def get_rgg_dotplot(
   file_id: str,
   uns_key: str,
   n_genes: int,
-  n_groups: int,
+  # n_groups: int,
 ):
   file_path = os.path.join(UPLOAD_DIR, file_id)
   obj = "Something went wrong while generating leiden"
@@ -309,7 +309,7 @@ async def get_rgg_dotplot(
     return JSONResponse(content=f"File ID '{file_id}' is not a valid.")
   
   elif (file_path.endswith(".h5ad")):
-    obj = au.get_rgg_dotplot(file_path, uns_key, n_genes, n_groups)
+    obj = au.get_rgg_dotplot(file_path, uns_key, n_genes)
   
   return JSONResponse(content=json.dumps(obj))
 

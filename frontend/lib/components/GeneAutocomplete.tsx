@@ -12,8 +12,11 @@ export default function GeneAutocomplete() {
   
   const dispatch = useAppDispatch();
   
-  const genesDict = useAppSelector((state) => state.plotReducer.rankedGenesGroups);
-  const genes = Object.keys(genesDict);
+  const genes = useAppSelector((state) => state.plotReducer.genes);
+  
+  if (!genes) {
+    return <></>
+  }
   
   const selectedGenes = useAppSelector((state) => state.plotReducer.selectedGenes);
   

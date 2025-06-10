@@ -25,9 +25,9 @@ import { DotPlot } from "@/lib/components/DotPlot";
 import DotplotDialog from "@/lib/components/modals/DotplotDialog";
 import { ListLabelOptions } from "@/lib/components/controls/ListLabelOptions";
 import ListEmbeddings from "@/lib/components/controls/ListEmbeddings";
-import MergeDialog from "@/lib/components/modals/MergeDialog";
 import d3ToPng from "d3-svg-to-png";
-import { GeneGroupTable } from "@/lib/components/GeneGroupTable";
+import { DotPlotConfigurationPopover } from "@/lib/components/modals/DotPlotConfigurationPopover";
+import { DotplotSavingPopover } from "@/lib/components/modals/DotplotSavingPopover";
 
 export default function FileIdPage({ }) {
   
@@ -36,6 +36,7 @@ export default function FileIdPage({ }) {
   const obs = useAppSelector((state) => state.plotReducer.obs);
   
   const inProgress = useAppSelector((state) => state.plotReducer.inProgress);
+  const dpOptions = useAppSelector((state) => state.plotReducer.dotplotOptions);
   
   const dispatch = useAppDispatch();
   
@@ -75,9 +76,8 @@ export default function FileIdPage({ }) {
     >
       <Grid
         item
-        xs={2}
+        width={200}
         height="100%"
-        width="fit-content"
         overflow="clip"
         >
         <Stack
@@ -133,16 +133,6 @@ export default function FileIdPage({ }) {
               Fetch RGG Dotplot
             </LoadingButton>
             
-            <LoadingButton
-              variant="outlined"
-              size="small"
-              onClick={() => setIsMergeDialogOpen(true)}
-              loading={inProgress.generate_ranked_genes_groups}
-              fullWidth
-            >
-              Merge groups
-            </LoadingButton>
-            
             <UMAPDialog
               isOpen={isUMAPDialogOpen}
               setIsOpen={setIsUMAPDialogOpen}
@@ -161,11 +151,6 @@ export default function FileIdPage({ }) {
             <DotplotDialog
               isOpen={isDotplotDialogOpen}
               setIsOpen={setIsDotplotDialogOpen}
-            />
-            
-            <MergeDialog
-              isOpen={isMergeDialogOpen}
-              setIsOpen={setIsMergeDialogOpen}
             />
           </Stack>
           
@@ -186,7 +171,7 @@ export default function FileIdPage({ }) {
       
       <Grid
         item
-        xs={2}
+        width={200}
       >
         <Stack
           direction="column"
@@ -200,23 +185,12 @@ export default function FileIdPage({ }) {
 
       <Grid
         item
-        // width={500}
         xs
         sx={{
           border: "1px solid grey",
         }}
       >
         <Stack direction="column" height="100%">
-          <Button variant="outlined" onClick={() => {
-            d3ToPng("#svgHere", "newImage", {
-              scale: 3,
-              format: "png",
-              // quality: 
-              download: true,
-            })
-          }}>
-            Download
-          </Button>
           <ScatterPlot />
         </Stack>
       </Grid>
@@ -228,21 +202,31 @@ export default function FileIdPage({ }) {
           border: "1px solid grey",
         }}
       >
-        <Stack direction="column" height="100%">
-          <Button variant="outlined" onClick={() => {
-            d3ToPng("#bigtest", "newImage", {
-              scale: 3,
-              format: "png",
-              // quality: 
-              download: true,
-              background: "white"
-            })
-          }}>
-            Download
-          </Button>
+        <Stack
+          direction="column"
+          height="100%"
+        >
+          
+          <Stack
+            direction="row"
+          >
+            <DotPlotConfigurationPopover />
+            <DotplotSavingPopover />
+          </Stack>
+          
           <DotPlot />
         </Stack>
       </Grid>
+      
+      {/* <Grid
+        item
+        xs
+        sx={{
+          border: "1px solid grey",
+        }}
+      >
+        <GeneGroupTable />
+      </Grid> */}
       
     </Grid>
   );

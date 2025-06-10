@@ -7,11 +7,16 @@ export type initialPlotStateProps = {
   obs: obsData | null;
   obsm: obsmData | null;
   genes: string[] | null;
+  nGenes: number | null;
+  nClusters: number | null;
   geneExpression: geneExpressionData[];
   geneDendrogram: geneDendrogramData | null
   labelSize: {
     [key: string]: number;
   };
+  dotplotOptions: {
+    [key in keyof DotplotOptions]: DotplotOptions[key]
+  }
   selectedEmbedding: string;
   selectedCategory: string;
   selectedLabels: string[];
@@ -20,6 +25,20 @@ export type initialPlotStateProps = {
     [key in keyof ProgressOptions]: ProgressOptions[key]
   }
 };
+
+export type colorTypes = "mean_expr" | "logfoldchange" | "pvals_adj";
+export type highlightType = "cluster" | "gene" | "none";
+
+export type DotplotOptions = {
+  title: string;
+  coloring: colorTypes;
+  expressionMinDefault: number;
+  expressionMaxDefault: number;
+  expressionMin: number;
+  expressionMax: number;
+  expressionIsDefault: boolean;
+  highlight: highlightType
+}
 
 export type ProgressOptions = {
   generate_leiden: boolean;
@@ -53,9 +72,11 @@ export type obsmData = {
 
 export type geneExpressionData = {
   gene: string;
-  group: string;
+  cluster: string;
   mean_expr: number;
   frac_expr: number;
+  pvals_adj: number;
+  logfoldchange: number;
 };
 
 export type geneDendrogramData = {
