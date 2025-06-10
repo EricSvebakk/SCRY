@@ -13,8 +13,8 @@ thesis.tepohi.no {
 api.thesis.tepohi.no {
   reverse_proxy thesis_docker_backend:8000 {
     transport http {
-      read_timeout 300s
-      write_timeout 300s
+      read_timeout 1800s
+      write_timeout 1800s
     }
   }
 }
