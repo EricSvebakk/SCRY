@@ -2,10 +2,10 @@
 import { Autocomplete, Button, createFilterOptions, Dialog, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
-import { generate_leiden } from "../../fetch/generate_leiden";
 import { AutocompleteOption } from "@/lib/types";
+import { get_clustering } from "@/lib/fetch/workflow/get_clustering";
 
-export default function LeidenDialog(props: {
+export default function ClusteringDialog(props: {
   isOpen: boolean;
   setIsOpen: Function
 }) {
@@ -33,7 +33,7 @@ export default function LeidenDialog(props: {
   
   return (
     <Dialog open={props.isOpen} onClose={() => props.setIsOpen(false)}>
-      <DialogTitle>Please provide an attribute key</DialogTitle>
+      <DialogTitle>Clustering - Leiden</DialogTitle>
       <DialogContent>
         <Stack direction="column" rowGap={2} pt={2}>
           <Autocomplete
@@ -85,9 +85,8 @@ export default function LeidenDialog(props: {
             variant="outlined"
             size="medium"
             onClick={() => {
-              console.log(selectedUns)
               if (selectedUns) {
-                generate_leiden(activeFile, selectedUns?.label, resolution, dispatch);
+                get_clustering(activeFile, selectedUns?.label, resolution, dispatch)
                 props.setIsOpen(false);
               }
             }}

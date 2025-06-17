@@ -21,10 +21,26 @@ export type initialPlotStateProps = {
   selectedCategory: string;
   selectedLabels: string[];
   selectedGenes: string[];
+  tabs: {
+    currentTab: tabOptions;
+  }
+  triggers: {
+    [key in keyof triggerOptions]: triggerOptions[key] | null;
+  },
   inProgress: {
-    [key in keyof ProgressOptions]: ProgressOptions[key]
+    [key in keyof ProgressOptions]: boolean
+  }
+  progressMessage: {
+    [key in keyof ProgressOptions]: string
   }
 };
+
+export type tabOptions = "dotplot" | "scatterplot" | "table";
+
+export type triggerOptions = {
+  saveScatterPlotImage: string;
+  somethingElse: boolean;
+}
 
 export type colorTypes = "mean_expr" | "logfoldchange" | "pvals_adj";
 export type highlightType = "cluster" | "gene" | "none";
@@ -51,6 +67,7 @@ export type ProgressOptions = {
   get_file_obsm: boolean;
   get_filenames: boolean;
   get_genes: boolean;
+  get_embedding: boolean;
 };
 
 export type dgeAttributes = {

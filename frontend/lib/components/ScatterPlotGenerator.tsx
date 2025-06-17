@@ -2,7 +2,7 @@
 
 import * as d3 from "d3";
 import { obsData, obsmData } from "../types";
-import { setLabelSize } from "../redux/reducers/plotReducer";
+import { resetTrigger, setLabelSize } from "../redux/reducers/plotReducer";
 
 export const my_colors = [
   "#1f77b4",
@@ -18,11 +18,12 @@ export const my_colors = [
 
 const ScatterPlotGenerator = (props: {
   title: string,
-  svgCurrent: SVGSVGElement,
+  svgCurrent: HTMLCanvasElement,
   groupRefs: HTMLCanvasElement[],
   obsData: obsData | null,
   obsmData: obsmData,
   dispatch: Function,
+  imageTrigger: string | null,
 }) => {
   
   const containerRect = props.svgCurrent.getBoundingClientRect();
@@ -82,8 +83,10 @@ const ScatterPlotGenerator = (props: {
     
     const someContext: CanvasRenderingContext2D = props.groupRefs[labelIndex].getContext("2d")!
     
-    someContext.canvas.width = width
-    someContext.canvas.height = height
+    someContext.canvas.width = width;
+    someContext.canvas.height = height;
+    someContext.canvas.style.width = (width * 30).toString();
+    someContext.canvas.style.height = (height * 30).toString();
     
     labelMap.map((labelPosition, positionIndex) => {
       
@@ -99,6 +102,27 @@ const ScatterPlotGenerator = (props: {
     })
       
   });
+  
+  if (!!props.imageTrigger) {
+    
+    const finalCanvas = document.createElement("canvas");
+    finalCanvas.width = width;
+    finalCanvas.height = height;
+    const finalCtx = finalCanvas.getContext("2d")!;
+    
+    // Draw all canvas layers in order
+    props.groupRefs.forEach((canvas) => {
+      finalCtx.drawImage(canvas, 0, 0, width, height);
+    });
+    
+    // Export the final canvas as an image
+    const a = document.createElement("a");
+    a.href = finalCanvas.toDataURL("image/png");
+    a.download = `${props.imageTrigger}.png`;
+    a.click();
+    
+    props.dispatch(resetTrigger({ type: "saveScatterPlotImage" }))
+  }
 
   return () => {
     svgContext.remove()

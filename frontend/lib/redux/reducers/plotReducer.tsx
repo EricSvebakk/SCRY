@@ -1,4 +1,4 @@
-import { obsData, geneExpressionData, obsmData, zarrHierarchy, initialPlotStateProps, ProgressOptions, geneDendrogramData, colorTypes, DotplotOptions } from "@/lib/types";
+import { obsData, geneExpressionData, obsmData, zarrHierarchy, initialPlotStateProps, ProgressOptions, geneDendrogramData, colorTypes, DotplotOptions, triggerOptions, tabOptions } from "@/lib/types";
 import { createSlice, Draft, PayloadAction } from "@reduxjs/toolkit";
 
 const initialPlotState: initialPlotStateProps = {
@@ -27,6 +27,26 @@ const initialPlotState: initialPlotStateProps = {
   selectedCategory: "",
   selectedLabels: [],
   selectedGenes: [],
+  triggers: {
+    saveScatterPlotImage: null,
+    somethingElse: null,
+  },
+  tabs: {
+    currentTab: "scatterplot"
+  },
+  progressMessage: {
+    generate_ranked_genes_groups: "",
+    generate_leiden: "",
+    generate_umap: "",
+    get_rgg_dotplot: "",
+    get_ranked_genes_groups: "",
+    get_file_hierarchy: "",
+    get_file_obs: "",
+    get_file_obsm: "",
+    get_filenames: "",
+    get_genes: "",
+    get_embedding: ""
+  },
   inProgress: {
     generate_ranked_genes_groups: false,
     generate_leiden: false,
@@ -37,7 +57,8 @@ const initialPlotState: initialPlotStateProps = {
     get_file_obs: false,
     get_file_obsm: false,
     get_filenames: false,
-    get_genes: false
+    get_genes: false,
+    get_embedding: false
   },
 };
 
@@ -104,7 +125,28 @@ export const plotSlice = createSlice({
       action: PayloadAction<{ type: K, value: ProgressOptions[K] }>
     ) {
       state.inProgress[action.payload.type] = action.payload.value;
-    }
+    },
+    setProgressMessage<K extends keyof ProgressOptions>(
+      state: Draft<initialPlotStateProps>,
+      action: PayloadAction<{ type: K, value: string }>
+    ) {
+      state.progressMessage[action.payload.type] = action.payload.value;
+    },
+    setTrigger<K extends keyof triggerOptions>(
+      state: Draft<initialPlotStateProps>,
+      action: PayloadAction<{ type: K, value: triggerOptions[K] }>
+    ) {
+      state.triggers[action.payload.type] = action.payload.value;
+    },
+    resetTrigger<K extends keyof triggerOptions>(
+      state: Draft<initialPlotStateProps>,
+      action: PayloadAction<{ type: K }>
+    ) {
+      state.triggers[action.payload.type] = null;
+    },
+    setCurrentTab: (state, action: PayloadAction<tabOptions>) => {
+      state.tabs.currentTab = action.payload
+    },
   },
 });
 
@@ -124,7 +166,11 @@ export const {
   setSelectedCategory,
   setSelectedLabels,
   setSelectedGenes,
-  setInProgress
+  setInProgress,
+  setProgressMessage,
+  setTrigger,
+  resetTrigger,
+  setCurrentTab,
 } = plotSlice.actions;
 
 export default plotSlice.reducer;

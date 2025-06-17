@@ -1,9 +1,10 @@
 import { Button, Dialog, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
-import { generate_umap } from "../../fetch/generate_umap";
+import { get_nldr } from "@/lib/fetch/workflow/get_nldr";
+import { setCurrentTab } from "@/lib/redux/reducers/plotReducer";
 
-export default function UMAPDialog(props: {
+export default function NLDRDialog(props: {
   isOpen: boolean;
   setIsOpen: Function
 }) {
@@ -19,9 +20,9 @@ export default function UMAPDialog(props: {
   
   return (
     <Dialog open={props.isOpen} onClose={() => props.setIsOpen(false)}>
-      <DialogTitle>Please provide an attribute key</DialogTitle>
-      <DialogContent>
-        <Stack direction="column" rowGap={2} pt={2}>
+      <DialogTitle>NLDR - UMAP</DialogTitle>
+      <DialogContent sx={{ p: 2 }}>
+        <Stack direction="column" rowGap={2} pt={1}>
           <TextField
             variant="outlined"
             size="small"
@@ -87,7 +88,8 @@ export default function UMAPDialog(props: {
             variant="outlined"
             size="medium"
             onClick={() => {
-              generate_umap(
+              dispatch(setCurrentTab("scatterplot"));
+              get_nldr(
                 activeFile,
                 adataKey,
                 numPCs,

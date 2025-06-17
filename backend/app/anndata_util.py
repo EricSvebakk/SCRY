@@ -1,5 +1,4 @@
 
-import anndata as ad
 import scanpy as sc
 import os
 import numpy as np
@@ -14,7 +13,6 @@ def get_anndata_file_hierarchy(file_path: str) -> dict[str, object]:
     return -1
   
   adata = sc.read_h5ad(file_path, backed="r")
-  # adata = ad.read_h5ad(file_path, "r")
   
   def notStartWith(s1: str):
     return not s1.startswith("_")
@@ -56,18 +54,13 @@ def get_genes_h5ad(file_path: str):
   return {
     "genes": genes
   }
-    
-  
 
 def get_anndata_file_obs(file_path: str, selectedObs: str) -> dict[str, object]:
   
   adata = sc.read_h5ad(file_path, backed="r")
   
-  # try:
   obs_data = adata.obs[selectedObs].astype("category")
   
-  # print(type(obs_data), obs_data)
-  # print()
   labels = list(obs_data.cat.categories)
   label_map = list(obs_data.cat.codes)
   
@@ -78,17 +71,12 @@ def get_anndata_file_obs(file_path: str, selectedObs: str) -> dict[str, object]:
     "label_map": label_map
   }
   
-  # except ValueError:
-  #   print()
-  #   return -1
-  
-
 def get_anndata_file_obsm(file_path: str, selectedObsm: str) -> dict[str, object]:
   
   adata = sc.read_h5ad(file_path, backed="r")
   
   try:
-    obsm_data = list(adata.obsm[selectedObsm].tolist())
+    obsm_data = list(adata.obsm[selectedObsm][:, :2].tolist())
     
     adata.file.close()
     
@@ -98,88 +86,6 @@ def get_anndata_file_obsm(file_path: str, selectedObsm: str) -> dict[str, object
   
   except:
     return -1
-
-def generate_umap_h5ad(
-  file_path: str,
-  key: str,
-  n_pcs: int = 30,
-  min_dist: float = 0.5,
-  spread: float = 1.0,
-  n_neighbors: int = 15,
-):
-  
-  adata = sc.read_h5ad(file_path)
-  
-  # Adds X_pca_[adata_key] to obsm, varm and uns
-  if ("X_pca" not in adata.obsm_keys()):
-    sc.pp.pca(
-      adata,
-      # key_added=f"X_pca_{adata_key}",
-      # n_comps=n_pcs,
-      chunked=True,
-      chunk_size=1000,
-      # zero_center=True,
-      # svd_solver='arpack',
-    )
-
-  # stores [adata_key]_distances and [adata_key]_connectivities to obsp
-  # stores [adata_key] to uns
-  sc.pp.neighbors(
-    adata,
-    key_added=key,
-    # use_rep=f"X_pca_{adata_key}",
-    n_pcs=n_pcs,
-    n_neighbors=n_neighbors
-  )
-  
-  # Adds X_umap_[adata_key] to obsm and uns
-  sc.tl.umap(
-    adata,
-    neighbors_key=key,
-    key_added=f"X_umap_{key}",
-    min_dist=min_dist,
-    spread=spread,
-  )
-  
-  # leiden_resolutions = {
-  #   adata_key + "_leiden_res0_25": 0.25,
-  #   adata_key + "_leiden_res0_5": 0.5,
-  #   adata_key + "_leiden_res1": 1,
-  # }
-  
-  # Stores leiden_resolutions[key] to obs and uns
-  # for key in leiden_resolutions:
-  #   sc.tl.leiden(adata, neighbors_key=adata_key, key_added=key, resolution=leiden_resolutions[key], flavor="igraph")
-  
-  sc.write(file_path, adata)
-  
-  adata.file.close()
-  
-  return os.path.exists(file_path)
-
-def generate_leiden_h5ad(file_path: str, key: str, resolution: float = 1):
-  
-  adata = sc.read_h5ad(file_path)
-  
-  res_to_string = f"{resolution}".replace(".", "_")
-  resolution_key = f"leiden_{res_to_string}_{key}"
-  
-  print(file_path, resolution_key, key, resolution)
-  
-  # Stores leiden_resolutions[key] to obs and uns
-  sc.tl.leiden(
-    adata,
-    neighbors_key=key,
-    key_added=resolution_key,
-    resolution=resolution,
-    flavor="igraph"
-  )
-  
-  sc.write(file_path, adata)
-  
-  adata.file.close()
-  
-  return os.path.exists(file_path)
 
 def generate_ranked_genes_groups(file_path: str, key: str):
   
@@ -203,11 +109,8 @@ def get_ranked_genes_groups(file_path: str, num_results: int = 20):
   
   adata = sc.read_h5ad(file_path)
   
-  # result = adata.uns["rank_genes_groups"].keys()
-  
   result = adata.uns["rank_genes_groups"]
   groups = result["names"].dtype.names
-  # groups = result["names"].dtype.names
   
   all_results = {}
 
@@ -219,23 +122,6 @@ def get_ranked_genes_groups(file_path: str, num_results: int = 20):
       'pvals': result['pvals'][group_key][:num_results].tolist(),
       'pvals_adj': result['pvals_adj'][group_key][:num_results].tolist(),
     }
-  
-  # return {
-  #   'names': result['names'][group_key][:num_results].tolist(),
-  #   'scores': result['scores'][group_key][:num_results].tolist(),
-  #   'logfoldchanges': result['logfoldchanges'][group_key][:num_results].tolist(),
-  #   'pvals': result['pvals'][group_key][:num_results].tolist(),
-  #   'pvals_adj': result['pvals_adj'][group_key][:num_results].tolist(),
-  # }
-  
-  # groups = result["names"].dtype.names
-  
-  # print(result)
-  # print(groups)
-  
-  # sc.tl.rank_genes_groups(adata, groupby=key)
-  
-  # sc.write(file_path, adata)
   
   adata.file.close()
   
@@ -305,135 +191,6 @@ def sort_by_dendro_rgg_rbb_order(df: pd.DataFrame, dendro_order: list[str], n_ge
   )
   
   return sorted_df
-
-def get_rgg_dotplot(
-  file_path: str,
-  uns_key: str,
-  n_genes: int = 1,
-):
-  
-  adata = sc.read_h5ad(file_path)
-  
-  key_dotplot = f"dotplot_stats_g{n_genes}_{uns_key}"
-  
-  # Dotplot and dendrogram have already been generated
-  if (key_dotplot in adata.uns_keys()):
-    
-    results = adata.uns[key_dotplot]
-    dendro_order = adata.uns[f"dendrogram_{uns_key}"]["categories_ordered"]
-    sorted_records = (
-      sort_by_dendro_rgg_rbb_order(
-        pd.DataFrame(results["data"]),
-        dendro_order,
-        n_genes
-      )
-      .to_dict(orient="records")
-    )
-    
-    return {
-      "data": sorted_records,
-      "dendro": json.loads(results["dendro"]),
-      "n_genes": int(results["n_genes"]),
-      "n_clusters": int(len(dendro_order))
-    }
-  
-  # Neither Dotplot or dendrogram have been generated
-  key_rgg = f"rank_genes_groups_{uns_key}"
-  
-  # Coompute rgg dataframes
-  fig = sc.pl.rank_genes_groups_dotplot(
-    adata,
-    key=key_rgg,
-    n_genes=n_genes,
-    return_fig=True
-  )
-  
-  mean_expr_df = fig.dot_color_df
-  frac_expr_df = fig.dot_size_df
-  
-  # Remove duplicate columns from n_genes > 1
-  mean_expr_df_no_dup = mean_expr_df.loc[:, ~mean_expr_df.T.duplicated()]
-  frac_expr_df_no_dup = frac_expr_df.loc[:, ~frac_expr_df.T.duplicated()]
-  
-  n_genes_actual = len(mean_expr_df_no_dup.columns)
-  
-  # Convert dfs to long-format
-  mean_expr_long = mean_expr_df_no_dup.reset_index().melt(id_vars="index", var_name="gene", value_name="mean_expr").rename(columns={"index": "cluster"})
-  frac_expr_long = frac_expr_df_no_dup.reset_index().melt(id_vars="index", var_name="gene", value_name="frac_expr").rename(columns={"index": "cluster"})
-
-  # Combine dataframes
-  merged_expr = mean_expr_long.merge(frac_expr_long, on=["gene", "cluster"])
-  
-  # Get remaining data not provided by fig
-  rgg = adata.uns[key_rgg]
-  pvals = []
-  logfcs = []
-  ranks = []
-
-  # Generates lists for pvals, logfolds and rank to match longform-df
-  for index, row in merged_expr.iterrows():
-    
-    gene, group = row["gene"], row["cluster"]
-    
-    try:
-      gene_list = rgg["names"][group]
-      
-      index = list(gene_list).index(gene)
-      
-      pval = rgg["pvals_adj"][group][index]
-      logfc = rgg["logfoldchanges"][group][index]
-      rank = index
-      
-    except ValueError:
-      pval = None
-      logfc = None
-      rank = None
-      
-    pvals.append(pval)
-    logfcs.append(logfc)
-    ranks.append(rank)
-  
-  # Add corresponding results to longform-df
-  merged_expr["pvals_adj"] = pvals
-  merged_expr["logfoldchange"] = logfcs
-  merged_expr["rgg_order"] = ranks
-  
-  # Remove insignificant pval results
-  filtered_df = merged_expr[merged_expr["pvals_adj"] < 0.05]
-  
-  # Generate tree <3
-  dendro_tree = get_dendro_tree(adata, uns_key)
-  
-  # Convert types for storing in anndata
-  results = {
-    "data": filtered_df.to_dict(orient="list"),
-    "n_genes": int(n_genes_actual),
-    "dendro": json.dumps(make_safe(dendro_tree))
-  }
-  
-  # Store computed results
-  adata.uns[key_dotplot] = results
-  sc.write(file_path, adata)
-  adata.file.close()    
-  
-  dendro_order = adata.uns[f"dendrogram_{uns_key}"]["categories_ordered"]
-  
-  # Sort results based on dendrogram-rgg-rbb-order, similar to scanpy's rgg_dotplot
-  sorted_records = (
-    sort_by_dendro_rgg_rbb_order(
-      pd.DataFrame(results["data"]),
-      dendro_order,
-      n_genes
-    )
-    .to_dict(orient="records")
-  )
-  
-  return {
-    "data": sorted_records,
-    "dendro": json.loads(results["dendro"]),
-    "n_genes": int(results["n_genes"]),
-    "n_clusters": int(len(dendro_order)),
-  }
 
 # Serialize object
 def make_safe(obj):

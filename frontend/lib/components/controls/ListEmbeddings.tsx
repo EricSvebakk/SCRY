@@ -5,13 +5,11 @@ import {
   Stack,
 } from "@mui/material";
 import {
-  setSelectedCategory,
+  setCurrentTab,
   setSelectedEmbedding,
 } from "../../redux/reducers/plotReducer";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { RootState } from "../../redux/stores/store";
-import { useState } from "react";
-import { get_file_obs } from "../../fetch/get_file_obs";
 import { get_file_obsm } from "@/lib/fetch/get_file_obsm";
 
 export default function ListEmbeddings() {
@@ -27,9 +25,8 @@ export default function ListEmbeddings() {
     return (
       <Stack
         sx={{
-          height: "15vh",
+          height: "100%",
           width: "100%",
-          border: "1px solid grey",
           alignItems: "center",
           justifyContent: "center"
         }}
@@ -43,33 +40,39 @@ export default function ListEmbeddings() {
     <Stack
       direction="column"
       sx={{
-        border: "1px solid grey",
-        height: "15vh",
-        overflowY: "auto"
+        width: "100%",
+        height: "100%",
+        overflowY: "auto",
       }}
     >
       {[...hierarchy.obsm]
         .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
         .map((e) => {
           return (
-            <Button
-              key={"accordion_" + e}
-              // disabled={selectedEmbedding === ""s || obsm === null}
-              disabled={selectedEmbedding === e}
-              sx={{
-                justifyContent: "start",
-                overflowX: "clip",
-                fontWeight: selectedEmbedding === e ? "bold" : ""
-              }}
-              size="small"
-              onClick={() => {
-                dispatch(setSelectedEmbedding(e));
-                get_file_obsm(fileID, e, dispatch);
-
-              }}
+            <Stack
+              key={"stack" + e}
+              direction="row"
             >
-              {e}
-            </Button>
+              <Button
+                fullWidth
+                key={"accordion_" + e}
+                // disabled={selectedEmbedding === ""s || obsm === null}
+                disabled={selectedEmbedding === e}
+                sx={{
+                  justifyContent: "start",
+                  overflowX: "clip",
+                  fontWeight: selectedEmbedding === e ? "bold" : ""
+                }}
+                size="small"
+                onClick={() => {
+                  dispatch(setSelectedEmbedding(e));
+                  dispatch(setCurrentTab("scatterplot"));
+                  get_file_obsm(fileID, e, dispatch);
+                }}
+              >
+                {e}
+              </Button>
+            </Stack>
           );
         })}
     </Stack>

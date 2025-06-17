@@ -1,8 +1,8 @@
 
 services:
   
-  thesis_docker_caddy:
-    container_name: thesis-docker-caddy
+  thesis_caddy:
+    container_name: thesis-caddy
     image: caddy:2.10.0-alpine
     restart: unless-stopped
     ports:
@@ -15,9 +15,9 @@ services:
       - caddy_config:/config
     networks:
       - caddy_net
-  
-  thesis_docker_backend:
-    container_name: thesis-docker-backend
+   
+  thesis_backend:
+    container_name: thesis-backend
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -27,16 +27,40 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/app:/usr/src/app # Sync the backend code
-      - ./persistent01:/persistent01  # Mount thesis_data for file storage
-      - ../thesis_test_folder:/thesis_test_folder
+      - ./persistent01:/persistent01  # Mount for file access
     environment:
       # - FRONTEND_ENDPOINT=http://localhost:3000
       - PYTHONPATH=/usr/src/app
+      - CELERY_BROKER_URL=redis://thesis_redis:6379/0
     networks:
       - caddy_net
   
-  thesis_docker_frontend:
-    container_name: thesis-docker-frontend
+  thesis_redis:
+    image: redis:7-alpine
+    container_name: thesis-redis
+    restart: unless-stopped
+    networks:
+      - caddy_net
+  
+  thesis_celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: thesis-celery
+    command: celery -A worker:celery_app worker --loglevel=info --concurrency=4
+    depends_on:
+      - thesis_backend
+      - thesis_redis
+    volumes:
+      - ./backend/app:/usr/src/app
+      - ./persistent01:/persistent01  # Mount for file access
+    environment:
+      - CELERY_BROKER_URL=redis://thesis_redis:6379/0
+    networks:
+      - caddy_net
+  
+  thesis_frontend:
+    container_name: thesis-frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -49,7 +73,7 @@ services:
     networks:
       - caddy_net
     depends_on:
-      - thesis_docker_backend
+      - thesis_backend
 
 volumes:
   caddy_data:

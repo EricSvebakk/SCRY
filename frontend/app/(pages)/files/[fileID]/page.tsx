@@ -3,11 +3,15 @@
 
 import {
   reset,
+  setCurrentTab,
 } from "@/lib/redux/reducers/plotReducer";
 import {
+  Box,
   Button,
+  ButtonGroup,
   Grid,
   Stack,
+  Typography,
 } from "@mui/material";
 import LoadingButton from '@mui/lab/LoadingButton';
 import ListLabels from "@/lib/components/controls/ListLabels";
@@ -15,19 +19,29 @@ import { ScatterPlot } from "@/lib/components/ScatterPlot";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { setActiveFile } from "@/lib/redux/reducers/fileReducer";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { MouseEventHandler, useEffect, useState } from "react";
 import { get_file_hierarchy } from "@/lib/fetch/get_file_hierarchy";
-import UMAPDialog from "@/lib/components/modals/UMAPDialog";
-import LeidenDialog from "@/lib/components/modals/LeidenDialog";
+import NLDRDialog from "@/lib/components/modals/NLDRDialog";
+import ClusteringDialog from "@/lib/components/modals/ClusteringDialog";
 import { get_genes } from "@/lib/fetch/get_genes";
 import RGGDialog from "@/lib/components/modals/RGGDialog";
 import { DotPlot } from "@/lib/components/DotPlot";
 import DotplotDialog from "@/lib/components/modals/DotplotDialog";
 import { ListLabelOptions } from "@/lib/components/controls/ListLabelOptions";
 import ListEmbeddings from "@/lib/components/controls/ListEmbeddings";
-import d3ToPng from "d3-svg-to-png";
 import { DotPlotConfigurationPopover } from "@/lib/components/modals/DotPlotConfigurationPopover";
-import { DotplotSavingPopover } from "@/lib/components/modals/DotplotSavingPopover";
+import { ImageSavingPopover } from "@/lib/components/modals/ImageSavingPopover";
+import { GeneGroupTable } from "@/lib/components/GeneGroupTable";
+import LDRDialog from "@/lib/components/modals/LDRDialog";
+
+type step = {
+  label: string;
+  id: string;
+  // disabled: boolean;
+  loading: boolean;
+  function: MouseEventHandler | undefined;
+}
+
 
 export default function FileIdPage({ }) {
   
@@ -36,15 +50,56 @@ export default function FileIdPage({ }) {
   const obs = useAppSelector((state) => state.plotReducer.obs);
   
   const inProgress = useAppSelector((state) => state.plotReducer.inProgress);
-  const dpOptions = useAppSelector((state) => state.plotReducer.dotplotOptions);
+  const currentTab = useAppSelector((state) => state.plotReducer.tabs.currentTab);
   
   const dispatch = useAppDispatch();
   
-  const [isUMAPDialogOpen, setIsUMAPDialogOpen] = useState(false);
-  const [isLeidenDialogOpen, setIsLeidenDialogOpen] = useState(false);
+  
+  const [isLDRDialogOpen, setIsLDRDialogOpen] = useState(false);
+  const [isNLDRDialogOpen, setIsNLDRDialogOpen] = useState(false);
+  const [isClusteringDialogOpen, setIsClusteringDialogOpen] = useState(false);
   const [isRGGDialogOpen, setIsRGGDialogOpen] = useState(false);
   const [isDotplotDialogOpen, setIsDotplotDialogOpen] = useState(false);
-  const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
+  
+  const steps: step[] = [
+    {
+      label: "Linear Dimension Reduction",
+      id: "ldr",
+      function: () => setIsLDRDialogOpen(true),
+      loading: false,
+    },
+    {
+      label: "Non-linear Dimension Reduction",
+      id: "nldr",
+      function: () => setIsNLDRDialogOpen(true),
+      loading: inProgress.generate_umap,
+    },
+    {
+      label: "Clustering of cells",
+      id: "cc",
+      function: () => setIsClusteringDialogOpen(true),
+      loading: inProgress.generate_leiden,
+    },
+    {
+      label: "Differential Expression",
+      id: "de",
+      function: () => setIsRGGDialogOpen(true),
+      loading: inProgress.generate_ranked_genes_groups,
+    },
+    {
+      label: "DE Dotplot",
+      id: "ded",
+      function: () => setIsDotplotDialogOpen(true),
+      loading: inProgress.get_rgg_dotplot,
+    },
+    {
+      label: "Cluster Annotation",
+      id: "ctap",
+      function: undefined,
+      loading: false,
+    },
+      
+  ]
   
   useEffect(() => {
     
@@ -58,9 +113,9 @@ export default function FileIdPage({ }) {
       if (!inProgress.get_file_hierarchy) {
         get_file_hierarchy(fileID, dispatch);
       }
-      if (!inProgress.get_genes) {
-        get_genes(fileID, dispatch);
-      }
+      // if (!inProgress.get_genes) {
+      //   get_genes(fileID, dispatch);
+      // }
     }
     
   }, []);
@@ -85,74 +140,6 @@ export default function FileIdPage({ }) {
           height="100%"
           rowGap={1}
         >
-          <Stack
-            direction="column"
-            rowGap={1}
-            p={1}
-            sx={{
-              border: "1px solid grey",
-            }}
-          >
-            <LoadingButton
-              variant="outlined"
-              size="small"
-              onClick={() => setIsUMAPDialogOpen(true)}
-              loading={inProgress.generate_umap}
-              fullWidth
-            >
-              Generate UMAP
-            </LoadingButton>
-            <LoadingButton
-              variant="outlined"
-              size="small"
-              onClick={() => setIsLeidenDialogOpen(true)}
-              loading={inProgress.generate_leiden}
-              fullWidth
-            >
-              Generate Leiden
-            </LoadingButton>
-            <LoadingButton
-              variant="outlined"
-              size="small"
-              onClick={() => setIsRGGDialogOpen(true)}
-              loading={inProgress.generate_ranked_genes_groups}
-              fullWidth
-            >
-              Generate RGG
-            </LoadingButton>
-            
-            <LoadingButton
-              variant="outlined"
-              size="small"
-              onClick={() => {
-                setIsDotplotDialogOpen(true)
-              }}
-              loading={inProgress.get_rgg_dotplot}
-              fullWidth
-            >
-              Fetch RGG Dotplot
-            </LoadingButton>
-            
-            <UMAPDialog
-              isOpen={isUMAPDialogOpen}
-              setIsOpen={setIsUMAPDialogOpen}
-            />
-            
-            <LeidenDialog
-              isOpen={isLeidenDialogOpen}
-              setIsOpen={setIsLeidenDialogOpen}
-            />
-            
-            <RGGDialog
-              isOpen={isRGGDialogOpen}
-              setIsOpen={setIsRGGDialogOpen}
-            />
-            
-            <DotplotDialog
-              isOpen={isDotplotDialogOpen}
-              setIsOpen={setIsDotplotDialogOpen}
-            />
-          </Stack>
           
           <Stack
             direction="column"
@@ -163,70 +150,211 @@ export default function FileIdPage({ }) {
               border: "1px solid grey",
             }}
           >
-            WIP
+            {
+              steps.map((e, i) => {
+                return (
+                  <LoadingButton
+                    variant="contained"
+                    disabled={ e.function === undefined }
+                    key={"button_" + e.id}
+                    fullWidth
+                    size="small"
+                    onClick={e.function}
+                    loading={e.loading}
+                  >
+                    <Stack
+                      direction="row"
+                      width="100%"
+                      justifyContent="space-between"
+                      gap={1}
+                      >
+                      <Typography variant="inherit">
+                        {i+1}.
+                      </Typography>
+                      
+                      <Stack
+                        direction="row"
+                        width="100%"
+                        justifyContent="space-around"
+                      >                          
+                        <Typography variant="inherit" align="center">
+                          {e.label}
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                    
+                  </LoadingButton>
+                  
+                )
+              })
+            }
+            
           </Stack>
+          
+          <LDRDialog
+            isOpen={isLDRDialogOpen}
+            setIsOpen={setIsLDRDialogOpen}
+          />
+          
+          <NLDRDialog
+            isOpen={isNLDRDialogOpen}
+            setIsOpen={setIsNLDRDialogOpen}
+          />
+          
+          <ClusteringDialog
+            isOpen={isClusteringDialogOpen}
+            setIsOpen={setIsClusteringDialogOpen}
+          />
+          
+          <RGGDialog
+            isOpen={isRGGDialogOpen}
+            setIsOpen={setIsRGGDialogOpen}
+          />
+          
+          <DotplotDialog
+            isOpen={isDotplotDialogOpen}
+            setIsOpen={setIsDotplotDialogOpen}
+          />
           
         </Stack>
       </Grid>
       
       <Grid
         item
-        width={200}
+        width={250}
+        height="100%"
       >
-        <Stack
+        <Grid
+          container
           direction="column"
           rowGap={1}
+          height="100%"
+          
         >
-          <ListEmbeddings />
-          <ListLabels />
-          <ListLabelOptions />
-        </Stack>
-      </Grid>
-
-      <Grid
-        item
-        xs
-        sx={{
-          border: "1px solid grey",
-        }}
-      >
-        <Stack direction="column" height="100%">
-          <ScatterPlot />
-        </Stack>
+          <Grid
+            item
+            xs
+            width="100%"
+            sx={{
+              border: "1px solid grey"
+            }}
+          >
+            <ListEmbeddings />
+          </Grid>
+          
+          <Grid
+            item
+            xs
+            width="100%"
+            sx={{
+              border: "1px solid grey"
+            }}
+          >
+            <ListLabels />
+          </Grid>
+          
+          <Grid
+            item
+            xs
+            sx={{
+              border: "1px solid grey"
+            }}
+          >
+            <ListLabelOptions />
+          </Grid>
+        </Grid>
       </Grid>
       
       <Grid
         item
         xs
         sx={{
-          border: "1px solid grey",
+          height: "100%"
         }}
       >
         <Stack
           direction="column"
           height="100%"
+          gap={1}
         >
-          
           <Stack
             direction="row"
+            sx={{
+              border: "1px solid grey",
+              p:1,
+            }}
+            gap={1}
           >
+            <ButtonGroup
+              size="small"
+            >     
+              <Button
+                variant={currentTab == "scatterplot" ? "contained" : "outlined"}
+                onClick={() => dispatch(setCurrentTab("scatterplot")) }
+              >
+                Scatter plot
+              </Button>
+              <Button
+                variant={currentTab == "dotplot" ? "contained" : "outlined"}
+                onClick={() => dispatch(setCurrentTab("dotplot")) }
+              >
+                Dot plot
+              </Button>
+              <Button
+                variant={currentTab == "table" ? "contained" : "outlined"}
+                onClick={() => dispatch(setCurrentTab("table")) }
+              >
+                Table
+              </Button>
+            </ButtonGroup>
+            
             <DotPlotConfigurationPopover />
-            <DotplotSavingPopover />
+            <ImageSavingPopover />
           </Stack>
           
-          <DotPlot />
+          <Box
+            height="100%"
+            sx={{
+              border: "1px solid grey"
+            }}
+          >
+            <Box
+              sx={{
+                height: "100%",
+                display: currentTab === "scatterplot" ? "flex" : "none"
+              }}
+            >
+              <ScatterPlot />
+            </Box>
+            
+            <Stack
+              height="100%"
+              sx={{
+                height: "100%",
+                display: currentTab === "dotplot" ? "flex" : "none"
+              }}
+            >
+              <Stack
+                direction="row"
+              >
+              </Stack>
+              
+              <DotPlot />
+            </Stack>
+            
+            <Box
+              sx={{
+                height: "100%",
+                display: currentTab === "table" ? "flex" : "none"
+              }}
+            >
+              <GeneGroupTable />
+            </Box>
+          </Box>
         </Stack>
+        
+        
       </Grid>
-      
-      {/* <Grid
-        item
-        xs
-        sx={{
-          border: "1px solid grey",
-        }}
-      >
-        <GeneGroupTable />
-      </Grid> */}
       
     </Grid>
   );

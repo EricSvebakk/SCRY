@@ -1,17 +1,10 @@
-{
-  servers api.thesis.tepohi.no {
-    timeouts {
-      idle 240s
-    }
-  }
-}
 
 thesis.tepohi.no {
-  reverse_proxy thesis_docker_frontend:3000
+  reverse_proxy thesis_frontend:3000
 }
 
 api.thesis.tepohi.no {
-  reverse_proxy thesis_docker_backend:8000 {
+  reverse_proxy thesis_backend:8000 {
     transport http {
       read_timeout 1800s
       write_timeout 1800s

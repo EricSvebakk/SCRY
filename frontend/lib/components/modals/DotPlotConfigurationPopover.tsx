@@ -43,7 +43,11 @@ export function DotPlotConfigurationPopover() {
   
   return (
     <>
-      <Tooltip enterDelay={0} placement="bottom" title="Open settings for dotplot">
+      <Tooltip
+        enterDelay={0}
+        placement="bottom" title="Open settings for dotplot"
+        disableFocusListener={expression.length == 0}
+      >
         <IconButton
           disabled={expression.length == 0}
           onClick={handleClick}

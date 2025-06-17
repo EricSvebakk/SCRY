@@ -2,9 +2,9 @@
 import { Autocomplete, Button, createFilterOptions, Dialog, DialogContent, DialogTitle, Divider, Stack, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
-import { get_rgg_dotplot } from "@/lib/fetch/get_rgg_dotplot";
+import { get_rgg_dotplot } from "@/lib/fetch/workflow/get_rgg_dotplot";
 import { AutocompleteOption } from "@/lib/types";
-import { setDotplotOptions } from "@/lib/redux/reducers/plotReducer";
+import { setCurrentTab, setDotplotOptions } from "@/lib/redux/reducers/plotReducer";
 
 
 export default function DotplotDialog(props: {
@@ -34,16 +34,15 @@ export default function DotplotDialog(props: {
         .map((e, i) => ({ label: uns[e].params.groupby, id: i }));
       
       setOptionsFiltered(structuredOptions);
-      console.log(structuredOptions)
     }
   }, [obs, uns]);
   
   
   return (
     <Dialog open={props.isOpen} onClose={() => props.setIsOpen(false)}>
-      <DialogTitle>Please provide an attribute key</DialogTitle>
+      <DialogTitle>Dot plot</DialogTitle>
       <DialogContent>
-        <Stack direction="column" rowGap={2} pt={2}>
+        <Stack direction="column" rowGap={2} pt={2} width={300}>
           
           <Autocomplete
             disabled={optionsFiltered.length === 0}
@@ -106,12 +105,12 @@ export default function DotplotDialog(props: {
             variant="outlined"
             size="medium"
             onClick={() => {
-              console.log(selectedUns)
               if (selectedUns) {
                 dispatch(setDotplotOptions({
                   ...dpOptions,
                   title: selectedUns.label
                 }));
+                dispatch(setCurrentTab("dotplot"));
                 get_rgg_dotplot(activeFile, selectedUns.label, nGenes, dispatch);
                 props.setIsOpen(false);
               }

@@ -1,38 +1,26 @@
 
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Button,
-  Checkbox,
   CircularProgress,
   Stack,
-  Tooltip,
-  Typography,
 } from "@mui/material";
 import {
   setSelectedCategory,
-  setSelectedLabels,
 } from "../../redux/reducers/plotReducer";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { RootState } from "../../redux/stores/store";
-import { Square } from "@mui/icons-material";
-import { my_colors } from "../ScatterPlotGenerator";
 import { useState } from "react";
-import { theme } from "@/app/layout";
 import { get_file_obs } from "../../fetch/get_file_obs";
 
 export default function ListLabels() {
   
   const fileID = useAppSelector((state: RootState) => state.fileReducer.activeFile);
   
-  const obsm = useAppSelector((state: RootState) => state.plotReducer.obsm);
-  
   const hierarchy = useAppSelector((state: RootState) => state.plotReducer.hierarchy);
+  const obsm = useAppSelector((state: RootState) => state.plotReducer.obsm);
   
   const selectedCategory = useAppSelector((state: RootState) => state.plotReducer.selectedCategory);
   const selectedEmbedding = useAppSelector((state: RootState) => state.plotReducer.selectedEmbedding);
-  // const selectedCat = useAppSelector((state: RootState) => state.plotReducer.selectedCategory);
   
   const inProgress = useAppSelector((state) => state.plotReducer.inProgress.get_file_hierarchy)
   
@@ -46,7 +34,6 @@ export default function ListLabels() {
         sx={{
           height: "30vh",
           width: "100%",
-          border: "1px solid grey",
           alignItems: "center",
           justifyContent: "center"
         }}
@@ -60,9 +47,9 @@ export default function ListLabels() {
     <Stack
       direction="column"
       sx={{
-        border: "1px solid grey",
         height: "30vh",
-        overflowY: "auto"
+        width: "100%",
+        overflowY: "auto",
       }}
     >
       {[...hierarchy.obs]
@@ -84,7 +71,6 @@ export default function ListLabels() {
                   
                   dispatch(setSelectedCategory(e));
                   get_file_obs(fileID, e, dispatch);
-                  // fetchFileObs(fileID, e, dispatch);
                 }
                 else {
                   setExpanded(!expanded);

@@ -3,8 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import DotPlotGenerator from "./DotPlotGenerator";
 import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
 import { RootState } from "../redux/stores/store";
-import { Box, CircularProgress, Stack } from "@mui/material";
-
+import { Box, CircularProgress, Stack, Typography } from "@mui/material";
 
 export function DotPlot() {
   
@@ -15,13 +14,13 @@ export function DotPlot() {
   const nGenes = useAppSelector((state: RootState) => state.plotReducer.nGenes);
   const nClusters = useAppSelector((state: RootState) => state.plotReducer.nClusters);
   const inProgress = useAppSelector((state: RootState) => state.plotReducer.inProgress.get_rgg_dotplot);
+  const progressMessage = useAppSelector((state: RootState) => state.plotReducer.progressMessage.get_rgg_dotplot);
   const dpOptions = useAppSelector((state: RootState) => state.plotReducer.dotplotOptions);
   const dispatch = useAppDispatch();
   
   const [counter, setCounter] = useState(0);
   
   useEffect(() => {
-    console.log("legal dotplot", !!nGenes, !!geneDendrogramData, !!geneExpressionData)
     
     let cleanUpFunction;
     
@@ -39,13 +38,13 @@ export function DotPlot() {
     return cleanUpFunction;
     
   }, [
-      geneExpressionData,
-      counter,
-      dpOptions.coloring,
-      dpOptions.highlight,
-      dpOptions.expressionMin,
-      dpOptions.expressionMax
-    ]);
+    geneExpressionData,
+    counter,
+    dpOptions.coloring,
+    dpOptions.highlight,
+    dpOptions.expressionMin,
+    dpOptions.expressionMax
+  ]);
   
   const updateCounter = () => {
     setCounter((counter) => counter += 1);
@@ -65,7 +64,12 @@ export function DotPlot() {
           alignItems: "center",
           justifyContent: "center"
         }}
+        gap={2}
       >
+        <Typography>
+          {progressMessage}
+        </Typography>
+        
         <CircularProgress size={100} color="primary"/>
       </Stack>
     );

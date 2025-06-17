@@ -37,11 +37,10 @@ export default function RGGDialog(props: {
   
   return (
     <Dialog open={props.isOpen} onClose={() => props.setIsOpen(false)}>
-      <DialogTitle>Please provide an attribute key</DialogTitle>
+      <DialogTitle>RGG</DialogTitle>
       <DialogContent>
-        <Stack direction="column" rowGap={2} pt={2}>
+        <Stack direction="column" rowGap={2} pt={2} width={300}>
           <Autocomplete
-            // multiple
             disabled={optionsFiltered.length === 0}
             size="small"
             fullWidth

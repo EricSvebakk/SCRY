@@ -25,9 +25,8 @@ export function ListLabelOptions() {
     return (
       <Stack
         sx={{
-          height: "36vh",
+          height: "30vh",
           width: "100%",
-          border: "1px solid grey",
           alignItems: "center",
           justifyContent: "center"
         }}
@@ -41,8 +40,8 @@ export function ListLabelOptions() {
     <Stack
       direction="column"
       sx={{
-        border: "1px solid grey",
-        height: "36vh",
+        height: "30vh",
+        width: "100%",
         overflowY: "auto"
       }}
     >          
@@ -53,6 +52,7 @@ export function ListLabelOptions() {
     
           return (
             <Button
+              key={"button_" + label}
               disableRipple
               sx={{ all: "initial" }}
               size="small"
@@ -68,6 +68,7 @@ export function ListLabelOptions() {
               onMouseLeave={() => labelOnMouseLeave(label, obs)}
             >
               <LabelListItem
+                key={"label_" + label}
                 label={label}
                 label_color={label_color}
               />

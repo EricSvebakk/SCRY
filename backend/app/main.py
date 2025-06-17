@@ -1,14 +1,16 @@
 
-import os
 from fastapi.responses import JSONResponse
-from fastapi import FastAPI
-from fastapi import FastAPI
-from fastapi import FastAPI, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Form
 from dotenv import load_dotenv, dotenv_values
-import logging
 from pathlib import Path
 from math import ceil, log10
+
+from celery.result import AsyncResult
+from worker import compute_rgg_dotplot, compute_nldr, compute_ldr, compute_clustering
+
+import os
+import logging
 import zarr
 import json
 import time
@@ -110,7 +112,7 @@ async def get_dims_zarr(data: any):
     return None
 
 # READY
-@app.get("/get_filenames")
+@app.get("/get_filenames", tags=["SYSTEM"])
 async def get_filenames():
   """
   """
@@ -133,7 +135,7 @@ async def get_filenames():
   )
 
 # READY
-@app.get("/get_file_size")
+@app.get("/get_file_size", tags=["SYSTEM"])
 async def get_file_size(file_id: str):
   """
   """
@@ -215,51 +217,6 @@ async def get_file_obsm(file_id: str, obsm: str):
   
   return JSONResponse(content=json.dumps(obj))
 
-@app.post("/generate_umap/")
-async def generate_umap(
-  file_id: str = Form(...),
-  adata_key: str = Form(...),
-  n_pcs: int = Form(...),
-  min_dist: float = Form(...),
-  spread: float = Form(...),
-  n_neighbors: int = Form(...),
-):
-  
-  file_path = os.path.join(UPLOAD_DIR, file_id)
-  obj = "Something went wrong while generating UMAP"
-  
-  if (not os.path.exists(file_path)):
-    return JSONResponse(content=f"File ID '{file_id}' is not a valid.")
-  
-  elif (file_path.endswith(".h5ad")):
-    obj = au.generate_umap_h5ad(file_path, adata_key, n_pcs, min_dist, spread, n_neighbors)
-  
-  return JSONResponse(content={
-    "response": "File has been successfully updated." if (obj) else "Something went wrong.",
-    "data": obj
-  })
-
-@app.post("/generate_leiden/")
-async def generate_leiden(
-  file_id: str = Form(...),
-  uns_key: str = Form(...),
-  resolution: float = Form(...),
-):
-  
-  file_path = os.path.join(UPLOAD_DIR, file_id)
-  obj = "Something went wrong while generating leiden"
-  
-  if (not os.path.exists(file_path)):
-    return JSONResponse(content=f"File ID '{file_id}' is not a valid.")
-  
-  elif (file_path.endswith(".h5ad")):
-    obj = au.generate_leiden_h5ad(file_path, uns_key, resolution)
-  
-  return JSONResponse(content={
-    "response": "File has been successfully updated." if (obj) else "Something went wrong.",
-    "data": obj
-  })
-
 @app.post("/generate_ranked_genes_groups/")
 async def generate_ranked_genes_groups(
   file_id: str = Form(...),
@@ -295,25 +252,7 @@ async def get_ranked_genes_groups(
   
   return JSONResponse(content=json.dumps(obj))
 
-@app.get("/get_rgg_dotplot")
-async def get_rgg_dotplot(
-  file_id: str,
-  uns_key: str,
-  n_genes: int,
-  # n_groups: int,
-):
-  file_path = os.path.join(UPLOAD_DIR, file_id)
-  obj = "Something went wrong while generating leiden"
-  
-  if (not os.path.exists(file_path)):
-    return JSONResponse(content=f"File ID '{file_id}' is not a valid.")
-  
-  elif (file_path.endswith(".h5ad")):
-    obj = au.get_rgg_dotplot(file_path, uns_key, n_genes)
-  
-  return JSONResponse(content=json.dumps(obj))
-
-
+# ============================================================================================
 @app.get("/get_genes")
 async def get_genes(
   file_id: str
@@ -329,3 +268,129 @@ async def get_genes(
     obj = au.get_genes_h5ad(file_path)
   
   return JSONResponse(content=obj)
+
+# ============================================================================================
+@app.post("/start_task_compute_ldr/", tags=["WORKFLOW"])
+async def start_task_compute_ldr(
+  file_id: str = Form(...),
+  n_pcs: int = Form(...),
+):
+    
+  file_path = os.path.join(UPLOAD_DIR, file_id)
+  
+  if (not os.path.exists(file_path)):
+    return JSONResponse(content=f"File ID '{file_id}' is not valid.")
+  
+  if (not file_path.endswith(".h5ad")):
+    return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
+  
+  task = compute_ldr.delay(file_path, n_pcs)
+  
+  return JSONResponse(content={
+    "task_id": task.id
+  })
+
+# ============================================================================================
+@app.post("/start_task_compute_nldr/", tags=["WORKFLOW"])
+async def start_task_compute_nldr(
+  file_id: str = Form(...),
+  adata_key: str = Form(...),
+  n_pcs: int = Form(...),
+  min_dist: float = Form(...),
+  spread: float = Form(...),
+  n_neighbors: int = Form(...),
+):
+    
+  file_path = os.path.join(UPLOAD_DIR, file_id)
+  
+  if (not os.path.exists(file_path)):
+    return JSONResponse(content=f"File ID '{file_id}' is not valid.")
+  
+  if (not file_path.endswith(".h5ad")):
+    return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
+  
+  task = compute_nldr.delay(file_path, adata_key, n_pcs, min_dist, spread, n_neighbors)
+  
+  return JSONResponse(content={
+    "task_id": task.id
+  })
+  
+# ============================================================================================
+@app.post("/start_task_compute_clustering/", tags=["WORKFLOW"])
+async def start_task_compute_clustering(
+  file_id: str = Form(...),
+  uns_key: str = Form(...),
+  resolution: float = Form(...),
+):
+  
+  file_path = os.path.join(UPLOAD_DIR, file_id)
+  
+  if (not os.path.exists(file_path)):
+    return JSONResponse(content=f"File ID '{file_id}' is not valid.")
+  
+  if (not file_path.endswith(".h5ad")):
+    return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
+  
+  task = compute_clustering.delay(file_path, uns_key, resolution)
+  
+  return JSONResponse(content={
+    "task_id": task.id
+  })
+
+# ============================================================================================
+@app.post("/start_task_compute_rgg_dotplot/", tags=["WORKFLOW"])
+async def start_task_compute_rgg_dotplot(
+  file_id: str = Form(...),
+  uns_key: str = Form(...),
+  n_genes: int = Form(...),
+):
+  
+  file_path = os.path.join(UPLOAD_DIR, file_id)
+  
+  if (not os.path.exists(file_path)):
+    return JSONResponse(content=f"File ID '{file_id}' is not valid.")
+  
+  if (not file_path.endswith(".h5ad")):
+    return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
+  
+  task = compute_rgg_dotplot.delay(file_path, uns_key, n_genes)
+  
+  return JSONResponse(content={
+    "task_id": task.id
+  })
+
+# ============================================================================================
+@app.get("/get_status_task", tags=["STATUS"])
+async def get_status_task(
+  task_id: str
+):
+  result = AsyncResult(task_id)
+  
+  return JSONResponse(content={
+    "task_id": task_id,
+    "status": result.status,
+    "progress": result.info if result.status not in ("SUCCESS") else "See /get_finished_task for results"
+    # "progress": result.info if result.info else None,
+    # "result": json.dumps(result.result) if result.ready() else None
+  })
+
+@app.get("/get_finished_task", tags=["STATUS"])
+async def get_finished_task(
+  task_id: str
+):
+  result = AsyncResult(task_id)
+
+  if result.successful():
+    return result.result
+  elif result.failed():
+    return {
+      "error": {
+        "type": type(result.result).__name__,
+        "message": str(result.result)
+      }
+    }
+  else:
+    return {
+      "status": result.status,
+      "message": "Task not finished yet"
+    }

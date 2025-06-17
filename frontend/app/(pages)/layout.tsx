@@ -73,7 +73,7 @@ export default function PagesLayout({
         direction="row"
         p={1}
         sx={{
-          border: "1px solid orange"
+          border: "1px solid grey"
         }}
       >
         {navItems.map((item) => {

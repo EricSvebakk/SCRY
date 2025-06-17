@@ -373,7 +373,7 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
               </tr>
               <tr>
                 <td>-log10(P)</td>
-                <td>${(record.pvals_adj > 0 ? transform(record.pvals_adj) : 0).toFixed(2)}</td>
+                <td>${(record.pvals_adj !== 0 ? -Math.log10(record.pvals_adj) : 0).toFixed(2)}</td>
               </tr>
             </table>
           `);

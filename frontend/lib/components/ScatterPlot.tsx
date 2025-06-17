@@ -1,8 +1,8 @@
 
 
-import { Box, CircularProgress, Stack } from "@mui/material";
+import { Box, CircularProgress, Stack, Typography } from "@mui/material";
 import ScatterPlotGenerator from "./ScatterPlotGenerator";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
 import { RootState } from "../redux/stores/store";
 
@@ -13,17 +13,20 @@ export function ScatterPlot() {
   
   const embedding = useAppSelector((state: RootState) => state.plotReducer.selectedEmbedding);
   const category = useAppSelector((state: RootState) => state.plotReducer.selectedCategory);
-  const inProgressObsm = useAppSelector((state: RootState) => state.plotReducer.inProgress.get_file_obsm);
+  const imageTrigger = useAppSelector((state) => state.plotReducer.triggers.saveScatterPlotImage);
   
-  const svgRef = useRef<SVGSVGElement>(null);
+  const inProgressObsm = useAppSelector((state: RootState) => state.plotReducer.inProgress.get_file_obsm);
+  const inProgressEmbedding = useAppSelector((state: RootState) => state.plotReducer.inProgress.get_embedding);
+  const progressMessage = useAppSelector((state) => state.plotReducer.progressMessage.get_embedding);
+  
+  const svgRef = useRef<HTMLCanvasElement>(null);
   const groupRefs = useRef<HTMLCanvasElement[]>([]);
   
   const dispatch = useAppDispatch();
+  
+  const [counter, setCounter] = useState(0);
 
   useEffect(() => {
-    
-    console.log("obs", obs);
-    console.log("obsm", obsm);
 
     let cleanUpFunction;
     
@@ -36,15 +39,24 @@ export function ScatterPlot() {
         obsData: obs,
         obsmData: obsm,
         dispatch: dispatch,
+        imageTrigger: imageTrigger,
       });
-      
     }
     
-    return cleanUpFunction
+    return cleanUpFunction;
     
-  }, [obs, obsm]);
+  }, [obs, obsm, imageTrigger, counter]);
+  
+  const updateCounter = () => {
+    setCounter((counter) => counter += 1);
+  }
+  
+  useEffect(() => {
+    window.addEventListener("resize", updateCounter);
+    return () => window.removeEventListener("resize", updateCounter);
+  }, [updateCounter]);
 
-  if (inProgressObsm) {
+  if (inProgressObsm || inProgressEmbedding) {
     return (
       <Stack
         sx={{
@@ -53,7 +65,12 @@ export function ScatterPlot() {
           alignItems: "center",
           justifyContent: "center"
         }}
+        gap={2}
       >
+        <Typography>
+          {progressMessage}
+        </Typography>
+        
         <CircularProgress size={100} color="primary"/>
       </Stack>
     );
