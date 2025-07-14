@@ -1,20 +1,14 @@
 
 import {
-  Checkbox,
   Stack,
   Typography,
 } from "@mui/material";
-import { useAppSelector } from "../redux/hooks/hooks";
-import { RootState } from "../redux/stores/store";
 import { Square } from "@mui/icons-material";
 
 export function LabelListItem(props:{
   label: string,
   label_color: string
 }) {
-  
-  const labelSize = useAppSelector((state: RootState) => state.plotReducer.labelSize);
-  const selectedLabels = useAppSelector((state) => state.plotReducer.selectedLabels);
   
   return (
     <Stack
@@ -53,17 +47,17 @@ export function LabelListItem(props:{
           variant="subtitle2"
           color={props.label_color}
         >
-          {labelSize[props.label]
+          {/* {labelSize[props.label]
             ? ` (${labelSize[props.label].toLocaleString(
                 undefined,
                 { minimumIntegerDigits: 3 }
               )})`
-            : ""}
+            : ""} */}
         </Typography>
-        <Checkbox
+        {/* <Checkbox
           size="small"
           checked={selectedLabels.includes(props.label)}
-        />
+        /> */}
       </Stack>
     </Stack>
   )

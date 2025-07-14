@@ -1,6 +1,6 @@
 
 import { addFiles } from "../redux/reducers/fileReducer";
-import { setInProgress } from "../redux/reducers/plotReducer";
+import { setStatus } from "../redux/reducers/plotReducer";
 import { AppDispatch } from "../redux/stores/store";
 import { fileType } from "../types";
 
@@ -12,7 +12,7 @@ export function get_filenames(dispatch: AppDispatch) {
   
   console.log("get_filenames() query:", request);
 
-  dispatch(setInProgress({
+  dispatch(setStatus({
     type: "get_filenames",
     value: true,
   }));
@@ -43,7 +43,7 @@ export function get_filenames(dispatch: AppDispatch) {
     
     dispatch(addFiles(fileRows))
     
-    dispatch(setInProgress({
+    dispatch(setStatus({
       type: "get_filenames",
       value: false,
     }));
@@ -51,7 +51,7 @@ export function get_filenames(dispatch: AppDispatch) {
   .catch((error) => {
     console.error("Something went wrong with get_filenames()", error);
     
-    dispatch(setInProgress({
+    dispatch(setStatus({
       type: "get_filenames",
       value: false,
     }));

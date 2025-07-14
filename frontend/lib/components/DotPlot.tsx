@@ -1,36 +1,27 @@
 
+import { Box } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import DotPlotGenerator from "./DotPlotGenerator";
 import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
-import { RootState } from "../redux/stores/store";
-import { Box, CircularProgress, Stack, Typography } from "@mui/material";
+import CurrentProgress from "./OverlayCurrentProgress";
 
 export function DotPlot() {
-  
-  const svgRef = useRef<SVGSVGElement>(null);
-  
-  const geneExpressionData = useAppSelector((state: RootState) => state.plotReducer.geneExpression);
-  const geneDendrogramData = useAppSelector((state: RootState) => state.plotReducer.geneDendrogram);
-  const nGenes = useAppSelector((state: RootState) => state.plotReducer.nGenes);
-  const nClusters = useAppSelector((state: RootState) => state.plotReducer.nClusters);
-  const inProgress = useAppSelector((state: RootState) => state.plotReducer.inProgress.get_rgg_dotplot);
-  const progressMessage = useAppSelector((state: RootState) => state.plotReducer.progressMessage.get_rgg_dotplot);
-  const dpOptions = useAppSelector((state: RootState) => state.plotReducer.dotplotOptions);
+
+  const gde = useAppSelector((state) => state.plotReducer.data.GDE);
+  const status = useAppSelector((state) => state.plotReducer.status.get_rgg_dotplot);
   const dispatch = useAppDispatch();
   
   const [counter, setCounter] = useState(0);
+  const svgRef = useRef<SVGSVGElement>(null);
   
   useEffect(() => {
     
     let cleanUpFunction;
     
-    if (svgRef.current && geneExpressionData.length > 0 && geneDendrogramData && nGenes) {
+    if (svgRef.current && gde.expression && gde.dendrogram) {
       cleanUpFunction = DotPlotGenerator({
         current: svgRef.current,
-        plotData: geneExpressionData,
-        dendrogramData: geneDendrogramData,
-        nGenes: nGenes,
-        dpOptions: dpOptions,
+        gde: gde,
         dispatch: dispatch
       });
     }
@@ -38,12 +29,12 @@ export function DotPlot() {
     return cleanUpFunction;
     
   }, [
-    geneExpressionData,
     counter,
-    dpOptions.coloring,
-    dpOptions.highlight,
-    dpOptions.expressionMin,
-    dpOptions.expressionMax
+    gde.expression,
+    gde.plotOptions.coloring,
+    gde.plotOptions.highlight,
+    gde.plotOptions.expressionMin,
+    gde.plotOptions.expressionMax,
   ]);
   
   const updateCounter = () => {
@@ -55,37 +46,21 @@ export function DotPlot() {
     return () => window.removeEventListener("resize", updateCounter);
   }, [updateCounter]);
   
-  if (inProgress) {
+  if (status.inProgress) {
     return (
-      <Stack
-        sx={{
-          height: "100%",
-          width: "100%",
-          alignItems: "center",
-          justifyContent: "center"
-        }}
-        gap={2}
-      >
-        <Typography>
-          {progressMessage}
-        </Typography>
-        
-        <CircularProgress size={100} color="primary"/>
-      </Stack>
-    );
+      <CurrentProgress
+        status={status}
+      />
+    )
   }
   
   return (
-    <Box
-      position="relative"
-      overflow="auto"
-      height="100%"
-    >
+    <Box position="relative" overflow="auto" height="100%">
       <Box
         component="svg"
         ref={svgRef}
-        width={nGenes ? nGenes * 15 : "100%"}
-        height={nClusters ? nClusters * 15 : "100%"}
+        width={gde.nGenes ? gde.nGenes * 15 : "100%"}
+        height={gde.nClusters ? gde.nClusters * 15 : "100%"}
         sx={{
           position: "absolute",
           zIndex: 1,
@@ -100,7 +75,7 @@ export function DotPlot() {
         sx={{
           position: "absolute",
           display: "none",
-          zIndex: 0
+          zIndex: 0,
         }}
       />
     </Box>

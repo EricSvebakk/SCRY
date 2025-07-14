@@ -1,11 +1,9 @@
 
 import scanpy as sc
-import os
 import numpy as np
 import pandas as pd
 from scipy.cluster.hierarchy import linkage, to_tree
 from anndata import AnnData
-import json
 
 def get_anndata_file_hierarchy(file_path: str) -> dict[str, object]:
   
@@ -36,11 +34,11 @@ def get_anndata_file_hierarchy(file_path: str) -> dict[str, object]:
   return {
     "obs":  list(filter(notStartWith, adata.obs_keys())),
     "var":  list(filter(notStartWith, adata.var_keys())),
-    "obsm": list(filter(notStartWith, adata.obsm_keys())),
-    "obsp": list(filter(notStartWith, list(adata.obsp.keys()))),
-    "varm": list(filter(notStartWith, adata.varm_keys())),
-    "uns": list(filter(notStartWith, adata.uns_keys())),
     "uns": make_safe(adata.uns),
+    # "uns": list(filter(notStartWith, adata.uns_keys())),
+    "obsm": list(filter(notStartWith, adata.obsm_keys())),
+    "varm": list(filter(notStartWith, adata.varm_keys())),
+    "obsp": list(filter(notStartWith, list(adata.obsp.keys()))),
   }
 
 def get_genes_h5ad(file_path: str):
@@ -67,8 +65,8 @@ def get_anndata_file_obs(file_path: str, selectedObs: str) -> dict[str, object]:
   adata.file.close()
   
   return {
-    "labels": labels,
-    "label_map": label_map
+    "categories": labels,
+    "codes": label_map
   }
   
 def get_anndata_file_obsm(file_path: str, selectedObsm: str) -> dict[str, object]:
@@ -87,46 +85,6 @@ def get_anndata_file_obsm(file_path: str, selectedObsm: str) -> dict[str, object
   except:
     return -1
 
-def generate_ranked_genes_groups(file_path: str, key: str):
-  
-  adata = sc.read_h5ad(file_path)
-  
-  sc.tl.rank_genes_groups(
-    adata,
-    method="wilcoxon",
-    # pval
-    groupby=key,
-    key_added= "rank_genes_groups_" + key
-  )
-  
-  sc.write(file_path, adata)
-  
-  adata.file.close()
-  
-  return os.path.exists(file_path)
-
-def get_ranked_genes_groups(file_path: str, num_results: int = 20):
-  
-  adata = sc.read_h5ad(file_path)
-  
-  result = adata.uns["rank_genes_groups"]
-  groups = result["names"].dtype.names
-  
-  all_results = {}
-
-  for group_key in groups:
-    all_results[group_key] = {
-      'names': result['names'][group_key][:num_results].tolist(),
-      'scores': result['scores'][group_key][:num_results].tolist(),
-      'logfoldchanges': result['logfoldchanges'][group_key][:num_results].tolist(),
-      'pvals': result['pvals'][group_key][:num_results].tolist(),
-      'pvals_adj': result['pvals_adj'][group_key][:num_results].tolist(),
-    }
-  
-  adata.file.close()
-  
-  return all_results
-
 def build_dendrogram_tree(linkage_matrix, labels: list[str]):
   
   tree, nodes = to_tree(linkage_matrix, rd=True)
@@ -138,7 +96,7 @@ def build_dendrogram_tree(linkage_matrix, labels: list[str]):
       return {
         "name": None,
         "children": [add_node(node.left), add_node(node.right)],
-        "distance": node.dist  # Optional: include distance info
+        # "distance": node.dist
       }
 
   return add_node(tree)

@@ -1,41 +1,25 @@
-
-import {
-  Button,
-  CircularProgress,
-  Stack,
-} from "@mui/material";
-import {
-  setCurrentTab,
-  setSelectedEmbedding,
-} from "../../redux/reducers/plotReducer";
+import { Button, Stack } from "@mui/material";
+import { setAnndataField, setCurrentTab } from "../../redux/reducers/plotReducer";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
-import { RootState } from "../../redux/stores/store";
 import { get_file_obsm } from "@/lib/fetch/get_file_obsm";
+import CurrentProgress from "../OverlayCurrentProgress";
 
 export default function ListEmbeddings() {
   
-  const fileID = useAppSelector((state: RootState) => state.fileReducer.activeFile);
-  const hierarchy = useAppSelector((state: RootState) => state.plotReducer.hierarchy);
-  const selectedEmbedding = useAppSelector((state: RootState) => state.plotReducer.selectedEmbedding);
-  const inProgress = useAppSelector((state) => state.plotReducer.inProgress.get_file_hierarchy)
-  
+  const fileID = useAppSelector((state) => state.fileReducer.activeFile);
+  const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
+  const status = useAppSelector((state) => state.plotReducer.status.get_file_hierarchy);
+
   const dispatch = useAppDispatch();
-  
-  if (inProgress || !hierarchy) {
+
+  if (status.inProgress) {
     return (
-      <Stack
-        sx={{
-          height: "100%",
-          width: "100%",
-          alignItems: "center",
-          justifyContent: "center"
-        }}
-      >
-        <CircularProgress size={60} color="primary"/>
-      </Stack>
-    );
+      <CurrentProgress
+        status={status}
+      />
+    )
   }
-  
+
   return (
     <Stack
       direction="column"
@@ -45,27 +29,29 @@ export default function ListEmbeddings() {
         overflowY: "auto",
       }}
     >
-      {[...hierarchy.obsm]
+      {obsm.keys ? [...obsm.keys]
         .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
         .map((e) => {
           return (
-            <Stack
-              key={"stack" + e}
-              direction="row"
-            >
+            <Stack key={"stack" + e} direction="row">
               <Button
                 fullWidth
                 key={"accordion_" + e}
-                // disabled={selectedEmbedding === ""s || obsm === null}
-                disabled={selectedEmbedding === e}
+                disabled={obsm.selectedKey === e}
                 sx={{
                   justifyContent: "start",
                   overflowX: "clip",
-                  fontWeight: selectedEmbedding === e ? "bold" : ""
+                  fontWeight: obsm.selectedKey === e ? "bold" : "",
                 }}
                 size="small"
                 onClick={() => {
-                  dispatch(setSelectedEmbedding(e));
+                  dispatch(
+                    setAnndataField({
+                      attribute: "obsm",
+                      field: "selectedKey",
+                      value: e,
+                    })
+                  );
                   dispatch(setCurrentTab("scatterplot"));
                   get_file_obsm(fileID, e, dispatch);
                 }}
@@ -74,8 +60,7 @@ export default function ListEmbeddings() {
               </Button>
             </Stack>
           );
-        })}
+        }) : <></>}
     </Stack>
-  )
-  
+  );
 }

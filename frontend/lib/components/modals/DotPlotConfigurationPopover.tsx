@@ -1,18 +1,34 @@
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
-import { setDotplotOptions } from "@/lib/redux/reducers/plotReducer";
+import { setGDEField } from "@/lib/redux/reducers/plotReducer";
 import { Close, Repeat, Settings } from "@mui/icons-material";
-import { Button, ButtonGroup, Grid, IconButton, Popover, Stack, TextField, Tooltip } from "@mui/material";
+import {
+  Button,
+  ButtonGroup,
+  Grid,
+  IconButton,
+  Popover,
+  Stack,
+  TextField,
+  Tooltip,
+} from "@mui/material";
 import { MouseEvent, useEffect, useState } from "react";
 
 export function DotPlotConfigurationPopover() {
-  
-  const dpOptions = useAppSelector((state) => state.plotReducer.dotplotOptions);
-  const expression = useAppSelector((state) => state.plotReducer.geneExpression);
+  const plotOptions = useAppSelector(
+    (state) => state.plotReducer.data.GDE.plotOptions
+  );
+  const expression = useAppSelector(
+    (state) => state.plotReducer.data.GDE.expression
+  );
   const dispatch = useAppDispatch();
-  
-  const [exprMin, setExprMin] = useState(dpOptions.expressionMinDefault.toFixed(2));
-  const [exprMax, setExprMax] = useState(dpOptions.expressionMaxDefault.toFixed(2));
-  
+
+  const [exprMin, setExprMin] = useState(
+    plotOptions.expressionMinDefault.toFixed(2)
+  );
+  const [exprMax, setExprMax] = useState(
+    plotOptions.expressionMaxDefault.toFixed(2)
+  );
+
   const [exprMinError, setExprMinError] = useState(false);
   const [exprMaxError, setExprMaxError] = useState(false);
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
@@ -24,32 +40,33 @@ export function DotPlotConfigurationPopover() {
   const handleClose = () => {
     setAnchorEl(null);
   };
-  
+
   const open = Boolean(anchorEl);
   const id = open ? "simple-popover-dotplotconfig" : undefined;
-  
+
   // Resets expression range states
   useEffect(() => {
-    if (dpOptions.expressionIsDefault) {
-      setExprMin(dpOptions.expressionMinDefault.toFixed(2));
-      setExprMax(dpOptions.expressionMaxDefault.toFixed(2));
+    if (plotOptions.expressionIsDefault) {
+      setExprMin(plotOptions.expressionMinDefault.toFixed(2));
+      setExprMax(plotOptions.expressionMaxDefault.toFixed(2));
     }
   }, [
-    dpOptions.coloring,
-    dpOptions.expressionIsDefault,
-    dpOptions.expressionMinDefault,
-    dpOptions.expressionMaxDefault
+    plotOptions.coloring,
+    plotOptions.expressionIsDefault,
+    plotOptions.expressionMinDefault,
+    plotOptions.expressionMaxDefault,
   ]);
-  
+
   return (
     <>
       <Tooltip
         enterDelay={0}
-        placement="bottom" title="Open settings for dotplot"
-        disableFocusListener={expression.length == 0}
+        placement="bottom"
+        title="Open settings for dotplot"
+        disableFocusListener={!expression || expression.length == 0}
       >
         <IconButton
-          disabled={expression.length == 0}
+          disabled={!expression || expression.length == 0}
           onClick={handleClick}
           aria-describedby={id}
           size="small"
@@ -57,7 +74,7 @@ export function DotPlotConfigurationPopover() {
           <Settings />
         </IconButton>
       </Tooltip>
-      
+
       <Popover
         id={id}
         open={open}
@@ -75,41 +92,40 @@ export function DotPlotConfigurationPopover() {
           p={1}
           gap={1}
         >
-          <Stack
-            direction="row"
-            justifyContent="end"
-            width="100%"
-          >
-            <Tooltip title="reset to default expression range" enterDelay={1000} placement="bottom">              
+          <Stack direction="row" justifyContent="end" width="100%">
+            <Tooltip
+              title="reset to default expression range"
+              enterDelay={1000}
+              placement="bottom"
+            >
               <IconButton
                 size="small"
                 onClick={() => {
-                  dispatch(setDotplotOptions({
-                    ...dpOptions,
-                    expressionIsDefault: true
-                  }))
-                  setExprMin(dpOptions.expressionMinDefault.toFixed(2));
-                  setExprMax(dpOptions.expressionMaxDefault.toFixed(2));
+                  dispatch(
+                    setGDEField({
+                      field: "plotOptions",
+                      value: {
+                        ...plotOptions,
+                        expressionMinDefault: parseFloat(exprMin),
+                        expressionMaxDefault: parseFloat(exprMax),
+                      },
+                    })
+                  );
+
+                  setExprMin(plotOptions.expressionMinDefault.toFixed(2));
+                  setExprMax(plotOptions.expressionMaxDefault.toFixed(2));
                 }}
               >
                 <Repeat />
               </IconButton>
             </Tooltip>
-            
-            <IconButton
-              size="small"
-              onClick={() => handleClose()}
-            >
+
+            <IconButton size="small" onClick={() => handleClose()}>
               <Close />
             </IconButton>
           </Stack>
-          
-          <Grid
-            width="100%"
-            container
-            direction="row"
-            gap={1}
-          >
+
+          <Grid width="100%" container direction="row" gap={1}>
             <Grid item xs>
               <TextField
                 fullWidth
@@ -122,7 +138,9 @@ export function DotPlotConfigurationPopover() {
                 label="expr. min"
                 value={exprMin}
                 error={exprMinError}
-                onChange={(event) => {setExprMin(event.target.value);}}
+                onChange={(event) => {
+                  setExprMin(event.target.value);
+                }}
               />
             </Grid>
             <Grid item xs>
@@ -137,33 +155,43 @@ export function DotPlotConfigurationPopover() {
                 label="expr. max"
                 value={exprMax}
                 error={exprMaxError}
-                onChange={(event) => {setExprMax(event.target.value);}}
+                onChange={(event) => {
+                  setExprMax(event.target.value);
+                }}
               />
-              
             </Grid>
-            <Grid item xs>              
-              <Tooltip placement="bottom" enterDelay={1000} title="Confirm expression range to re-render dotplot">
+            <Grid item xs>
+              <Tooltip
+                placement="bottom"
+                enterDelay={1000}
+                title="Confirm expression range to re-render dotplot"
+              >
                 <Button
                   fullWidth
                   variant="outlined"
                   sx={{
-                    height: "100%"
+                    height: "100%",
                   }}
                   // size="small"
                   onClick={() => {
                     const parsedExprMin = parseFloat(exprMin) ?? null;
                     const parsedExprMax = parseFloat(exprMax) ?? null;
-                    
+
                     setExprMinError(parsedExprMin === null);
                     setExprMaxError(parsedExprMax === null);
-                    
+
                     if (parsedExprMin !== null && parsedExprMax !== null) {
-                      dispatch(setDotplotOptions({
-                        ...dpOptions,
-                        expressionMin: parsedExprMin,
-                        expressionMax: parsedExprMax,
-                        expressionIsDefault: false
-                      }))
+                      dispatch(
+                        setGDEField({
+                          field: "plotOptions",
+                          value: {
+                            ...plotOptions,
+                            expressionMin: parsedExprMin,
+                            expressionMax: parsedExprMax,
+                            expressionIsDefault: false,
+                          },
+                        })
+                      );
                     }
                   }}
                 >
@@ -172,103 +200,171 @@ export function DotPlotConfigurationPopover() {
               </Tooltip>
             </Grid>
           </Grid>
-          
+
           <ButtonGroup size="small" fullWidth>
             <Button
-              variant={dpOptions.coloring == "mean_expr" ? "contained" : "outlined"}
+              variant={
+                plotOptions.coloring == "mean_expr" ? "contained" : "outlined"
+              }
               onClick={() => {
-                dispatch(setDotplotOptions({
-                  ...dpOptions,
-                  coloring: "mean_expr",
-                  expressionIsDefault: true
-                }))
+                dispatch(
+                  setGDEField({
+                    field: "plotOptions",
+                    value: {
+                      ...plotOptions,
+                      coloring: "mean_expr",
+                      expressionIsDefault: true,
+                    },
+                  })
+                );
               }}
             >
               mean
             </Button>
             <Button
-              variant={dpOptions.coloring == "logfoldchange" ? "contained" : "outlined"}
+              variant={
+                plotOptions.coloring == "logfoldchange"
+                  ? "contained"
+                  : "outlined"
+              }
               onClick={() => {
-                dispatch(setDotplotOptions({
-                  ...dpOptions,
-                  coloring: "logfoldchange",
-                  expressionIsDefault: true
-                }))
+                dispatch(
+                  setGDEField({
+                    field: "plotOptions",
+                    value: {
+                      ...plotOptions,
+                      coloring: "logfoldchange",
+                      expressionIsDefault: true,
+                    },
+                  })
+                );
               }}
             >
               logfold
             </Button>
             <Button
-              variant={dpOptions.coloring == "pvals_adj" ? "contained" : "outlined"}
+              variant={
+                plotOptions.coloring == "pvals_adj" ? "contained" : "outlined"
+              }
               onClick={() => {
-                dispatch(setDotplotOptions({
-                  ...dpOptions,
-                  coloring: "pvals_adj",
-                  expressionIsDefault: true
-                }))
+                dispatch(
+                  setGDEField({
+                    field: "plotOptions",
+                    value: {
+                      ...plotOptions,
+                      coloring: "pvals_adj",
+                      expressionIsDefault: true,
+                    },
+                  })
+                );
               }}
             >
               pval
             </Button>
           </ButtonGroup>
-          
+
           <ButtonGroup size="small" fullWidth>
-            
             <Tooltip
               title="Highlight max expression per cluster"
               placement="bottom"
               enterDelay={1000}
             >
               <Button
-                variant={dpOptions.highlight == "cluster" ? "contained" : "outlined"}
+                variant={
+                  plotOptions.highlight == "cluster" ? "contained" : "outlined"
+                }
                 onClick={() => {
-                  dispatch(setDotplotOptions({
-                    ...dpOptions,
-                    highlight: "cluster"
-                  }))
+                  dispatch(
+                    setGDEField({
+                      field: "plotOptions",
+                      value: {
+                        ...plotOptions,
+                        highlight: "cluster",
+                      },
+                    })
+                  );
                 }}
               >
                 cluster
               </Button>
             </Tooltip>
-            
+
             <Tooltip
               title="Highlight max expression per gene"
               placement="bottom"
               enterDelay={1000}
             >
               <Button
-                variant={dpOptions.highlight == "gene" ? "contained" : "outlined"}
+                variant={
+                  plotOptions.highlight == "gene" ? "contained" : "outlined"
+                }
                 onClick={() => {
-                  dispatch(setDotplotOptions({
-                    ...dpOptions,
-                    highlight: "gene"
-                  }))
+                  dispatch(
+                    setGDEField({
+                      field: "plotOptions",
+                      value: {
+                        ...plotOptions,
+                        highlight: "gene",
+                      },
+                    })
+                  );
                 }}
               >
                 gene
               </Button>
             </Tooltip>
-            
+
+            <Tooltip
+              title="Highlight max expression per gene"
+              placement="bottom"
+              enterDelay={1000}
+            >
+              <Button
+                variant={
+                  plotOptions.highlight == "rgg_order" ? "contained" : "outlined"
+                }
+                onClick={() => {
+                  dispatch(
+                    setGDEField({
+                      field: "plotOptions",
+                      value: {
+                        ...plotOptions,
+                        highlight: "rgg_order",
+                      },
+                    })
+                  );
+                }}
+              >
+                rank #1
+              </Button>
+            </Tooltip>
+
             <Tooltip
               title="Removes highlighting"
               placement="bottom"
               enterDelay={1000}
-            >              
+            >
               <Button
-                variant={dpOptions.highlight == "none" ? "contained" : "outlined"}
+                variant={
+                  plotOptions.highlight == "none" ? "contained" : "outlined"
+                }
                 onClick={() => {
-                  dispatch(setDotplotOptions({
-                    ...dpOptions,
-                    highlight: "none"
-                  }))
+                  dispatch(
+                    setGDEField({
+                      field: "plotOptions",
+                      value: {
+                        ...plotOptions,
+                        highlight: "none",
+                      },
+                    })
+                  );
                 }}
               >
                 None
               </Button>
             </Tooltip>
           </ButtonGroup>
-          
+
           {/* <ButtonGroup size="small" fullWidth>
             
             <Tooltip
@@ -328,6 +424,5 @@ export function DotPlotConfigurationPopover() {
         </Stack>
       </Popover>
     </>
-  )
-  
+  );
 }

@@ -1,5 +1,11 @@
-
-import { Button, Dialog, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Stack,
+  TextField,
+} from "@mui/material";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { setCurrentTab } from "@/lib/redux/reducers/plotReducer";
@@ -7,14 +13,13 @@ import { get_ldr } from "@/lib/fetch/workflow/get_ldr";
 
 export default function LDRDialog(props: {
   isOpen: boolean;
-  setIsOpen: Function
+  setIsOpen: Function;
 }) {
-  
   const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
-  
+
   const dispatch = useAppDispatch();
   const [numPCs, setNumPCs] = useState<number>(30);
-  
+
   return (
     <Dialog open={props.isOpen} onClose={() => props.setIsOpen(false)}>
       <DialogTitle>LDR - PCA</DialogTitle>
@@ -36,11 +41,7 @@ export default function LDRDialog(props: {
             size="medium"
             onClick={() => {
               dispatch(setCurrentTab("scatterplot"));
-              get_ldr(
-                activeFile,
-                numPCs,
-                dispatch
-              );
+              get_ldr(activeFile, numPCs, dispatch);
 
               props.setIsOpen(false);
             }}
@@ -51,5 +52,4 @@ export default function LDRDialog(props: {
       </DialogContent>
     </Dialog>
   );
-  
 }

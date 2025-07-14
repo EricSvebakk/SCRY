@@ -5,6 +5,7 @@ from fastapi import FastAPI, Form
 from dotenv import load_dotenv, dotenv_values
 from pathlib import Path
 from math import ceil, log10
+from typing import Optional
 
 from celery.result import AsyncResult
 from worker import compute_rgg_dotplot, compute_nldr, compute_ldr, compute_clustering
@@ -56,62 +57,10 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 async def root():
   """
   """
-  
-  result = []
-  file_sizes = [
-    "KB",
-    "MB",
-    "GB"
-  ]
-  
-  for file_id in os.listdir(UPLOAD_DIR):
     
-    path = os.path.join(UPLOAD_DIR, file_id)
-    is_file = os.path.isfile(path)
-    
-    file_size_bytes = None
-    shape = None
-    
-    if (is_file):
-      file_size_bytes = os.path.getsize(path)
-      
-    else:
-      zarr_data = zarr.open_group(path)
-      store = zarr_data.store
-      file_size_bytes = sum(store.getsize(k) for k in store.keys())
-      
-      shape = await get_dims_zarr(zarr_data["X"])
-    
-    ceil_log_size = ceil(log10(file_size_bytes) / 4)
-    file_size = file_size_bytes * ((1/1024)**ceil_log_size)
-    file_size_result = f"{file_size:.2f} {file_sizes[ceil_log_size-1]}"
-    
-    result.append({
-      "name": file_id,
-      # "shape": shape,
-      "file_size": file_size_result
-    })
-    
-  result.sort(key=lambda x: x["name"])
-    
-  return JSONResponse(content={
-      "message": "Thesis API",
-      "files": result
-  })
+  return JSONResponse(content={ "message": "Thesis API" })
 
-# 
-async def get_dims_zarr(data: any):
-  if (isinstance(data, zarr.Group)):
-    
-    # result = csr_matrix((data["data"], data["indices"], data["indptr"]))
-    # print("result?", result)
-    
-    return [int(data["indptr"].shape[0]-1), int(data["indices"][-1]+1)]
-    return None
-  else:
-    return None
-
-# READY
+# ============================================================================================
 @app.get("/get_filenames", tags=["SYSTEM"])
 async def get_filenames():
   """
@@ -134,7 +83,6 @@ async def get_filenames():
     }
   )
 
-# READY
 @app.get("/get_file_size", tags=["SYSTEM"])
 async def get_file_size(file_id: str):
   """
@@ -148,9 +96,8 @@ async def get_file_size(file_id: str):
       "chunk_total": ceil(file_size / UPLOAD_CHUNK_SIZE),
     }
   )
-  
-# READY
-@app.get("/get_file_hierarchy")
+
+@app.get("/get_file_hierarchy", tags=["SYSTEM"])
 async def get_file_hierarchy(file_id: str):
   """
   """
@@ -165,11 +112,9 @@ async def get_file_hierarchy(file_id: str):
   
   return JSONResponse(content=obj)
 
-# READY
-@app.get("/get_file_obs")
+# ============================================================================================
+@app.get("/get_file_obs", tags=["ANNDATA"])
 async def get_file_obs(file_id: str, obs: str):
-  
-  time_start = time.time()
   
   file_path = os.path.join(UPLOAD_DIR, file_id)
   obj = "Something went wrong while fetching obs"
@@ -185,19 +130,10 @@ async def get_file_obs(file_id: str, obs: str):
     
   if (obj is None):
     return JSONResponse(content="Something went wrong.")
-  
-  time_end = time.time()
-  
-  time_elapsed = time_end - time_start
 
   return JSONResponse(content=json.dumps(obj))
-  # return JSONResponse(content={
-  #   "time": time_elapsed,
-  #   "obs": json.dumps(obj),
-  # })
 
-# READY
-@app.get("/get_file_obsm")
+@app.get("/get_file_obsm", tags=["ANNDATA"])
 async def get_file_obsm(file_id: str, obsm: str):
   
   file_path = os.path.join(UPLOAD_DIR, file_id)
@@ -217,43 +153,7 @@ async def get_file_obsm(file_id: str, obsm: str):
   
   return JSONResponse(content=json.dumps(obj))
 
-@app.post("/generate_ranked_genes_groups/")
-async def generate_ranked_genes_groups(
-  file_id: str = Form(...),
-  uns_key: str = Form(...),
-):
-  file_path = os.path.join(UPLOAD_DIR, file_id)
-  obj = "Something went wrong while generating leiden"
-  
-  if (not os.path.exists(file_path)):
-    return JSONResponse(content=f"File ID '{file_id}' is not a valid.")
-  
-  elif (file_path.endswith(".h5ad")):
-    obj = au.generate_ranked_genes_groups(file_path, uns_key)
-  
-  return JSONResponse(content={
-    "response": "File has been successfully updated." if (obj) else "Something went wrong.",
-    "data": obj
-  })
-
-@app.get("/get_ranked_genes_groups")
-async def get_ranked_genes_groups(
-  file_id: str,
-  # group_id: str
-):
-  file_path = os.path.join(UPLOAD_DIR, file_id)
-  obj = "Something went wrong while generating leiden"
-  
-  if (not os.path.exists(file_path)):
-    return JSONResponse(content=f"File ID '{file_id}' is not a valid.")
-  
-  elif (file_path.endswith(".h5ad")):
-    obj = au.get_ranked_genes_groups(file_path)
-  
-  return JSONResponse(content=json.dumps(obj))
-
-# ============================================================================================
-@app.get("/get_genes")
+@app.get("/get_genes", tags=["ANNDATA"])
 async def get_genes(
   file_id: str
 ):
@@ -290,7 +190,6 @@ async def start_task_compute_ldr(
     "task_id": task.id
   })
 
-# ============================================================================================
 @app.post("/start_task_compute_nldr/", tags=["WORKFLOW"])
 async def start_task_compute_nldr(
   file_id: str = Form(...),
@@ -314,8 +213,7 @@ async def start_task_compute_nldr(
   return JSONResponse(content={
     "task_id": task.id
   })
-  
-# ============================================================================================
+
 @app.post("/start_task_compute_clustering/", tags=["WORKFLOW"])
 async def start_task_compute_clustering(
   file_id: str = Form(...),
@@ -337,12 +235,12 @@ async def start_task_compute_clustering(
     "task_id": task.id
   })
 
-# ============================================================================================
 @app.post("/start_task_compute_rgg_dotplot/", tags=["WORKFLOW"])
 async def start_task_compute_rgg_dotplot(
   file_id: str = Form(...),
   uns_key: str = Form(...),
   n_genes: int = Form(...),
+  selected_genes: Optional[list[str]] = Form(None),
 ):
   
   file_path = os.path.join(UPLOAD_DIR, file_id)
@@ -353,7 +251,9 @@ async def start_task_compute_rgg_dotplot(
   if (not file_path.endswith(".h5ad")):
     return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
   
-  task = compute_rgg_dotplot.delay(file_path, uns_key, n_genes)
+  print(uns_key, n_genes, selected_genes)
+  
+  task = compute_rgg_dotplot.delay(file_path, uns_key, n_genes, selected_genes)
   
   return JSONResponse(content={
     "task_id": task.id
@@ -370,8 +270,6 @@ async def get_status_task(
     "task_id": task_id,
     "status": result.status,
     "progress": result.info if result.status not in ("SUCCESS") else "See /get_finished_task for results"
-    # "progress": result.info if result.info else None,
-    # "result": json.dumps(result.result) if result.ready() else None
   })
 
 @app.get("/get_finished_task", tags=["STATUS"])

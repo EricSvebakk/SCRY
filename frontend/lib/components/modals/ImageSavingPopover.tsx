@@ -1,9 +1,10 @@
+
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { setTrigger } from "@/lib/redux/reducers/plotReducer";
 import { Close, Save } from "@mui/icons-material";
 import { Autocomplete, Button, IconButton, Popover, Stack, TextField, Tooltip } from "@mui/material";
 import d3ToPng from "d3-svg-to-png";
-import { MouseEvent, useState } from "react";
+import { MouseEvent, useEffect, useState } from "react";
 
 type plotOption = {
   label: string;
@@ -17,12 +18,12 @@ const plotOptions: plotOption[] = [
 
 export function ImageSavingPopover() {
  
-  const unsTitle = useAppSelector((state) => state.plotReducer.dotplotOptions.title)
-  const expression = useAppSelector((state) => state.plotReducer.geneExpression);
-  const obsm = useAppSelector((state) => state.plotReducer.obsm);
+  const expression = useAppSelector((state) => state.plotReducer.data.GDE.expression);
+  const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm.selectedKey);
+  const currentTab = useAppSelector((state) => state.plotReducer.navigation.currentTab);
   const dispatch = useAppDispatch();
   
-  const [selectedPlot, setSelectedPlot] = useState<plotOption | null>(null);
+  const [selectedPlot, setSelectedPlot] = useState<plotOption | null>(plotOptions.find((e) => e.id === currentTab) ?? null);
   
   const [title, setTitle] = useState("");
   const [scale, setScale] = useState("1");
@@ -43,7 +44,7 @@ export function ImageSavingPopover() {
   const id = open ? "simple-popover-savedotplot" : undefined;
   let filteredOptions = plotOptions
   
-  if (expression.length == 0) {
+  if (!expression || expression.length == 0) {
     filteredOptions = filteredOptions.filter((e) => e.id !== "dotplot")
   }
   
@@ -51,17 +52,23 @@ export function ImageSavingPopover() {
     filteredOptions = filteredOptions.filter((e) => e.id !== "scatterplot")
   }
   
+  useEffect(() => {
+    if (selectedPlot && selectedPlot.id !== currentTab) {
+      setSelectedPlot(plotOptions.find((e) => e.id === currentTab) ?? null);
+    }
+  }, [currentTab]);
+  
   return (
     <>
       <IconButton
-        disabled={(expression.length == 0) && !obsm}
+        disabled={(!expression || expression.length == 0) && !obsm}
         onClick={handleClick}
         aria-describedby={id}
         size="small"
       >
-        <Save/>
+        <Save />
       </IconButton>
-      
+
       <Popover
         id={id}
         open={open}
@@ -79,27 +86,20 @@ export function ImageSavingPopover() {
           p={1}
           gap={1.5}
         >
-          <Stack
-            direction="row"
-            justifyContent="end"
-            width="100%"
-          >
-            <IconButton
-              size="small"
-              onClick={() => handleClose()}
-            >
+          <Stack direction="row" justifyContent="end" width="100%">
+            <IconButton size="small" onClick={() => handleClose()}>
               <Close />
             </IconButton>
           </Stack>
-          
+
           <Autocomplete
             value={selectedPlot}
             options={filteredOptions}
-            onChange={(event: any, value: any, reason, details) => {              
+            onChange={(event: any, value: any, reason, details) => {
               if (reason === "selectOption") {
-                setSelectedPlot(details?.option as any)
-              } else if ((reason === "removeOption") || reason === "clear") {
-                setSelectedPlot(null)
+                setSelectedPlot(details?.option as any);
+              } else if (reason === "removeOption" || reason === "clear") {
+                setSelectedPlot(null);
               }
             }}
             renderInput={(params) => {
@@ -114,7 +114,7 @@ export function ImageSavingPopover() {
               );
             }}
           />
-          
+
           <TextField
             variant="outlined"
             size="small"
@@ -125,7 +125,7 @@ export function ImageSavingPopover() {
             value={title}
             error={titleError}
             onChange={(event) => {
-              setTitle(event.target.value)
+              setTitle(event.target.value);
             }}
           />
           <TextField
@@ -139,7 +139,7 @@ export function ImageSavingPopover() {
             value={scale}
             error={scaleError}
             onChange={(event) => {
-              setScale(event.target.value)
+              setScale(event.target.value);
             }}
           />
           <Tooltip
@@ -151,27 +151,27 @@ export function ImageSavingPopover() {
               variant="contained"
               onClick={async () => {
                 const parsedScale = parseInt(scale) ?? null;
-                
+
                 setScaleError(!parsedScale);
                 setTitleError(title === "");
-                
-                if ((!parsedScale) || (title === "")) {
+
+                if (!parsedScale || title === "") {
                   return;
                 }
-                
+
                 if (selectedPlot?.id === "scatterplot") {
-                  dispatch(setTrigger({ type: "saveScatterPlotImage", value: title }));
-                }
-                else if (selectedPlot?.id === "dotplot") {
+                  dispatch(
+                    setTrigger({ type: "saveScatterPlotImage", value: title })
+                  );
+                } else if (selectedPlot?.id === "dotplot") {
                   d3ToPng("#dotplot", title, {
                     scale: parsedScale,
                     format: "png",
                     cssinline: 0,
                     download: true,
-                    background: "white"
-                  })
+                    background: "white",
+                  });
                 }
-                
               }}
             >
               Create Image

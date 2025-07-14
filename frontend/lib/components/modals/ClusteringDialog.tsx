@@ -1,5 +1,13 @@
-
-import { Autocomplete, Button, createFilterOptions, Dialog, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
+import {
+  Autocomplete,
+  Button,
+  createFilterOptions,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Stack,
+  TextField,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { AutocompleteOption } from "@/lib/types";
@@ -7,30 +15,33 @@ import { get_clustering } from "@/lib/fetch/workflow/get_clustering";
 
 export default function ClusteringDialog(props: {
   isOpen: boolean;
-  setIsOpen: Function
+  setIsOpen: Function;
 }) {
-  
   const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
-  const uns = useAppSelector((state) => state.plotReducer.hierarchy?.uns);
-  const obsp = useAppSelector((state) => state.plotReducer.hierarchy?.obsp);
-  
+  const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;
+  const obsp = useAppSelector((state) => state.plotReducer.anndata.obsp.keys);
+
   const dispatch = useAppDispatch();
-  const [selectedUns, setSelectedUns] = useState<AutocompleteOption | null>(null);
-  const [optionsFiltered, setOptionsFiltered] = useState<AutocompleteOption[]>([]);
+  const [selectedUns, setSelectedUns] = useState<AutocompleteOption | null>(
+    null
+  );
+  const [optionsFiltered, setOptionsFiltered] = useState<AutocompleteOption[]>(
+    []
+  );
   const [resolution, setResolution] = useState<number>(1);
-  
+
   const filterOptions = createFilterOptions({ limit: 20 });
-  
+
   useEffect(() => {
-    if (uns && obsp) {      
+    if (uns && obsp) {
       const structuredOptions: AutocompleteOption[] = Object.keys(uns)
-        .filter((e) => Object.keys(uns[e]).includes("connectivities_key"))
+        .filter((e: string) => Object.keys(uns[e]).includes("connectivities_key"))
         .map((e, i) => ({ label: e, id: i }));
-      
+
       setOptionsFiltered(structuredOptions);
     }
   }, [obsp, uns]);
-  
+
   return (
     <Dialog open={props.isOpen} onClose={() => props.setIsOpen(false)}>
       <DialogTitle>Clustering - Leiden</DialogTitle>
@@ -43,12 +54,12 @@ export default function ClusteringDialog(props: {
             value={selectedUns}
             options={optionsFiltered}
             onChange={(event: any, value: any, reason, details) => {
-              const selectedOption = (details?.option as any)
+              const selectedOption = details?.option as any;
 
               console.log(reason, details);
 
               if (reason === "selectOption") {
-                setSelectedUns(selectedOption)
+                setSelectedUns(selectedOption);
               } else if (reason === "removeOption") {
                 setSelectedUns(null);
               } else if (reason === "clear") {
@@ -86,7 +97,12 @@ export default function ClusteringDialog(props: {
             size="medium"
             onClick={() => {
               if (selectedUns) {
-                get_clustering(activeFile, selectedUns?.label, resolution, dispatch)
+                get_clustering(
+                  activeFile,
+                  selectedUns?.label,
+                  resolution,
+                  dispatch
+                );
                 props.setIsOpen(false);
               }
             }}
@@ -97,5 +113,4 @@ export default function ClusteringDialog(props: {
       </DialogContent>
     </Dialog>
   );
-  
 }

@@ -1,46 +1,29 @@
 
-import {
-  Button,
-  CircularProgress,
-  Stack,
-} from "@mui/material";
-import {
-  setSelectedCategory,
-} from "../../redux/reducers/plotReducer";
+import { Button, Stack } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
-import { RootState } from "../../redux/stores/store";
 import { useState } from "react";
 import { get_file_obs } from "../../fetch/get_file_obs";
+import { setAnndataField } from "@/lib/redux/reducers/plotReducer";
+import CurrentProgress from "../OverlayCurrentProgress";
 
 export default function ListLabels() {
   
-  const fileID = useAppSelector((state: RootState) => state.fileReducer.activeFile);
+  const fileID = useAppSelector((state) => state.fileReducer.activeFile);
   
-  const hierarchy = useAppSelector((state: RootState) => state.plotReducer.hierarchy);
-  const obsm = useAppSelector((state: RootState) => state.plotReducer.obsm);
-  
-  const selectedCategory = useAppSelector((state: RootState) => state.plotReducer.selectedCategory);
-  const selectedEmbedding = useAppSelector((state: RootState) => state.plotReducer.selectedEmbedding);
-  
-  const inProgress = useAppSelector((state) => state.plotReducer.inProgress.get_file_hierarchy)
+  const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
+  const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
+  const status = useAppSelector((state) => state.plotReducer.status.get_file_hierarchy)
   
   const dispatch = useAppDispatch();
   
   const [expanded, setExpanded] = useState(false);
   
-  if (inProgress || !hierarchy) {
+  if (status.inProgress) {
     return (
-      <Stack
-        sx={{
-          height: "30vh",
-          width: "100%",
-          alignItems: "center",
-          justifyContent: "center"
-        }}
-      >
-        <CircularProgress size={100} color="primary"/>
-      </Stack>
-    );
+      <CurrentProgress
+        status={status}
+      />
+    )
   }
   
   return (
@@ -52,24 +35,31 @@ export default function ListLabels() {
         overflowY: "auto",
       }}
     >
-      {[...hierarchy.obs]
+      { obs.keys ? [...obs.keys]
         .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
         .map((e) => {
           return (
             <Button
               key={"accordion_" + e}
-              disabled={selectedEmbedding === "" || obsm === null || selectedCategory == e}
+              disabled={obsm.selectedKey === "" || obs.selectedKey == e}
               sx={{
                 justifyContent: "start",
                 overflowX: "clip",
-                fontWeight: selectedCategory === e ? "bold" : ""
+                fontWeight: obs.selectedKey === e ? "bold" : ""
               }}
               size="small"
               onClick={() => {
-                if (selectedCategory !== e) {
+                if (obs.selectedKey !== e) {
                   setExpanded(true);
                   
-                  dispatch(setSelectedCategory(e));
+                  dispatch(
+                    setAnndataField({
+                      attribute: "obs",
+                      field: "selectedKey",
+                      value: e
+                    })
+                  );
+                  
                   get_file_obs(fileID, e, dispatch);
                 }
                 else {
@@ -80,7 +70,7 @@ export default function ListLabels() {
               {e}
             </Button>
           );
-        })}
+        }) : <></>}
     </Stack>
   )
   

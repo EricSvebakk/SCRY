@@ -1,5 +1,4 @@
-
-import { setInProgress, setProgressMessage, setSelectedEmbedding } from "../../redux/reducers/plotReducer";
+import { setAnndataField, setStatus } from "../../redux/reducers/plotReducer";
 import { get_file_hierarchy } from "../get_file_hierarchy";
 import { get_file_obsm } from "../get_file_obsm";
 
@@ -12,7 +11,7 @@ export function get_nldr(
   minDist: number,
   spread: number,
   nNeighbors: number,
-  callback: Function
+  dispatch: Function
 ) {
   const request = `${BACKEND_ENDPOINT}/start_task_compute_nldr/`;
 
@@ -24,17 +23,12 @@ export function get_nldr(
   formData.append("spread", spread.toString());
   formData.append("n_neighbors", nNeighbors.toString());
 
-  callback(
-    setInProgress({
+  dispatch(
+    setStatus({
       type: "get_embedding",
       value: true,
     })
   );
-  
-  callback(setProgressMessage({
-    type: "get_embedding",
-    value: "",
-  }));
 
   fetch(request, {
     method: "POST",
@@ -44,20 +38,22 @@ export function get_nldr(
     .then((response) => {
       if (!response.ok) {
         console.error("Something went wrong with get_nldr(): not ok");
-        callback(setInProgress({
-          type: "get_embedding",
-          value: false,
-        }));
+        dispatch(
+          setStatus({
+            type: "get_embedding",
+            value: false,
+          })
+        );
       }
       return response.json();
     })
     .then((data: { task_id: string }) => {
-      poll_nldr_status(data.task_id, fileID, adataKey, callback)
+      poll_nldr_status(data.task_id, fileID, adataKey, dispatch);
     })
     .catch((error) => {
       console.error("Something went wrong with get_nldr()", error);
-      callback(
-        setInProgress({
+      dispatch(
+        setStatus({
           type: "get_embedding",
           value: false,
         })
@@ -65,95 +61,101 @@ export function get_nldr(
     });
 }
 
-function poll_nldr_status(taskID: string, fileID: string, key: string, callback: Function) {
-  
+function poll_nldr_status(
+  taskID: string,
+  fileID: string,
+  key: string,
+  dispatch: Function
+) {
   const request = `${BACKEND_ENDPOINT}/get_status_task?task_id=${taskID}`;
-  
+
   const interval = setInterval(async () => {
-    
     fetch(request)
+      .then((response) => {
+        if (!response.ok) {
+          console.error("Something went wrong with poll_nldr_status()");
+          dispatch(
+            setStatus({
+              type: "get_embedding",
+              value: false,
+            })
+          );
+          clearInterval(interval);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.status === "SUCCESS" || data.status === "FAILURE") {
+          get_nldr_result(taskID, fileID, key, dispatch);
+          clearInterval(interval);
+        } else if (data.status === "PROGRESS") {
+          dispatch(
+            setStatus({
+              type: "get_embedding",
+              value: true,
+              message: data.progress.status,
+            })
+          );
+        }
+      })
+      .catch((error) => {
+        console.error("Something went wrong with poll_nldr_status()", error);
+        dispatch(
+          setStatus({
+            type: "get_embedding",
+            value: false,
+          })
+        );
+        clearInterval(interval);
+      });
+  }, 2000);
+}
+
+function get_nldr_result(
+  taskID: string,
+  fileID: string,
+  key: string,
+  dispatch: Function
+) {
+  const request = `${BACKEND_ENDPOINT}/get_finished_task?task_id=${taskID}`;
+
+  fetch(request)
     .then((response) => {
       if (!response.ok) {
-        console.error("Something went wrong with poll_nldr_status()");
-        callback(setInProgress({
-          type: "get_embedding",
-          value: false,
-        }));
-        callback(setProgressMessage({
-          type: "get_embedding",
-          value: ""
-        }));
-        clearInterval(interval);
+        console.error("Something went wrong with get_nldr_result()");
       }
       return response.json();
     })
     .then((data) => {
-      if (data.status === "SUCCESS" || data.status === "FAILURE") {
-        get_nldr_result(taskID, fileID, key, callback);
-        clearInterval(interval);
-        callback(setProgressMessage({
+      console.log(data);
+
+      const embeddingKey = `X_umap_${key}`;
+
+      dispatch(
+        setAnndataField({
+          attribute: "obsm",
+          field: "selectedKey",
+          value: embeddingKey,
+        })
+      );
+
+      get_file_obsm(fileID, embeddingKey, dispatch);
+      get_file_hierarchy(fileID, dispatch);
+
+      dispatch(
+        setStatus({
           type: "get_embedding",
-          value: ""
-        }));
-      }
-      else if (data.status === "PROGRESS") {
-        callback(setProgressMessage({
-          type: "get_embedding",
-          value: data.progress.status
-        }));
-      }
-      
+          value: false,
+        })
+      );
     })
     .catch((error) => {
-      console.error("Something went wrong with poll_nldr_status()", error);
-      callback(setInProgress({
-        type: "get_embedding",
-        value: false,
-      }));
-      callback(setProgressMessage({
-        type: "get_embedding",
-        value: ""
-      }));
-      clearInterval(interval);
+      console.error("Something went wrong with get_nldr_result()", error);
+      dispatch(
+        setStatus({
+          type: "get_embedding",
+          value: false,
+        })
+      );
     });
-    
-  }, 2000); 
-  
-}
-
-function get_nldr_result(taskID: string, fileID: string, key: string, callback: Function) {
-  
-  const request = `${BACKEND_ENDPOINT}/get_finished_task?task_id=${taskID}`;
-  
-  fetch(request)
-  .then((response) => {
-    if (!response.ok) {
-      console.error("Something went wrong with get_nldr_result()");
-    }
-    return response.json();
-  })
-  .then((data) => {
-    
-    console.log(data);
-    
-    const embeddingKey = `X_umap_${key}`
-    
-    callback(setSelectedEmbedding(embeddingKey));
-    
-    get_file_obsm(fileID, embeddingKey, callback);
-    get_file_hierarchy(fileID, callback);
-    
-    callback(setInProgress({
-      type: "get_embedding",
-      value: false,
-    }));
-  })
-  .catch((error) => {
-    console.error("Something went wrong with get_nldr_result()", error);
-    callback(setInProgress({
-      type: "get_embedding",
-      value: false,
-    }));
-  })
-  
 }

@@ -1,65 +1,69 @@
-import { obsData, geneExpressionData, obsmData, zarrHierarchy, initialPlotStateProps, ProgressOptions, geneDendrogramData, colorTypes, DotplotOptions, triggerOptions, tabOptions } from "@/lib/types";
-import { createSlice, Draft, PayloadAction } from "@reduxjs/toolkit";
+import {
+  InitialPlotStateProps,
+  fetchOptions,
+  tabOptions,
+  GDEFields,
+  SelectedFields,
+  AnndataAttributeFields,
+  AnndataAttributeData,
+  AnndataAttributeKeys,
+  AnndataAttributes,
+  statusOptions,
+  statusAttributes,
+  triggerOptions,
+} from "@/lib/types";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-const initialPlotState: initialPlotStateProps = {
-  svgRef: null,
-  groupRefs: null,
-  hierarchy: null,
-  obs: null,
-  obsm: null,
-  genes: null,
-  geneExpression: [],
-  geneDendrogram: null,
-  nGenes: null,
-  nClusters: null,
-  labelSize: {},
-  dotplotOptions: {
-    title: "",
-    coloring: "mean_expr",
-    highlight: "cluster",
-    expressionMin: 0,
-    expressionMax: 0,
-    expressionMinDefault: 0,
-    expressionMaxDefault: 0,
-    expressionIsDefault: true
+const initialPlotState: InitialPlotStateProps = {
+  anndata: AnndataAttributeKeys.reduce(
+    (acc, key) => {
+      acc[key] = {}
+      return acc;
+    },
+    {} as AnndataAttributes
+  ),
+  data: {
+    genes: [],
+    GDE: {
+      expression: null,
+      dendrogram: null,
+      genes: [],
+      clusters: [],
+      nGenes: 0,
+      nClusters: 0,
+      plotOptions: {
+        coloring: "mean_expr",
+        highlight: "rgg_order",
+        expressionMin: 0,
+        expressionMax: 0,
+        expressionMinDefault: 0,
+        expressionMaxDefault: 0,
+        expressionIsDefault: true,
+      },
+    },
   },
-  selectedEmbedding: "",
-  selectedCategory: "",
-  selectedLabels: [],
-  selectedGenes: [],
-  triggers: {
-    saveScatterPlotImage: null,
-    somethingElse: null,
+  filtering: {
+    selected: {
+      genes: [],
+      clusters: [],
+    },
   },
-  tabs: {
-    currentTab: "scatterplot"
+  navigation: {
+    currentTab: "scatterplot",
+    triggers: {
+      saveScatterPlotImage: null
+    }
   },
-  progressMessage: {
-    generate_ranked_genes_groups: "",
-    generate_leiden: "",
-    generate_umap: "",
-    get_rgg_dotplot: "",
-    get_ranked_genes_groups: "",
-    get_file_hierarchy: "",
-    get_file_obs: "",
-    get_file_obsm: "",
-    get_filenames: "",
-    get_genes: "",
-    get_embedding: ""
-  },
-  inProgress: {
-    generate_ranked_genes_groups: false,
-    generate_leiden: false,
-    generate_umap: false,
-    get_rgg_dotplot: false,
-    get_ranked_genes_groups: false,
-    get_file_hierarchy: false,
-    get_file_obs: false,
-    get_file_obsm: false,
-    get_filenames: false,
-    get_genes: false,
-    get_embedding: false
-  },
+  status: fetchOptions.reduce(
+    (acc, key) => {
+      acc[key] = {
+        inProgress: false,
+        message: "",
+      } as statusOptions
+      return acc
+    },
+    {} as statusAttributes
+  )
 };
 
 export const plotSlice = createSlice({
@@ -73,104 +77,110 @@ export const plotSlice = createSlice({
         }
       }
     },
-    setSVGRef: (state, action: PayloadAction<{}>) => {},
-    setCanvasRefs: (state, action: PayloadAction<{}>) => {},
-    setHierarchy: (state, action: PayloadAction<zarrHierarchy>) => {
-      state.hierarchy = action.payload;
+    setAnndataField<
+      A extends keyof AnndataAttributeData,
+      F extends keyof AnndataAttributeFields<AnndataAttributeData[A]>
+    >(
+      state: InitialPlotStateProps,
+      action: PayloadAction<{
+        attribute: A;
+        field: F;
+        value: AnndataAttributeFields<AnndataAttributeData[A]>[F];
+      }>
+    ) {
+      const { attribute, field, value } = action.payload;
+
+      (
+        state.anndata[attribute] as AnndataAttributeFields<
+          AnndataAttributeData[A]
+        >
+      )[field] = value;
     },
-    setObs: (state, action: PayloadAction<obsData | null>) => {
-      state.obs = action.payload;
+    setFieldAcrossAnndata<F extends keyof AnndataAttributeFields<any>>(
+      state: InitialPlotStateProps,
+      action: PayloadAction<{
+        field: F;
+        values: Partial<{
+          [A in keyof AnndataAttributeData]: AnndataAttributeFields<
+            AnndataAttributeData[A]
+          >[F];
+        }>;
+      }>
+    ) {
+      const { field, values } = action.payload;
+
+      for (const attr in values) {
+        if (values[attr as keyof typeof values] !== undefined) {
+          const typedAttr = attr as keyof AnndataAttributeData;
+          const currentAttribute = state.anndata[
+            typedAttr
+          ] as AnndataAttributeFields<AnndataAttributeData[typeof typedAttr]>;
+          currentAttribute[field] = values[typedAttr];
+        }
+      }
     },
-    setObsm: (state, action: PayloadAction<obsmData | null>) => {
-      state.obsm = action.payload;
+    setGDEField<K extends keyof GDEFields>(
+      state: InitialPlotStateProps,
+      action: PayloadAction<{ field: K; value: GDEFields[K] }>
+    ) {
+      state.data.GDE[action.payload.field] = action.payload.value;
     },
-    setGenes: (
-      state: Draft<initialPlotStateProps>,
-      action: PayloadAction<string[]>
-    ) => {
-      state.genes = action.payload;
+    setSelectedField<K extends keyof SelectedFields>(
+      state: InitialPlotStateProps,
+      action: PayloadAction<{ field: K; value: SelectedFields[K] }>
+    ) {
+      state.filtering.selected[action.payload.field] = action.payload.value;
     },
-    setGeneExpression: (state, action: PayloadAction<geneExpressionData[]>) => {
-      state.geneExpression = action.payload;
-    },
-    setGeneDendrogram: (state, action: PayloadAction<geneDendrogramData>) => {
-      state.geneDendrogram = action.payload;
-    },
-    setNGenes: (state, action: PayloadAction<number>) => {
-      state.nGenes = action.payload;
-    },
-    setNClusters: (state, action: PayloadAction<number>) => {
-      state.nClusters = action.payload;
-    },
-    setLabelSize: (state, action: PayloadAction<{}>) => {
-      state.labelSize = action.payload;
-    },
-    setDotplotOptions: (state, action: PayloadAction<DotplotOptions>) => {
-      state.dotplotOptions = action.payload;
-    },
-    setSelectedEmbedding: (state, action: PayloadAction<string>) => {
-      state.selectedEmbedding = action.payload;
-    },
-    setSelectedCategory: (state, action: PayloadAction<string>) => {
-      state.selectedCategory = action.payload;
-    },
-    setSelectedLabels: (state, action: PayloadAction<string[]>) => {
-      state.selectedLabels = action.payload;
+    setGenes: (state, action: PayloadAction<string[]>) => {
+      state.data.genes = action.payload;
     },
     setSelectedGenes: (state, action: PayloadAction<string[]>) => {
-      state.selectedGenes = action.payload;
+      state.filtering.selected.genes = action.payload;
     },
-    setInProgress<K extends keyof ProgressOptions>(
-      state: Draft<initialPlotStateProps>,
-      action: PayloadAction<{ type: K, value: ProgressOptions[K] }>
+    setCurrentTab: (
+      state: InitialPlotStateProps,
+      action: PayloadAction<tabOptions>
+    ) => {
+      state.navigation.currentTab = action.payload;
+    },
+    setTrigger<K extends keyof triggerOptions> (
+      state: InitialPlotStateProps,
+      action: PayloadAction<{ type: K; value: triggerOptions[K] | null }>
     ) {
-      state.inProgress[action.payload.type] = action.payload.value;
+      state.navigation.triggers[action.payload.type] = action.payload.value
     },
-    setProgressMessage<K extends keyof ProgressOptions>(
-      state: Draft<initialPlotStateProps>,
-      action: PayloadAction<{ type: K, value: string }>
-    ) {
-      state.progressMessage[action.payload.type] = action.payload.value;
-    },
-    setTrigger<K extends keyof triggerOptions>(
-      state: Draft<initialPlotStateProps>,
-      action: PayloadAction<{ type: K, value: triggerOptions[K] }>
-    ) {
-      state.triggers[action.payload.type] = action.payload.value;
-    },
-    resetTrigger<K extends keyof triggerOptions>(
-      state: Draft<initialPlotStateProps>,
-      action: PayloadAction<{ type: K }>
-    ) {
-      state.triggers[action.payload.type] = null;
-    },
-    setCurrentTab: (state, action: PayloadAction<tabOptions>) => {
-      state.tabs.currentTab = action.payload
+    setStatus: (
+      state: InitialPlotStateProps,
+      action: PayloadAction<{
+        type: (typeof fetchOptions)[number];
+        value: boolean;
+        message?: string;
+      }>
+    ) => {
+      const type = state.status[action.payload.type];
+
+      console.log(type, action.payload);
+
+      type.inProgress = action.payload.value;
+
+      if (action.payload.message !== undefined) {
+        type.message = action.payload.message;
+      }
     },
   },
 });
 
 export const {
   reset,
-  setHierarchy,
-  setObs,
-  setObsm,
+  setAnndataField,
+  setFieldAcrossAnndata,
+  setGDEField,
+  setSelectedField,
   setGenes,
-  setGeneExpression,
-  setGeneDendrogram,
-  setNGenes,
-  setNClusters,
-  setLabelSize,
-  setDotplotOptions,
-  setSelectedEmbedding,
-  setSelectedCategory,
-  setSelectedLabels,
   setSelectedGenes,
-  setInProgress,
-  setProgressMessage,
   setTrigger,
-  resetTrigger,
   setCurrentTab,
+  setStatus,
 } = plotSlice.actions;
 
 export default plotSlice.reducer;

@@ -1,14 +1,17 @@
-import { setGenes, setInProgress } from "../redux/reducers/plotReducer";
+import { setGenes, setStatus } from "../redux/reducers/plotReducer";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
-export function get_genes(fileID: string, callback: Function) {
+export function get_genes(fileID: string, dispatch: Function) {
   const request = `${BACKEND_ENDPOINT}/get_genes?file_id=${fileID}`;
 
-  callback(setInProgress({
-    type: "get_genes",
-    value: true,
-  }));
+  dispatch(
+    setStatus({
+      type: "get_genes",
+      value: true,
+      message: "Loading in AnnData genes",
+    })
+  );
   
   fetch(request)
     .then((response) => {
@@ -18,15 +21,15 @@ export function get_genes(fileID: string, callback: Function) {
       return response.json();
     })
     .then((data) => {
-      callback(setGenes(data.genes));
-      callback(setInProgress({
+      dispatch(setGenes(data.genes));
+      dispatch(setStatus({
         type: "get_genes",
         value: false,
       }));
     })
     .catch((error) => {
       console.error("Something went wrong with get_genes()", error);
-      callback(setInProgress({
+      dispatch(setStatus({
         type: "get_genes",
         value: false,
       }));

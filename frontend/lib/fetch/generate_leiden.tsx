@@ -1,4 +1,4 @@
-import { setInProgress } from "../redux/reducers/plotReducer";
+import { setStatus } from "../redux/reducers/plotReducer";
 import { get_file_hierarchy } from "./get_file_hierarchy";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
@@ -17,7 +17,7 @@ export function generate_leiden(
   formData.append("uns_key", uns_key);
   formData.append("resolution", resolution.toString());
   
-  callback(setInProgress({
+  callback(setStatus({
     type: "generate_leiden",
     value: true,
   }));
@@ -35,7 +35,7 @@ export function generate_leiden(
     })
     .then((data) => {
       console.log("generate_leiden() result", data);
-      callback(setInProgress({
+      callback(setStatus({
         type: "generate_leiden",
         value: false,
       }));
@@ -45,7 +45,7 @@ export function generate_leiden(
     .catch((error) => {
       console.error("Something went wrong with generate_leiden()", error);
       callback(
-        setInProgress({
+        setStatus({
           type: "generate_leiden",
           value: false,
         })

@@ -1,4 +1,11 @@
-import { Button, Dialog, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Stack,
+  TextField,
+} from "@mui/material";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { get_nldr } from "@/lib/fetch/workflow/get_nldr";
@@ -6,18 +13,17 @@ import { setCurrentTab } from "@/lib/redux/reducers/plotReducer";
 
 export default function NLDRDialog(props: {
   isOpen: boolean;
-  setIsOpen: Function
+  setIsOpen: Function;
 }) {
-  
   const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
-  
+
   const dispatch = useAppDispatch();
   const [adataKey, setAdataKey] = useState<string>("");
   const [numPCs, setNumPCs] = useState<number>(30);
   const [minDist, setMinDist] = useState<number>(0.5);
   const [spread, setSpread] = useState<number>(1.0);
   const [nNeighbors, setNNeighbors] = useState<number>(15);
-  
+
   return (
     <Dialog open={props.isOpen} onClose={() => props.setIsOpen(false)}>
       <DialogTitle>NLDR - UMAP</DialogTitle>
@@ -108,5 +114,4 @@ export default function NLDRDialog(props: {
       </DialogContent>
     </Dialog>
   );
-  
 }

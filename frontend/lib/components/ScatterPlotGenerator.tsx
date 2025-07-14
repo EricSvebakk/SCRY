@@ -1,8 +1,8 @@
 
 
 import * as d3 from "d3";
-import { obsData, obsmData } from "../types";
-import { resetTrigger, setLabelSize } from "../redux/reducers/plotReducer";
+import { AnndataIndices } from "../types";
+import { setTrigger } from "../redux/reducers/plotReducer";
 
 export const my_colors = [
   "#1f77b4",
@@ -17,13 +17,12 @@ export const my_colors = [
 ];
 
 const ScatterPlotGenerator = (props: {
-  title: string,
   svgCurrent: HTMLCanvasElement,
   groupRefs: HTMLCanvasElement[],
-  obsData: obsData | null,
-  obsmData: obsmData,
+  indices: AnndataIndices | undefined,
+  coordinates: number[][],
   dispatch: Function,
-  imageTrigger: string | null,
+  imageTrigger: any | null
 }) => {
   
   const containerRect = props.svgCurrent.getBoundingClientRect();
@@ -37,23 +36,23 @@ const ScatterPlotGenerator = (props: {
   const paddingWidth = canvasWidth / paddingRatio;
   const paddingHeight = canvasHeight / paddingRatio;
   
-  let labels = props.obsData ? props.obsData.labels : ["none"];
-  let labelMap = props.obsData ? props.obsData.label_map : props.obsmData.coordinates.map((e) => 0);
-  let colorScheme = props.obsData ? my_colors : ["black"];
-  let coordinates = props.obsmData.coordinates;
+  let labels = props.indices ? props.indices.categories : ["none"];
+  let labelMap = props.indices ? props.indices.codes : props.coordinates.map((e) => 0);
+  let colorScheme = props.indices ? d3.schemeSet3 : ["black"];
+  let coordinates = props.coordinates;
   
   let labelSizeMap: {[key: string]: number} = {};
   
-  props.obsData?.labels.forEach((e: string) => {
+  props.indices?.categories.forEach((e: string) => {
     labelSizeMap[e] = 0;
   });
   
-  props.obsData?.label_map.forEach((f: number) => {
-    const labelIndex = props.obsData?.labels[f]!;
+  props.indices?.codes.forEach((f: number) => {
+    const labelIndex = props.indices?.categories[f]!;
     labelSizeMap[labelIndex] ++;
   })
   
-  props.dispatch(setLabelSize(labelSizeMap))
+  // props.dispatch(setLabelSize(labelSizeMap))
   
   const pointSize = 3.5 - (0.5 * Math.log10(coordinates.length))
 
@@ -105,14 +104,46 @@ const ScatterPlotGenerator = (props: {
   
   if (!!props.imageTrigger) {
     
-    const finalCanvas = document.createElement("canvas");
-    finalCanvas.width = width;
-    finalCanvas.height = height;
-    const finalCtx = finalCanvas.getContext("2d")!;
+    const scale = 3;
     
-    // Draw all canvas layers in order
-    props.groupRefs.forEach((canvas) => {
-      finalCtx.drawImage(canvas, 0, 0, width, height);
+    // const imageWidth = 1584 * scale;
+    // const imageHeight = 396 * scale;
+    const imageWidth = width * scale;
+    const imageHeight = height * scale; 
+    
+    const finalCanvas = document.createElement("canvas");
+    finalCanvas.width = imageWidth;
+    finalCanvas.height = imageHeight;
+    
+    const finalCtx = finalCanvas.getContext("2d")!;
+    finalCtx.imageSmoothingEnabled = true;
+    
+    finalCtx.fillStyle = "white";
+    finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+    const scaledxScale = d3
+      .scaleLinear()
+      .domain(d3.extent(coordinates, (d: number[]) => d[0]) as [number, number])
+      .range([paddingWidth, imageWidth - paddingWidth]);
+
+    const scaledyScale = d3
+      .scaleLinear()
+      .domain(d3.extent(coordinates, (d: number[]) => d[1]) as [number, number])
+      .range([imageHeight - paddingHeight, paddingHeight]);
+    
+    labels.forEach((label, labelIndex) => {      
+      labelMap.map((labelPosition, positionIndex) => {
+        
+        if (labelPosition !== labelIndex) return;
+        
+        const point = coordinates[positionIndex];
+        
+        finalCtx.beginPath();
+        finalCtx.arc(scaledxScale(point[0]), scaledyScale(point[1]), pointSize * 2, 0, 2 * Math.PI);
+        finalCtx.fillStyle = labels.length > 0 ? colorScale(labels[labelMap[positionIndex]]) : "black";
+        finalCtx.fill();
+        finalCtx.closePath();
+      })
     });
     
     // Export the final canvas as an image
@@ -121,7 +152,7 @@ const ScatterPlotGenerator = (props: {
     a.download = `${props.imageTrigger}.png`;
     a.click();
     
-    props.dispatch(resetTrigger({ type: "saveScatterPlotImage" }))
+    props.dispatch(setTrigger({ type: "saveScatterPlotImage", value: null }))
   }
 
   return () => {

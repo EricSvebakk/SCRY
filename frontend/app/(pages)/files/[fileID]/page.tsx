@@ -1,10 +1,5 @@
+"use client";
 
-"use client"
-
-import {
-  reset,
-  setCurrentTab,
-} from "@/lib/redux/reducers/plotReducer";
 import {
   Box,
   Button,
@@ -13,25 +8,24 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import LoadingButton from '@mui/lab/LoadingButton';
-import ListLabels from "@/lib/components/controls/ListLabels";
-import { ScatterPlot } from "@/lib/components/ScatterPlot";
-import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
-import { setActiveFile } from "@/lib/redux/reducers/fileReducer";
 import { useParams } from "next/navigation";
 import { MouseEventHandler, useEffect, useState } from "react";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
+import { setCurrentTab } from "@/lib/redux/reducers/plotReducer";
+import { ScatterPlot } from "@/lib/components/ScatterPlot";
+import { setActiveFile } from "@/lib/redux/reducers/fileReducer";
 import { get_file_hierarchy } from "@/lib/fetch/get_file_hierarchy";
+import { ImageSavingPopover } from "@/lib/components/modals/ImageSavingPopover";
+import { DotPlot } from "@/lib/components/DotPlot";
+import { ListLabelOptions } from "@/lib/components/controls/ListLabelOptions";
+import { DotPlotConfigurationPopover } from "@/lib/components/modals/DotPlotConfigurationPopover";
+import { get_genes } from "@/lib/fetch/get_genes";
+import LoadingButton from "@mui/lab/LoadingButton";
+import ListLabels from "@/lib/components/controls/ListLabels";
 import NLDRDialog from "@/lib/components/modals/NLDRDialog";
 import ClusteringDialog from "@/lib/components/modals/ClusteringDialog";
-import { get_genes } from "@/lib/fetch/get_genes";
-import RGGDialog from "@/lib/components/modals/RGGDialog";
-import { DotPlot } from "@/lib/components/DotPlot";
 import DotplotDialog from "@/lib/components/modals/DotplotDialog";
-import { ListLabelOptions } from "@/lib/components/controls/ListLabelOptions";
 import ListEmbeddings from "@/lib/components/controls/ListEmbeddings";
-import { DotPlotConfigurationPopover } from "@/lib/components/modals/DotPlotConfigurationPopover";
-import { ImageSavingPopover } from "@/lib/components/modals/ImageSavingPopover";
-import { GeneGroupTable } from "@/lib/components/GeneGroupTable";
 import LDRDialog from "@/lib/components/modals/LDRDialog";
 
 type step = {
@@ -40,27 +34,21 @@ type step = {
   // disabled: boolean;
   loading: boolean;
   function: MouseEventHandler | undefined;
-}
+};
 
-
-export default function FileIdPage({ }) {
-  
+export default function FileIdPage({}) {
   const { fileID } = useParams();
-  
-  const obs = useAppSelector((state) => state.plotReducer.obs);
-  
-  const inProgress = useAppSelector((state) => state.plotReducer.inProgress);
-  const currentTab = useAppSelector((state) => state.plotReducer.tabs.currentTab);
-  
+
+  const status = useAppSelector((state) => state.plotReducer.status);
+  const currentTab = useAppSelector((state) => state.plotReducer.navigation.currentTab);
+
   const dispatch = useAppDispatch();
-  
-  
+
   const [isLDRDialogOpen, setIsLDRDialogOpen] = useState(false);
   const [isNLDRDialogOpen, setIsNLDRDialogOpen] = useState(false);
   const [isClusteringDialogOpen, setIsClusteringDialogOpen] = useState(false);
-  const [isRGGDialogOpen, setIsRGGDialogOpen] = useState(false);
   const [isDotplotDialogOpen, setIsDotplotDialogOpen] = useState(false);
-  
+
   const steps: step[] = [
     {
       label: "Linear Dimension Reduction",
@@ -72,25 +60,19 @@ export default function FileIdPage({ }) {
       label: "Non-linear Dimension Reduction",
       id: "nldr",
       function: () => setIsNLDRDialogOpen(true),
-      loading: inProgress.generate_umap,
+      loading: status.generate_umap.inProgress,
     },
     {
       label: "Clustering of cells",
       id: "cc",
       function: () => setIsClusteringDialogOpen(true),
-      loading: inProgress.generate_leiden,
+      loading: status.generate_leiden.inProgress,
     },
     {
-      label: "Differential Expression",
-      id: "de",
-      function: () => setIsRGGDialogOpen(true),
-      loading: inProgress.generate_ranked_genes_groups,
-    },
-    {
-      label: "DE Dotplot",
+      label: "Differential Expression Dotplot",
       id: "ded",
       function: () => setIsDotplotDialogOpen(true),
-      loading: inProgress.get_rgg_dotplot,
+      loading: status.get_rgg_dotplot.inProgress,
     },
     {
       label: "Cluster Annotation",
@@ -98,49 +80,31 @@ export default function FileIdPage({ }) {
       function: undefined,
       loading: false,
     },
-      
-  ]
-  
+  ];
+
   useEffect(() => {
+    // if (obs) {
+    //   dispatch(reset(true));
+    // }
     
-    if (obs) {
-      dispatch(reset(true));
-    }
-    
+    console.log(typeof fileID, status);
+
     if (typeof fileID === "string") {
       dispatch(setActiveFile(fileID));
-      
-      if (!inProgress.get_file_hierarchy) {
+
+      if (!status.get_file_hierarchy.inProgress) {
         get_file_hierarchy(fileID, dispatch);
       }
-      // if (!inProgress.get_genes) {
-      //   get_genes(fileID, dispatch);
-      // }
+      if (!status.get_genes.inProgress) {
+        get_genes(fileID, dispatch);
+      }
     }
-    
   }, []);
 
-  
   return (
-    <Grid
-      container
-      direction="row"
-      columnGap={1}
-      height="100%"
-      xs
-    >
-      <Grid
-        item
-        width={200}
-        height="100%"
-        overflow="clip"
-        >
-        <Stack
-          direction="column"
-          height="100%"
-          rowGap={1}
-        >
-          
+    <Grid container direction="row" columnGap={1} height="100%" xs>
+      <Grid item width={200} height="100%" overflow="clip">
+        <Stack direction="column" height="100%" rowGap={1}>
           <Stack
             direction="column"
             height="100%"
@@ -150,47 +114,40 @@ export default function FileIdPage({ }) {
               border: "1px solid grey",
             }}
           >
-            {
-              steps.map((e, i) => {
-                return (
-                  <LoadingButton
-                    variant="contained"
-                    disabled={ e.function === undefined }
-                    key={"button_" + e.id}
-                    fullWidth
-                    size="small"
-                    onClick={e.function}
-                    loading={e.loading}
+            {steps.map((e, i) => {
+              return (
+                <LoadingButton
+                  variant="contained"
+                  disabled={e.function === undefined}
+                  key={"button_" + e.id}
+                  fullWidth
+                  size="small"
+                  onClick={e.function}
+                  loading={e.loading}
+                >
+                  <Stack
+                    direction="row"
+                    width="100%"
+                    justifyContent="space-between"
+                    gap={1}
                   >
+                    <Typography variant="inherit">{i + 1}.</Typography>
+
                     <Stack
                       direction="row"
                       width="100%"
-                      justifyContent="space-between"
-                      gap={1}
-                      >
-                      <Typography variant="inherit">
-                        {i+1}.
+                      justifyContent="space-around"
+                    >
+                      <Typography variant="inherit" align="center">
+                        {e.label}
                       </Typography>
-                      
-                      <Stack
-                        direction="row"
-                        width="100%"
-                        justifyContent="space-around"
-                      >                          
-                        <Typography variant="inherit" align="center">
-                          {e.label}
-                        </Typography>
-                      </Stack>
                     </Stack>
-                    
-                  </LoadingButton>
-                  
-                )
-              })
-            }
-            
+                  </Stack>
+                </LoadingButton>
+              );
+            })}
           </Stack>
-          
+
           <LDRDialog
             isOpen={isLDRDialogOpen}
             setIsOpen={setIsLDRDialogOpen}
@@ -206,157 +163,128 @@ export default function FileIdPage({ }) {
             setIsOpen={setIsClusteringDialogOpen}
           />
           
-          <RGGDialog
-            isOpen={isRGGDialogOpen}
-            setIsOpen={setIsRGGDialogOpen}
-          />
-          
           <DotplotDialog
             isOpen={isDotplotDialogOpen}
             setIsOpen={setIsDotplotDialogOpen}
           />
-          
         </Stack>
       </Grid>
-      
-      <Grid
-        item
-        width={250}
-        height="100%"
-      >
-        <Grid
-          container
-          direction="column"
-          rowGap={1}
-          height="100%"
-          
-        >
+
+      <Grid item width={250} height="100%">
+        <Grid container direction="column" rowGap={1} height="100%">
           <Grid
             item
             xs
             width="100%"
             sx={{
-              border: "1px solid grey"
+              border: "1px solid grey",
             }}
           >
             <ListEmbeddings />
           </Grid>
-          
+
           <Grid
             item
             xs
             width="100%"
             sx={{
-              border: "1px solid grey"
+              border: "1px solid grey",
             }}
           >
             <ListLabels />
           </Grid>
-          
+
           <Grid
             item
             xs
             sx={{
-              border: "1px solid grey"
+              border: "1px solid grey",
             }}
           >
             <ListLabelOptions />
           </Grid>
         </Grid>
       </Grid>
-      
+
       <Grid
         item
         xs
         sx={{
-          height: "100%"
+          height: "100%",
         }}
       >
-        <Stack
-          direction="column"
-          height="100%"
-          gap={1}
-        >
+        <Stack direction="column" height="100%" gap={1}>
           <Stack
             direction="row"
             sx={{
               border: "1px solid grey",
-              p:1,
+              p: 1,
             }}
             gap={1}
           >
-            <ButtonGroup
-              size="small"
-            >     
+            <ButtonGroup size="small">
               <Button
                 variant={currentTab == "scatterplot" ? "contained" : "outlined"}
-                onClick={() => dispatch(setCurrentTab("scatterplot")) }
+                onClick={() => dispatch(setCurrentTab("scatterplot"))}
               >
                 Scatter plot
               </Button>
               <Button
                 variant={currentTab == "dotplot" ? "contained" : "outlined"}
-                onClick={() => dispatch(setCurrentTab("dotplot")) }
+                onClick={() => dispatch(setCurrentTab("dotplot"))}
               >
                 Dot plot
               </Button>
               <Button
                 variant={currentTab == "table" ? "contained" : "outlined"}
-                onClick={() => dispatch(setCurrentTab("table")) }
+                onClick={() => dispatch(setCurrentTab("table"))}
               >
                 Table
               </Button>
             </ButtonGroup>
-            
+
             <DotPlotConfigurationPopover />
             <ImageSavingPopover />
           </Stack>
-          
+
           <Box
             height="100%"
             sx={{
-              border: "1px solid grey"
+              border: "1px solid grey",
             }}
           >
             <Box
               sx={{
                 height: "100%",
-                display: currentTab === "scatterplot" ? "flex" : "none"
+                display: currentTab === "scatterplot" ? "flex" : "none",
               }}
             >
               <ScatterPlot />
             </Box>
-            
+
             <Stack
               height="100%"
               sx={{
                 height: "100%",
-                display: currentTab === "dotplot" ? "flex" : "none"
+                display: currentTab === "dotplot" ? "flex" : "none",
               }}
             >
-              <Stack
-                direction="row"
-              >
-              </Stack>
-              
+              <Stack direction="row"></Stack>
+
               <DotPlot />
             </Stack>
-            
+
             <Box
               sx={{
                 height: "100%",
-                display: currentTab === "table" ? "flex" : "none"
+                display: currentTab === "table" ? "flex" : "none",
               }}
             >
-              <GeneGroupTable />
+              {/* <GeneGroupTable /> */}
             </Box>
           </Box>
         </Stack>
-        
-        
       </Grid>
-      
     </Grid>
   );
-  
 }

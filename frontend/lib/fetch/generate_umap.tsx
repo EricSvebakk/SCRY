@@ -1,4 +1,4 @@
-import { setInProgress } from "../redux/reducers/plotReducer";
+import { setStatus } from "../redux/reducers/plotReducer";
 import { get_file_hierarchy } from "./get_file_hierarchy";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
@@ -23,7 +23,7 @@ export function generate_umap(
   formData.append("n_neighbors", nNeighbors.toString());
 
   callback(
-    setInProgress({
+    setStatus({
       type: "generate_umap",
       value: true,
     })
@@ -43,7 +43,7 @@ export function generate_umap(
     .then((data) => {
       console.log("generate_umap() result", data);
       callback(
-        setInProgress({
+        setStatus({
           type: "generate_umap",
           value: false,
         })
@@ -54,7 +54,7 @@ export function generate_umap(
     .catch((error) => {
       console.error("Something went wrong with generate_umap()", error);
       callback(
-        setInProgress({
+        setStatus({
           type: "generate_umap",
           value: false,
         })

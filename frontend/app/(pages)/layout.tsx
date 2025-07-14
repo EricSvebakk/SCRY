@@ -6,7 +6,6 @@ import { green, grey, red } from "@mui/material/colors";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { RootState } from "@/lib/redux/stores/store";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { addFile } from "@/lib/redux/reducers/fileReducer";
 
@@ -26,9 +25,9 @@ export default function PagesLayout({
   
   const dispatch = useAppDispatch();
   
-  const files = useAppSelector((state: RootState) => state.fileReducer.files);
-  const activeFile = useAppSelector((state: RootState) => state.fileReducer.activeFile);
-  const selectedFiles = useAppSelector((state: RootState) => state.fileReducer.selectedFiles);
+  const files = useAppSelector((state) => state.fileReducer.files);
+  const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
+  const selectedFiles = useAppSelector((state) => state.fileReducer.selectedFiles);
 
   useEffect(() => {
     

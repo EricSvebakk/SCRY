@@ -1,22 +1,25 @@
 
 
 import * as d3 from "d3";
-import { DotplotOptions, geneDendrogramData, geneExpressionData } from "../types";
+import { DotplotOptions, GDEFields, geneExpressionData } from "../types";
 import { AppDispatch } from "../redux/stores/store";
-import { setDotplotOptions } from "../redux/reducers/plotReducer";
+import { setGDEField } from "../redux/reducers/plotReducer";
 
 
 type dotPlotGeneratorProps = {
   current: any;
-  plotData: geneExpressionData[];
-  dendrogramData: geneDendrogramData,
-  nGenes: number, 
-  dpOptions: DotplotOptions,
+  gde: GDEFields;
   dispatch: AppDispatch
 };
 
 const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
   const containerRect = props.current.getBoundingClientRect();
+  
+  const { expression, dendrogram, plotOptions } = props.gde;
+  
+  if (!expression || !dendrogram) {
+    return;
+  }
   
   const width = containerRect.width;
   const height = containerRect.height;
@@ -31,17 +34,17 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
   
   // =========================================================================
   
-  const expressionValues = props.plotData.map((e) => e.mean_expr);
+  const expressionValues = expression.map((e) => e.mean_expr);
 
   const expressionMin = Math.min(...expressionValues, 0);
   const expressionMax = Math.max(...expressionValues);
 
-  const fracValues = props.plotData.map((e) => e.frac_expr);
+  const fracValues = expression.map((e) => e.frac_expr);
   const fracMin = Math.min(...fracValues, 0);
   const fracMax = Math.max(...fracValues);
   
-  const genes = props.plotData.map((e) => e.gene);
-  const cluster = props.plotData.map((e) => e.cluster);
+  const genes = expression.map((e) => e.gene);
+  const cluster = expression.map((e) => e.cluster);
   
   function isUnique(value: any, index: number, array: any[]) {
     return array.indexOf(value) === index;
@@ -74,18 +77,18 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
     .range([0, plotHeight])
     .padding(0.2);
 
-  let recordKey = props.dpOptions.coloring as keyof geneExpressionData;
+  let recordKey = plotOptions.coloring as keyof geneExpressionData;
   let colorScale = null;
   let recordsTransformed = null;
   let transform = (t: number) => (t);
   
-  const isDefault = props.dpOptions.expressionIsDefault;
-  let exprMin = props.dpOptions.expressionMin;
-  let exprMax = props.dpOptions.expressionMax;
+  const isDefault = plotOptions.expressionIsDefault;
+  let exprMin = plotOptions.expressionMin;
+  let exprMax = plotOptions.expressionMax;
   
   switch (recordKey) {
     case "mean_expr":
-      recordsTransformed = props.plotData.map((e) => e[recordKey] as number);
+      recordsTransformed = expression.map((e) => e[recordKey] as number);
       
       exprMin = isDefault
         ? Math.min(...recordsTransformed)
@@ -101,7 +104,7 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
       break;
       
     case "logfoldchange":
-      recordsTransformed = props.plotData.map((e) => e[recordKey] as number);
+      recordsTransformed = expression.map((e) => e[recordKey] as number);
       
       exprMin = isDefault
         ? Math.min(...recordsTransformed)
@@ -111,14 +114,19 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
         ? Math.max(...recordsTransformed)
         : exprMax;
       
+      const maxAbs = Math.max(Math.abs(exprMin), Math.abs(exprMax));
+        
       colorScale = d3
-        .scaleDiverging((t) => d3.interpolateRdBu(1 - (0.1 + (0.8 *t))))
-        .domain([exprMin, 0, exprMax])
+        // .scaleDiverging((t) => d3.interpolateRdBu(1 - (0.25 + 0.5 * t)))
+        // .scaleDiverging((t) => d3.interpolateRdBu(0.75 - (0.25 * t)))
+        .scaleDiverging((t) => d3.interpolateRdBu(1 - t))
+        .domain([exprMin, 0, exprMax]);
+        // .domain([-maxAbs, 0, maxAbs]);
       break;
       
     case "pvals_adj":
       transform = (t: number) => (-Math.log10(t));
-      recordsTransformed = props.plotData.filter((e) => e.pvals_adj > 0).map((e) => transform(e[recordKey] as number));
+      recordsTransformed = expression.filter((e) => e.pvals_adj > 0).map((e) => transform(e[recordKey] as number));
       
       exprMin = isDefault
         ? 0
@@ -141,20 +149,23 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
   
   console.log(exprMin, exprMax, isDefault)
   
-  if (props.dpOptions.expressionIsDefault) {
-    props.dispatch(setDotplotOptions({
-      ...props.dpOptions,
-      expressionMinDefault: exprMin,
-      expressionMaxDefault: exprMax,
+  if (plotOptions.expressionIsDefault) {
+    props.dispatch(setGDEField({
+      field: "plotOptions",
+      value: {        
+        ...plotOptions,
+        expressionMinDefault: exprMin,
+        expressionMaxDefault: exprMax,
+      }
     }))
   }
   
   let highest_expression: { [key: string]: number } = {}
   let highest_expression_pos: { [key: string]: number } = {}
-  const highlight = props.dpOptions.highlight;
+  const highlight = plotOptions.highlight;
   
-  if (highlight != "none") {    
-    props.plotData.forEach((e, i) => {
+  if (highlight !== "none") {    
+    expression.forEach((e, i) => {
       const cur_num = transform(e[recordKey] as number);
       
       if (cur_num == Infinity) {
@@ -166,7 +177,12 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
         highest_expression_pos[e[highlight]] = i;
       }
       
-      if (cur_num > highest_expression[e[highlight]]) {
+      if ((highlight === "rgg_order") && (e.rgg_order == 0)) {
+        highest_expression[e.cluster] = 0;
+        highest_expression_pos[e.cluster] = i;
+      }
+      
+      else if ((highlight !== "rgg_order") && (cur_num > highest_expression[e[highlight]])) {
         highest_expression[e[highlight]] = cur_num;
         highest_expression_pos[e[highlight]] = i;
       }
@@ -210,7 +226,7 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
   
   // =========================================================================
 
-  const dendroRoot = d3.hierarchy(props.dendrogramData as any);
+  const dendroRoot = d3.hierarchy(dendrogram as any);
   const clusterLayout = d3.cluster().size([dendroHeight, dendroWidth])
   
   clusterLayout(dendroRoot);
@@ -278,7 +294,7 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
     .attr("id", "plotgroup")
     .attr("transform", `translate(${margin.left + margin.yAxis + dendroWidth}, ${margin.top})`);
 
-  props.plotData.forEach((record: geneExpressionData, i: number) => {
+  expression.forEach((record: geneExpressionData, i: number) => {
     
     const color = transform(record[recordKey] as number);
     
@@ -291,8 +307,12 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
     
     const gene_index = record.gene;
     
-    const isHighlighted = highlight != "none" && highest_expression_pos[record[highlight]] == i;
-    const highlightColor = highlight == "cluster" ? "green" : "purple";
+    const isHighlighted = (
+      ((highlight === "rgg_order") && (highest_expression_pos[record.cluster] === i)) ||
+      ((highlight !== "none") && (highlight !== "rgg_order") && highest_expression_pos[record[highlight]] == i)
+    );
+    
+    const highlightColor = "green"
     
     plotGroup
       .append("circle")
@@ -311,6 +331,8 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
       .attr("r", maxScale)
       .attr("fill", "transparent")
       .style("pointer-events", "all")
+      .classed("cluster_" + record.cluster, true)
+      .classed("some_shit", true)
       .on("mouseover", function (this: any, event: MouseEvent) {
         tooltip
           .style("opacity", 1)
@@ -319,6 +341,31 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
           .select(`#${circleId}`)
           .style("stroke", "black")
           .style("opacity", 1);
+          
+        // plotGroup
+        //   .selectAll(".cluster_" + record.cluster)
+        //   .style("stroke", "orange")
+        //   .style("stroke-width", 3);
+         
+        // plotGroup
+        //   .selectAll(".some_shit")
+        //   .style("stroke", "orange")
+        //   .style("stroke-width", 3)
+        //   .classed("highlight-rank1", true);
+        
+        // plotGroup
+        //   // .selectAll("circle")
+        //     .selectAll(".some_shit")
+        //   .filter(function (d, j: any) {
+        //     const other = expression[j];
+        //     // return other?.gene === record.gene && other?.rgg_order == 0;
+        //     // return  other?.rgg_order == record.rgg_order;
+        //     return other?.rgg_order == 0;
+        //   })
+        //   .style("stroke", "orange")
+        //   .style("stroke-width", 3)
+        //   .classed("highlight-rank1", true);
+          
       })
       .on("mousemove", function (this:any, event: MouseEvent) {
         
@@ -342,10 +389,7 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
           top = event.pageY - tooltipHeight - offsetY;
         }
         
-        tooltip
-          .style("left", `${left}px`)
-          .style("top", `${top}px`)
-          .html(`
+        tooltip.style("left", `${left}px`).style("top", `${top}px`).html(`
             <table>
               <tr>
                 <td>Cluster label</td>
@@ -354,6 +398,10 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
               <tr>
                 <td>Gene label</td>
                 <td>${record.gene} (${genes.indexOf(gene_index)})</td>
+              </tr>
+              <tr>
+                <td>Gene rank in cluster</td>
+                <td>#${record.rgg_order + 1}</td>
               </tr>
               <tr>
                 <td>% of expressed cells</td>
@@ -373,17 +421,37 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
               </tr>
               <tr>
                 <td>-log10(P)</td>
-                <td>${(record.pvals_adj !== 0 ? -Math.log10(record.pvals_adj) : 0).toFixed(2)}</td>
+                <td>${(record.pvals_adj !== 0
+                  ? -Math.log10(record.pvals_adj)
+                  : 0
+                ).toFixed(2)}</td>
               </tr>
             </table>
           `);
       })
       .on("mouseleave", function (this: any, event: MouseEvent) {
-        tooltip
-          .style("opacity", 0);
-        d3
-          .select(`#${circleId}`)
-          .style("stroke", isHighlighted ? highlightColor: "none")
+        tooltip.style("opacity", 0);
+        d3.select(`#${circleId}`).style(
+          "stroke",
+          isHighlighted ? highlightColor : "none"
+        );
+
+        // plotGroup
+        //   .selectAll(".cluster_" + record.cluster)
+        //   .style("stroke", "none")
+        //   .style("stroke-width", 2)
+
+        // plotGroup
+        //   .selectAll(".some_shit")
+        //   .style("stroke", "none")
+        //   .style("stroke-width", 2)
+
+        // Remove highlight from all #1 rank circles
+        // plotGroup
+        //   .selectAll(".highlight-rank1")
+        //   .style("stroke", "none")
+        //   .style("stroke-width", 2)
+          // .classed("highlight-rank1", false);
       });
     
   })

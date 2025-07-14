@@ -4,6 +4,8 @@ from celery import Celery
 import scanpy as sc
 import pandas as pd
 import json
+from typing import Optional
+
 from anndata_util import sort_by_dendro_rgg_rbb_order, get_dendro_tree, make_safe
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
@@ -28,7 +30,7 @@ def update_progress(task, step_index: int, steps: list[str]):
         "current": step_index + 1,
         "total": total,
         "step": steps[step_index],
-        "status": f"Step {step_index + 1}/{total}: {steps[step_index]}"
+        "status": f"Step {step_index + 1}/{total if (total != 1) else 'X'}: {steps[step_index]}"
       }
     )
 
@@ -230,43 +232,6 @@ def compute_clustering(
     "labels": labels,
     "label_map": label_map
   }
-  
-# ============================================================================================
-@celery_app.task(bind=True)
-def compute_ranked_genes_groups(
-  self,
-  file_path: str,
-  key: str
-):
-  
-  step_current = 0
-  function_steps = [
-    "Opening anndata object",
-    "Computing leiden clusters",
-    "Retrieving data",
-    "Storing results to anndata object"
-  ]
-  
-  update_progress(self, step_current, function_steps)
-  
-  adata = sc.read_h5ad(file_path)
-  
-  step_current += 1
-  update_progress(self, step_current, function_steps)
-  
-  sc.tl.rank_genes_groups(
-    adata,
-    method="wilcoxon",
-    groupby=key,
-    key_added= "rank_genes_groups_" + key
-  )
-  
-  step_current += 1
-  update_progress(self, step_current, function_steps)
-  
-  sc.write(file_path, adata)
-  
-  return True
 
 # ============================================================================================
 @celery_app.task(bind=True)
@@ -275,23 +240,54 @@ def compute_rgg_dotplot(
   file_path: str,
   uns_key: str,
   n_genes: int,
+  selected_genes: Optional[list[str]]
 ):
   
   step_current = 0
   function_steps = [
-    "Opening anndata object"
+    "Loading anndata object"
   ]
   
   update_progress(self, step_current, function_steps)
   
+  key_rgg = f"rank_genes_groups_{uns_key}"
+  key_dotplot = f"dotplot_stats_g{n_genes}_{'_'.join(selected_genes).lower() if (selected_genes != None) else ''}_{uns_key}"
+  
   adata = sc.read_h5ad(file_path)
   
-  key_dotplot = f"dotplot_stats_g{n_genes}_{uns_key}"
+  if not (key_rgg in adata.uns_keys()): 
+    function_steps.append("Computing ranked genes groups")
+  
+  if (key_dotplot in adata.uns_keys()):
+    function_steps.append("Sort dataframe by dendrogram-rgg-rrb order")
+  
+  # else:
+  function_steps.extend([
+    "Compute sc.pl.rank_genes_groups_dotplot() for figure information",
+    "Remove duplicate columns",
+    "Convert dataframes to long-format",
+    "Combine dataframes",
+    "Retrieve pval, logfoldchange and rank from previous sc.tl.rank_genes_groups() computation and merge",
+    "Filter out results with pval_adj < 0.05",
+    "Store results to anndata object",
+    "Sort dataframe by dendrogram-rgg-rrb order",
+  ])
+  
+  
+  if not (key_rgg in adata.uns_keys()): 
+    
+    step_current += 1
+    update_progress(self, step_current, function_steps)
+    
+    sc.tl.rank_genes_groups(
+      adata,
+      method="wilcoxon",
+      groupby=uns_key,
+      key_added=key_rgg
+    )
   
   # Dotplot and dendrogram have already been generated
   if (key_dotplot in adata.uns_keys()):
-    
-    function_steps.append("Sort dataframe by dendrogram-rgg-rrb order")
     
     step_current += 1
     update_progress(self, step_current, function_steps)
@@ -316,26 +312,24 @@ def compute_rgg_dotplot(
     
   # Neither Dotplot or dendrogram have been generated
   
-  function_steps.extend([
-    "Compute sc.pl.rank_genes_groups_dotplot() for figure information",
-    "Remove duplicate columns",
-    "Convert dataframes to long-format",
-    "Combine dataframes",
-    "Retrieve pval, logfoldchange and rank from previous sc.tl.rank_genes_groups() computation and merge",
-    "Filter out results with pval_adj < 0.05",
-    "Store results to anndata object",
-    "Sort dataframe by dendrogram-rgg-rrb order",
-  ])
-  
   step_current += 1
   update_progress(self, step_current, function_steps)
   
   key_rgg = f"rank_genes_groups_{uns_key}"
+  rgg = adata.uns[key_rgg]
+  
+  top_genes = set()
+  for group in rgg["names"].dtype.names:
+    top_genes.update(rgg["names"][group][:n_genes])
+    
+  if (selected_genes != None):
+    top_genes.update(selected_genes)
   
   fig = sc.pl.rank_genes_groups_dotplot(
     adata,
     key=key_rgg,
-    n_genes=n_genes,
+    # n_genes=n_genes,
+    var_names=list(top_genes),
     return_fig=True
   )
   
@@ -362,7 +356,6 @@ def compute_rgg_dotplot(
   merged_expr = mean_expr_long.merge(frac_expr_long, on=["gene", "cluster"])
   
   # Get remaining data not provided by fig
-  rgg = adata.uns[key_rgg]
   pvals = []
   logfcs = []
   ranks = []

@@ -1,43 +1,34 @@
 
 
-import { Box, CircularProgress, Stack, Typography } from "@mui/material";
+import { Box, Stack } from "@mui/material";
 import ScatterPlotGenerator from "./ScatterPlotGenerator";
 import { useEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
-import { RootState } from "../redux/stores/store";
+import CurrentProgress from "./OverlayCurrentProgress";
 
 export function ScatterPlot() {
   
-  const obs = useAppSelector((state: RootState) => state.plotReducer.obs);
-  const obsm = useAppSelector((state: RootState) => state.plotReducer.obsm);
+  const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
+  const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
+  const imageTrigger = useAppSelector((state) => state.plotReducer.navigation.triggers.saveScatterPlotImage);
+  const status = useAppSelector((state) => state.plotReducer.status.get_embedding);
   
-  const embedding = useAppSelector((state: RootState) => state.plotReducer.selectedEmbedding);
-  const category = useAppSelector((state: RootState) => state.plotReducer.selectedCategory);
-  const imageTrigger = useAppSelector((state) => state.plotReducer.triggers.saveScatterPlotImage);
-  
-  const inProgressObsm = useAppSelector((state: RootState) => state.plotReducer.inProgress.get_file_obsm);
-  const inProgressEmbedding = useAppSelector((state: RootState) => state.plotReducer.inProgress.get_embedding);
-  const progressMessage = useAppSelector((state) => state.plotReducer.progressMessage.get_embedding);
-  
+  const [counter, setCounter] = useState(0);
+  const dispatch = useAppDispatch();
   const svgRef = useRef<HTMLCanvasElement>(null);
   const groupRefs = useRef<HTMLCanvasElement[]>([]);
   
-  const dispatch = useAppDispatch();
-  
-  const [counter, setCounter] = useState(0);
-
   useEffect(() => {
 
     let cleanUpFunction;
     
-    if (obsm && svgRef.current && groupRefs.current.length !== 0) {
+    if (obsm.data && svgRef.current && groupRefs.current.length !== 0) {
       
       cleanUpFunction = ScatterPlotGenerator({
-        title: `${embedding} > ${category}`,
         svgCurrent: svgRef.current,
         groupRefs: groupRefs.current,
-        obsData: obs,
-        obsmData: obsm,
+        indices: obs.indices,
+        coordinates: obsm.data,
         dispatch: dispatch,
         imageTrigger: imageTrigger,
       });
@@ -45,7 +36,12 @@ export function ScatterPlot() {
     
     return cleanUpFunction;
     
-  }, [obs, obsm, imageTrigger, counter]);
+  }, [
+    obs,
+    obsm,
+    imageTrigger,
+    counter
+  ]);
   
   const updateCounter = () => {
     setCounter((counter) => counter += 1);
@@ -56,24 +52,12 @@ export function ScatterPlot() {
     return () => window.removeEventListener("resize", updateCounter);
   }, [updateCounter]);
 
-  if (inProgressObsm || inProgressEmbedding) {
+  if (status.inProgress) {
     return (
-      <Stack
-        sx={{
-          height: "100%",
-          width: "100%",
-          alignItems: "center",
-          justifyContent: "center"
-        }}
-        gap={2}
-      >
-        <Typography>
-          {progressMessage}
-        </Typography>
-        
-        <CircularProgress size={100} color="primary"/>
-      </Stack>
-    );
+      <CurrentProgress
+        status={status}
+      />
+    )
   }
   
   return (
@@ -84,9 +68,9 @@ export function ScatterPlot() {
       height="100%"
       width="100%"
     >
-      {obsm !== null ? (
-        obs !== null ? (
-          obs.labels.map((e, i) => {
+      {obsm.data ? (
+        obs.indices ? (
+          obs.indices.categories.map((e, i) => {
             return (
               <Box
                 component="canvas"
