@@ -3,6 +3,7 @@ import os
 from celery import Celery
 import scanpy as sc
 import pandas as pd
+import celltypist as ct
 import json
 from typing import Optional
 
@@ -24,14 +25,17 @@ def update_progress(task, step_index: int, steps: list[str]):
   total = len(steps)
   
   if (step_index >= 0) and (step_index < total):
+    
+    meta = {
+      "current": step_index + 1,
+      "total": total,
+      "step": steps[step_index],
+      "status": f"Step {step_index + 1}/{total if (total != 1) else 'X'}: {steps[step_index]}"
+    }
+    
     task.update_state(
       state="PROGRESS",
-      meta={
-        "current": step_index + 1,
-        "total": total,
-        "step": steps[step_index],
-        "status": f"Step {step_index + 1}/{total if (total != 1) else 'X'}: {steps[step_index]}"
-      }
+      meta=meta
     )
 
 # ============================================================================================
@@ -431,3 +435,57 @@ def compute_rgg_dotplot(
     "n_genes": int(results["n_genes"]),
     "n_clusters": int(len(dendro_order)),
   }
+  
+# ============================================================================================
+@celery_app.task(bind=True)
+def compute_celltypist_annotations(
+  self,
+  file_path: str,
+  key: str,
+  connectivities_key: str,
+  annotation_model: str = "Immune_All_Low.pkl",
+):
+  
+  step_current = 0
+  function_steps = [
+    "Loading anndata object",
+    "Loading in specified model",
+    "Predicting annotations",
+    "Converting to anndata format"
+    "Writing predictions to anndata object"
+  ]
+  
+  update_progress(self, step_current, function_steps)
+  
+  adata = sc.read_h5ad(file_path)
+  
+  # TODO: Use connectivities_key to avoid having to recompute neigbours/connectivities for celltypist
+  # adata.obsp["connectivities"] = adata.obsp[connectivities_key]
+  
+  update_progress(self, step_current, function_steps)
+  
+  model = ct.models.Model.load(model = annotation_model)
+  
+  update_progress(self, step_current, function_steps)
+  
+  predictions = ct.annotate(adata, model = model, majority_voting = True)
+  
+  adata.file.close()
+  
+  update_progress(self, step_current, function_steps)
+  
+  adata_with_preds = predictions.to_adata(prefix=key + "_")
+  
+  labels = predictions.predicted_labels.to_dict(orient="records")
+  
+  update_progress(self, step_current, function_steps)
+  
+  sc.write(file_path, adata_with_preds)
+  
+  adata_with_preds.file.close()
+  
+  return {
+    "labels": labels
+  }
+  
+  

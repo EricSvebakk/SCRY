@@ -27,11 +27,12 @@ import ClusteringDialog from "@/lib/components/modals/ClusteringDialog";
 import DotplotDialog from "@/lib/components/modals/DotplotDialog";
 import ListEmbeddings from "@/lib/components/controls/ListEmbeddings";
 import LDRDialog from "@/lib/components/modals/LDRDialog";
+import AutoAnnotationDialog from "@/lib/components/modals/AutoAnnotationDialog";
+import { get_model_types } from "@/lib/fetch/get_model_types";
 
 type step = {
   label: string;
   id: string;
-  // disabled: boolean;
   loading: boolean;
   function: MouseEventHandler | undefined;
 };
@@ -48,6 +49,7 @@ export default function FileIdPage({}) {
   const [isNLDRDialogOpen, setIsNLDRDialogOpen] = useState(false);
   const [isClusteringDialogOpen, setIsClusteringDialogOpen] = useState(false);
   const [isDotplotDialogOpen, setIsDotplotDialogOpen] = useState(false);
+  const [isAutoAnnotDialogOpen, setIsAutoAnnotDialogOpen] = useState(false);
 
   const steps: step[] = [
     {
@@ -77,15 +79,12 @@ export default function FileIdPage({}) {
     {
       label: "Cluster Annotation",
       id: "ctap",
-      function: undefined,
-      loading: false,
+      function: () => setIsAutoAnnotDialogOpen(true),
+      loading: status.get_celltypist_annotations.inProgress,
     },
   ];
 
   useEffect(() => {
-    // if (obs) {
-    //   dispatch(reset(true));
-    // }
     
     console.log(typeof fileID, status);
 
@@ -97,6 +96,9 @@ export default function FileIdPage({}) {
       }
       if (!status.get_genes.inProgress) {
         get_genes(fileID, dispatch);
+      }
+      if (!status.get_model_types.inProgress) {
+        get_model_types(fileID, dispatch);
       }
     }
   }, []);
@@ -167,6 +169,12 @@ export default function FileIdPage({}) {
             isOpen={isDotplotDialogOpen}
             setIsOpen={setIsDotplotDialogOpen}
           />
+          
+          <AutoAnnotationDialog
+            isOpen={isAutoAnnotDialogOpen}
+            setIsOpen={setIsAutoAnnotDialogOpen}
+          />
+          
         </Stack>
       </Grid>
 

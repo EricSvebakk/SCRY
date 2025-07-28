@@ -3,7 +3,6 @@ import {
   fetchOptions,
   tabOptions,
   GDEFields,
-  SelectedFields,
   AnndataAttributeFields,
   AnndataAttributeData,
   AnndataAttributeKeys,
@@ -11,6 +10,7 @@ import {
   statusOptions,
   statusAttributes,
   triggerOptions,
+  CelltypistModel,
 } from "@/lib/types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
@@ -41,6 +41,10 @@ const initialPlotState: InitialPlotStateProps = {
         expressionIsDefault: true,
       },
     },
+    annotationModels: {
+      models: [],
+      selected: null,
+    }
   },
   filtering: {
     selected: {
@@ -125,14 +129,11 @@ export const plotSlice = createSlice({
     ) {
       state.data.GDE[action.payload.field] = action.payload.value;
     },
-    setSelectedField<K extends keyof SelectedFields>(
-      state: InitialPlotStateProps,
-      action: PayloadAction<{ field: K; value: SelectedFields[K] }>
-    ) {
-      state.filtering.selected[action.payload.field] = action.payload.value;
-    },
     setGenes: (state, action: PayloadAction<string[]>) => {
       state.data.genes = action.payload;
+    },
+    setSelectedClusters: (state, action: PayloadAction<string[]>) => {
+      state.filtering.selected.clusters = action.payload;
     },
     setSelectedGenes: (state, action: PayloadAction<string[]>) => {
       state.filtering.selected.genes = action.payload;
@@ -143,11 +144,11 @@ export const plotSlice = createSlice({
     ) => {
       state.navigation.currentTab = action.payload;
     },
-    setTrigger<K extends keyof triggerOptions> (
+    setTrigger<K extends keyof triggerOptions>(
       state: InitialPlotStateProps,
       action: PayloadAction<{ type: K; value: triggerOptions[K] | null }>
     ) {
-      state.navigation.triggers[action.payload.type] = action.payload.value
+      state.navigation.triggers[action.payload.type] = action.payload.value;
     },
     setStatus: (
       state: InitialPlotStateProps,
@@ -159,14 +160,18 @@ export const plotSlice = createSlice({
     ) => {
       const type = state.status[action.payload.type];
 
-      console.log(type, action.payload);
-
       type.inProgress = action.payload.value;
 
       if (action.payload.message !== undefined) {
         type.message = action.payload.message;
       }
     },
+    setModelTypes: (
+      state: InitialPlotStateProps,
+      action: PayloadAction<CelltypistModel[]>
+    ) => {
+      state.data.annotationModels.models = action.payload;
+    }
   },
 });
 
@@ -175,12 +180,13 @@ export const {
   setAnndataField,
   setFieldAcrossAnndata,
   setGDEField,
-  setSelectedField,
   setGenes,
   setSelectedGenes,
+  setSelectedClusters,
   setTrigger,
   setCurrentTab,
   setStatus,
+  setModelTypes,
 } = plotSlice.actions;
 
 export default plotSlice.reducer;

@@ -6,9 +6,10 @@ from dotenv import load_dotenv, dotenv_values
 from pathlib import Path
 from math import ceil, log10
 from typing import Optional
+import celltypist as ct
 
 from celery.result import AsyncResult
-from worker import compute_rgg_dotplot, compute_nldr, compute_ldr, compute_clustering
+from worker import compute_rgg_dotplot, compute_nldr, compute_ldr, compute_clustering, compute_celltypist_annotations
 
 import os
 import logging
@@ -170,6 +171,16 @@ async def get_genes(
   return JSONResponse(content=obj)
 
 # ============================================================================================
+@app.get("/get_model_types", tags=["CELLTYPIST"])
+async def get_model_types():
+  
+  models = ct.models.models_description().to_dict(orient="records")
+  
+  return JSONResponse(content={
+    "models": models
+  })
+
+# ============================================================================================
 @app.post("/start_task_compute_ldr/", tags=["WORKFLOW"])
 async def start_task_compute_ldr(
   file_id: str = Form(...),
@@ -258,6 +269,29 @@ async def start_task_compute_rgg_dotplot(
   return JSONResponse(content={
     "task_id": task.id
   })
+
+@app.post("/start_task_compute_celltypist_annotations/", tags=["WORKFLOW"])
+async def start_task_compute_celltypist_annotations(
+  file_id: str = Form(...),
+  annotation_key: str = Form(...),
+  connectivities_key: str = Form(...),
+  annotation_model: Optional[str] = Form(None),
+):
+  
+  file_path = os.path.join(UPLOAD_DIR, file_id)
+  
+  if (not os.path.exists(file_path)):
+    return JSONResponse(content=f"File ID '{file_id}' is not valid.")
+  
+  if (not file_path.endswith(".h5ad")):
+    return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
+  
+  task = compute_celltypist_annotations.delay(file_path, annotation_key, connectivities_key, annotation_model)
+  
+  return JSONResponse(content={
+    "task_id": task.id
+  })
+  
 
 # ============================================================================================
 @app.get("/get_status_task", tags=["STATUS"])

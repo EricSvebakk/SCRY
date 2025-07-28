@@ -2,6 +2,10 @@
 export type InitialPlotStateProps = {
   anndata: AnndataAttributes;
   data: {
+    annotationModels: {
+      models: CelltypistModel[]
+      selected: CelltypistModelType | null;
+    }
     genes: string[];
     GDE: GDEFields;
   };
@@ -115,6 +119,8 @@ export const fetchOptions = [
   "get_genes",
   "get_embedding",
   "get_clustering",
+  "get_celltypist_annotations",
+  "get_model_types",
 ] as const;
 
 export type statusOptions = {
@@ -129,6 +135,13 @@ export type statusAttributes = {
 export type triggerOptions = {
   saveScatterPlotImage: string;
   // somethingElse: boolean;
+};
+
+export type CelltypistModelType = string;
+
+export type CelltypistModel = {
+  model: CelltypistModelType;
+  description: string;
 };
 
 // ==== Not related to reducer =============================================================
@@ -156,6 +169,7 @@ export type fileType = {
 export type AutocompleteOption = {
   label: string;
   id: number;
+  description?: string;
 };
 
 export type FileState = {
