@@ -70,6 +70,7 @@ export function DotPlotConfigurationPopover() {
           onClick={handleClick}
           aria-describedby={id}
           size="small"
+          color="secondary"
         >
           <Settings />
         </IconButton>

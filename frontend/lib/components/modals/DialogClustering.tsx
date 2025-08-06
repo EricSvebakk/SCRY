@@ -13,7 +13,7 @@ import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { AutocompleteOption } from "@/lib/types";
 import { get_clustering } from "@/lib/fetch/workflow/get_clustering";
 
-export default function ClusteringDialog(props: {
+export default function DialogClustering(props: {
   isOpen: boolean;
   setIsOpen: Function;
 }) {
@@ -44,7 +44,7 @@ export default function ClusteringDialog(props: {
 
   return (
     <Dialog open={props.isOpen} onClose={() => props.setIsOpen(false)}>
-      <DialogTitle>Clustering - Leiden</DialogTitle>
+      <DialogTitle>Create Clustering (Leiden)</DialogTitle>
       <DialogContent>
         <Stack direction="column" rowGap={2} pt={2}>
           <Autocomplete
@@ -71,7 +71,7 @@ export default function ClusteringDialog(props: {
               return (
                 <TextField
                   {...params}
-                  label="Select variable"
+                  label="Select neighborhood graph"
                   placeholder="variable"
                   InputLabelProps={{ shrink: true }}
                 />

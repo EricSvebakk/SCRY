@@ -1,9 +1,10 @@
 
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import DotPlotGenerator from "./DotPlotGenerator";
 import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
 import CurrentProgress from "./OverlayCurrentProgress";
+import { theme } from "@/app/layout";
 
 export function DotPlot() {
 
@@ -55,7 +56,14 @@ export function DotPlot() {
   }
   
   return (
-    <Box position="relative" overflow="auto" height="100%">
+    <Box
+      position="relative"
+      overflow="auto"
+      height="100%"
+      sx={{
+        backgroundColor: theme.palette.background.paper,
+      }}
+    >
       <Box
         component="svg"
         ref={svgRef}
@@ -78,6 +86,22 @@ export function DotPlot() {
           zIndex: 0,
         }}
       />
+      {!gde.expression ? (
+        <Box
+          sx={{
+            position: "absolute",
+            width: "100%",
+            height: "100%",
+            border: "1px solid yellow",
+            alignContent: "center",
+            justifyItems: "center",
+          }}
+        >
+          <Typography>No Observations selected</Typography>
+        </Box>
+      ) : (
+        <></>
+      )}
     </Box>
   );
   

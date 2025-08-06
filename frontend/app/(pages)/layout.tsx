@@ -1,7 +1,7 @@
 
 "use client"
 
-import { Grid, ListItem, ListItemButton, ListItemText, Stack } from "@mui/material";
+import { ListItem, ListItemButton, ListItemText, Stack } from "@mui/material";
 import { green, grey, red } from "@mui/material/colors";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,8 +30,6 @@ export default function PagesLayout({
   const selectedFiles = useAppSelector((state) => state.fileReducer.selectedFiles);
 
   useEffect(() => {
-    
-    console.log("BRUH", pathname)
     
     if ((activeFile !== "") && !files.map((e) => e.id).includes(activeFile)) {
       dispatch(addFile({
@@ -64,15 +62,19 @@ export default function PagesLayout({
       rowGap={1}
       className="layout_inner"
       sx={{
-        minHeight: "98vh",
+        minHeight: "100vh",
+        maxHeight: "100vh",
       }}
     >
-      <Grid
+      {/* <Grid
         container
         direction="row"
-        p={1}
+        // p={1}
         sx={{
-          border: "1px solid grey"
+          p: "1vh",
+          // height: "10vh",
+          border: "1px solid grey",
+          backgroundColor: theme.palette.background.default
         }}
       >
         {navItems.map((item) => {
@@ -92,7 +94,7 @@ export default function PagesLayout({
             </Grid>
           );
         })}
-      </Grid>
+      </Grid> */}
       
       {children}
     </Stack>

@@ -1,6 +1,7 @@
 
 import { CircularProgress, Stack, Typography } from "@mui/material";
 import { statusOptions } from "../types";
+import { theme } from "@/app/layout";
 
 type CurrentProgressProps = {
   status: statusOptions;
@@ -19,10 +20,11 @@ export default function CurrentProgress({
         width: "100%",
         alignItems: "center",
         justifyContent: "center",
+        backgroundColor: theme.palette.background.paper
       }}
       gap={2}
     >
-      <Typography>{status.message}</Typography>
+      <Typography textAlign="center" sx={{ border: "1px solid red" }}>{status.message}</Typography>
 
       <CircularProgress size={indicatorSize} color="primary" />
     </Stack>

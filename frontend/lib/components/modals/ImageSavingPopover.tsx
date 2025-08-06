@@ -87,7 +87,11 @@ export function ImageSavingPopover() {
           gap={1.5}
         >
           <Stack direction="row" justifyContent="end" width="100%">
-            <IconButton size="small" onClick={() => handleClose()}>
+            <IconButton
+              size="small"
+              onClick={() => handleClose()}
+              color="secondary"
+            >
               <Close />
             </IconButton>
           </Stack>

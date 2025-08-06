@@ -10,12 +10,28 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const theme = createTheme({
   palette: {
+    // primary: {
+    //   main: ""
+    // },
     // action: {
     //   // disabledBackground:"rgb(147, 187, 227)",
     // },
+    // back
+    primary: {
+      main: "#aaaaff",
+    },
+    secondary: {
+      main: "#ccccff"
+    },
+    // text: {
+    //   secondary: "#ffffff"
+    // },
+    // secondary: {
+    // }
     background: {
-      // paper: grey[300],
-      // default: "white"
+      // paper: "#afa",
+      paper: "#ffffff",
+      default: "#aaaaff"
     }
   },
   // spacing: 8
@@ -40,7 +56,9 @@ export default function RootLayout({
             square
             disableGutters
             sx={{
-              minHeight: "100vh"
+              minHeight: "100vh",
+              backgroundColor: theme.palette.background.paper,
+              overflowY: "hidden"
             }}
           >
             <Container
@@ -48,8 +66,7 @@ export default function RootLayout({
               disableGutters
               className="layout_outer"
               sx={{
-                padding: "1vh",
-                minHeight: "98vh",
+                minHeight: "100vh",
               }}
             >
               <Provider store={store}>

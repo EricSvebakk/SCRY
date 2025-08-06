@@ -1,4 +1,4 @@
-import { Button, Checkbox, Grid, Stack } from "@mui/material";
+import { Box, Button, Checkbox, Grid, Stack, Typography } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { my_colors } from "../ScatterPlotGenerator";
 import { AnndataIndices } from "../../types";
@@ -6,6 +6,8 @@ import { LabelListItem } from "../LabelListItem";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { setSelectedClusters } from "@/lib/redux/reducers/plotReducer";
 import { useEffect } from "react";
+import { theme } from "@/app/layout";
+import ButtonSecondary from "../custom/ButtonSecondary";
 
 export function ListLabelOptions() {
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
@@ -46,13 +48,44 @@ export function ListLabelOptions() {
     <Stack
       direction="column"
       sx={{
-        height: "30vh",
+        height: "98vh",
         width: "100%",
+        backgroundColor: theme.palette.background.paper,
+        border: "1px solid grey",
       }}
     >
       <Stack
+        direction="row"
         sx={{
+          borderBottom: "1px solid grey",
+        }}
+      >
+        <ButtonSecondary
+          title="Select all"
+          onClick={() => {
+            if (obs.indices) {
+              dispatch(setSelectedClusters(obs.indices?.categories));
+            }
+          }}
+        />
+
+        <ButtonSecondary
+          title="Deselect all"
+          onClick={() => {
+            if (obs.indices) {
+              dispatch(setSelectedClusters([]));
+            }
+          }}
+        />
+      </Stack>
+
+      <Stack
+        sx={{
+          height: "100%",
           overflowY: "auto",
+          p: "1vh",
+          backgroundColor: theme.palette.background.paper,
+          // border: "1px solid green",
         }}
       >
         {obs.indices?.categories.map((label, i) => {
@@ -97,33 +130,32 @@ export function ListLabelOptions() {
                   <Checkbox
                     checked={selectedClusters.includes(label)}
                     size="small"
+                    sx={{
+                      p: 0,
+                    }}
                   />
                 </Grid>
               </Grid>
             </Button>
           );
         })}
-      </Stack>
 
-      <Stack direction="row">
-        <Button
-          onClick={() => {
-            if (obs.indices) {
-              dispatch(setSelectedClusters(obs.indices?.categories));
-            }
-          }}
-        >
-          Select all
-        </Button>
-        <Button
-          onClick={() => {
-            if (obs.indices) {
-              dispatch(setSelectedClusters([]));
-            }
-          }}
-        >
-          Deselect all
-        </Button>
+        {!obs.indices ? (
+          <Box
+            sx={{
+              position: "relative",
+              width: "100%",
+              height: "100%",
+              // border: "1px solid yellow",
+              alignContent: "center",
+              justifyItems: "center",
+            }}
+          >
+            <Typography>No clustering selected</Typography>
+          </Box>
+        ) : (
+          <></>
+        )}
       </Stack>
     </Stack>
   );

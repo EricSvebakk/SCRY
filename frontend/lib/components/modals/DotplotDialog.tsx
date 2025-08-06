@@ -38,8 +38,7 @@ export default function DotplotDialog(props: {
 
   useEffect(() => {
     if (uns && obs) {
-      const unsStructuredOptions: AutocompleteOption[] = Object.keys(uns)
-        .filter((e) => obs.includes(e))
+      const unsStructuredOptions: AutocompleteOption[] = obs
         .map((e, i) => ({ label: e, id: i }));
         
       setUnsOptionsFiltered(unsStructuredOptions); 
