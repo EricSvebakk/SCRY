@@ -14,10 +14,12 @@ import { get_model_types } from "@/lib/fetch/get_model_types";
 import ScreenDimensionalReduction from "@/lib/components/screen/ScreenDimensionalReduction";
 import ScreenDifferentialGeneExpression from "@/lib/components/screen/ScreenDifferentialGeneExpression";
 import { theme } from "@/app/layout";
+import { tabOptions } from "@/lib/types";
+import { setCurrentTab } from "@/lib/redux/reducers/plotReducer";
 
 type step = {
   label: string;
-  id: string;
+  id: tabOptions;
   loading: boolean;
   isOpen: boolean;
   function: Function;
@@ -25,42 +27,34 @@ type step = {
 };
 
 export default function FileIdPage({}) {
+  
   const { fileID } = useParams();
 
   const status = useAppSelector((state) => state.plotReducer.status);
 
   const dispatch = useAppDispatch();
 
-  const [isLDRDialogOpen, setIsLDRDialogOpen] = useState(true);
-  const [isDotplotDialogOpen, setIsDotplotDialogOpen] = useState(false);
-  // const [isAutoAnnotDialogOpen, setIsAutoAnnotDialogOpen] = useState(false);
+  const [isDRScreenOpen, setIsDRScreenOpen] = useState(true);
+  const [isDEScreenOpen, setIsDEScreenOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<number>(0);
   
   const steps: step[] = [
     {
       label: "Dimensional Reduction & Clustering",
-      id: "ldr",
-      isOpen: isLDRDialogOpen,
-      function: (val: boolean) => setIsLDRDialogOpen(val),
+      id: "scatterplot",
+      isOpen: isDRScreenOpen,
+      function: (val: boolean) => setIsDRScreenOpen(val),
       loading: false,
       screen: <ScreenDimensionalReduction />,
     },
     {
       label: "Differential Expression",
-      id: "ded",
-      isOpen: isDotplotDialogOpen,
-      function: (val: boolean) => setIsDotplotDialogOpen(val),
+      id: "dotplot",
+      isOpen: isDEScreenOpen,
+      function: (val: boolean) => setIsDEScreenOpen(val),
       loading: status.get_rgg_dotplot.inProgress,
       screen: <ScreenDifferentialGeneExpression />,
     },
-    // {
-    //   label: "Cluster Annotation",
-    //   id: "ctap",
-    //   isOpen: isAutoAnnotDialogOpen,
-    //   function: (val: boolean) => setIsAutoAnnotDialogOpen(val),
-    //   loading: status.get_celltypist_annotations.inProgress,
-    //   screen: <ScreenDimensionalReduction />,
-    // },
   ];
 
   useEffect(() => {
@@ -130,6 +124,7 @@ export default function FileIdPage({}) {
                     steps.forEach((e) => e.function(false));
                     e.function(true);
                     setSelectedStep(i);
+                    dispatch(setCurrentTab(e.id))
                   }}
                 >
                   {e.label}
