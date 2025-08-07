@@ -8,6 +8,7 @@ import CurrentProgress from "../OverlayCurrentProgress";
 import { theme } from "@/app/layout";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import DialogClustering from "../modals/DialogClustering";
+import AutoAnnotationDialog from "../modals/AutoAnnotationDialog";
 
 export default function ListClusterings() {
   
@@ -21,6 +22,7 @@ export default function ListClusterings() {
   
   const [expanded, setExpanded] = useState(false);
   const [isClusteringDialogOpen, setIsClusteringDialogOpen] = useState<boolean>(false);
+  const [isAutoAnnotDialogOpen, setIsAutoAnnotDialogOpen] = useState<boolean>(false);
   
   
   if (status.inProgress) {
@@ -58,9 +60,9 @@ export default function ListClusterings() {
           [...obs.keys]
             .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
             .map((e) => {
-              
-              const isDisabled = obsm.selectedKey === undefined || obs.selectedKey === e;
-              
+              const isDisabled =
+                obsm.selectedKey === undefined || obs.selectedKey === e;
+
               return (
                 // <Tooltip
                 //   title={isDisabled ? "Please select an Embedding" : e}
@@ -69,42 +71,42 @@ export default function ListClusterings() {
                 //   placement="right"
                 // >
                 //   <Box width="100%">
-                    <Button
-                      key={"accordion_" + e}
-                      size="small"
-                      variant="text"
-                      disabled={isDisabled}
-                      sx={{
-                        color: theme.palette.text.secondary,
-                        justifyContent: "start",
-                        overflowX: "clip",
-                        fontWeight: obs.selectedKey === e ? "bold" : "",
-                        fontSize: 10,
-                        "&:disabled": {
-                          cursor: "not-allowed",
-                          pointerEvents: "all !important",
-                        },
-                      }}
-                      onClick={() => {
-                        if (obs.selectedKey !== e) {
-                          setExpanded(true);
+                <Button
+                  key={"accordion_" + e}
+                  size="small"
+                  variant="text"
+                  disabled={isDisabled}
+                  sx={{
+                    color: theme.palette.text.secondary,
+                    justifyContent: "start",
+                    overflowX: "clip",
+                    fontWeight: obs.selectedKey === e ? "bold" : "",
+                    fontSize: 10,
+                    "&:disabled": {
+                      cursor: "not-allowed",
+                      pointerEvents: "all !important",
+                    },
+                  }}
+                  onClick={() => {
+                    if (obs.selectedKey !== e) {
+                      setExpanded(true);
 
-                          dispatch(
-                            setAnndataField({
-                              attribute: "obs",
-                              field: "selectedKey",
-                              value: e,
-                            })
-                          );
+                      dispatch(
+                        setAnndataField({
+                          attribute: "obs",
+                          field: "selectedKey",
+                          value: e,
+                        })
+                      );
 
-                          get_file_obs(fileID, e, dispatch);
-                        } else {
-                          setExpanded(!expanded);
-                        }
-                      }}
-                    >
-                      {e}
-                    </Button>
+                      get_file_obs(fileID, e, dispatch);
+                    } else {
+                      setExpanded(!expanded);
+                    }
+                  }}
+                >
+                  {e}
+                </Button>
                 //   </Box>
                 // </Tooltip>
               );
@@ -121,11 +123,25 @@ export default function ListClusterings() {
           borderTop: "1px solid grey",
         }}
       />
-      
+
+      <ButtonSecondary
+        title="+ Create Auto-Annotation"
+        onClick={() => setIsAutoAnnotDialogOpen(true)}
+        sx={{
+          borderTop: "1px solid grey",
+        }}
+      />
+
       <DialogClustering
         isOpen={isClusteringDialogOpen}
         setIsOpen={setIsClusteringDialogOpen}
       />
+
+      <AutoAnnotationDialog
+        isOpen={isAutoAnnotDialogOpen}
+        setIsOpen={setIsAutoAnnotDialogOpen}
+      />
+      
     </Stack>
   );
   
