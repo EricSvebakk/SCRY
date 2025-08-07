@@ -1,10 +1,12 @@
 
-import { Box, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import DotPlotGenerator from "./DotPlotGenerator";
 import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
 import CurrentProgress from "./OverlayCurrentProgress";
 import { theme } from "@/app/layout";
+import { ImageSavingPopover } from "./modals/ImageSavingPopover";
+import { DotPlotConfigurationPopover } from "./modals/DotPlotConfigurationPopover";
 
 export function DotPlot() {
 
@@ -56,53 +58,80 @@ export function DotPlot() {
   }
   
   return (
-    <Box
-      position="relative"
-      overflow="auto"
-      height="100%"
+    <Stack
+      direction="column"
       sx={{
+        height: "98vh",
+        width: "100%",
         backgroundColor: theme.palette.background.paper,
+        border: "1px solid grey",
+        borderRight: "none",
       }}
     >
-      <Box
-        component="svg"
-        ref={svgRef}
-        width={gde.nGenes ? gde.nGenes * 15 : "100%"}
-        height={gde.nClusters ? gde.nClusters * 15 : "100%"}
+      <Stack
+        direction="row"
+        justifyItems="center"
+        gap={1}
         sx={{
-          position: "absolute",
-          zIndex: 1,
+          px: 0.5,
+          height: 32,
+          backgroundColor: theme.palette.secondary.main,
+          borderBottom: "1px solid grey",
         }}
-        id="dotplot"
-      />
+      >
+        <ImageSavingPopover />
+        <DotPlotConfigurationPopover />
+      </Stack>
+      
       <Box
-        component="div"
-        width="100%"
+        position="relative"
+        overflow="auto"
         height="100%"
-        id="tooltip_box"
         sx={{
-          position: "absolute",
-          display: "none",
-          zIndex: 0,
+          backgroundColor: theme.palette.background.paper,
         }}
-      />
-      {!gde.expression ? (
+      >
         <Box
+          component="svg"
+          ref={svgRef}
+          width={gde.nGenes ? gde.nGenes * 15 : "100%"}
+          height={gde.nClusters ? gde.nClusters * 15 : "100%"}
           sx={{
             position: "absolute",
-            width: "100%",
-            height: "100%",
-            border: "1px solid yellow",
-            alignContent: "center",
-            justifyItems: "center",
+            zIndex: 1,
           }}
-        >
-          <Typography>No Observations selected</Typography>
-        </Box>
-      ) : (
-        <></>
-      )}
-    </Box>
+          id="dotplot"
+        />
+        <Box
+          component="div"
+          width="100%"
+          height="100%"
+          id="tooltip_box"
+          sx={{
+            position: "absolute",
+            display: "none",
+            zIndex: 0,
+          }}
+        />
+        {!gde.expression ? (
+          <Box
+            sx={{
+              position: "absolute",
+              width: "100%",
+              height: "100%",
+              border: "1px solid yellow",
+              alignContent: "center",
+              justifyItems: "center",
+            }}
+          >
+            <Typography>No Observations selected</Typography>
+          </Box>
+        ) : (
+          <></>
+        )}
+      </Box>
+    </Stack>
+    
   );
   
 }

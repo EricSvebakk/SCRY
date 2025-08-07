@@ -29,7 +29,7 @@ export default function ScreenDifferentialGeneExpression() {
     >
       <Grid
         item
-        width={200}
+        width={250}
         sx={{
           height: "100%",
           border: "1px solid grey",
@@ -74,7 +74,7 @@ export default function ScreenDifferentialGeneExpression() {
         xs
         sx={{
           height: "100%",
-          border: "1px solid grey",
+          // border: "1px solid grey",
         }}
       >
         <DotPlot />

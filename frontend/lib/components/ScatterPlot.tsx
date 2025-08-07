@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
 import CurrentProgress from "./OverlayCurrentProgress";
 import { theme } from "@/app/layout";
-import { DotPlotConfigurationPopover } from "./modals/DotPlotConfigurationPopover";
 import { ImageSavingPopover } from "./modals/ImageSavingPopover";
 
 export function ScatterPlot() {
@@ -76,7 +75,6 @@ export function ScatterPlot() {
           borderBottom: "1px solid grey",
         }}
       >
-        <DotPlotConfigurationPopover />
         <ImageSavingPopover />
       </Stack>
 

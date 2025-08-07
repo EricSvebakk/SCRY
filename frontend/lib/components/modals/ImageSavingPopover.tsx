@@ -58,6 +58,12 @@ export function ImageSavingPopover() {
     }
   }, [currentTab]);
   
+  useEffect(() => {
+    if (open && selectedPlot && title === "") {
+      setTitle(selectedPlot.label.toLowerCase().replace(" ", "") + "_" + (new Date().toISOString().split('T')[0]))
+    }
+  }, [anchorEl]);
+  
   return (
     <>
       <IconButton
