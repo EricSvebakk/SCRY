@@ -61,10 +61,16 @@ export function ImageSavingPopover() {
   return (
     <>
       <IconButton
+        size="small"
         disabled={(!expression || expression.length == 0) && !obsm}
         onClick={handleClick}
         aria-describedby={id}
-        size="small"
+        sx={{
+          p: 0,
+          minHeight: 0,
+          minWidth: 0,
+          // display: "inline-block",
+        }}
       >
         <Save />
       </IconButton>
@@ -90,7 +96,6 @@ export function ImageSavingPopover() {
             <IconButton
               size="small"
               onClick={() => handleClose()}
-              color="secondary"
             >
               <Close />
             </IconButton>

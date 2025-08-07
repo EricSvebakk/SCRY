@@ -66,11 +66,16 @@ export function DotPlotConfigurationPopover() {
         disableFocusListener={!expression || expression.length == 0}
       >
         <IconButton
+          size="small"
           disabled={!expression || expression.length == 0}
           onClick={handleClick}
           aria-describedby={id}
-          size="small"
-          color="secondary"
+          sx={{
+            p: 0,
+            minHeight: 0,
+            minWidth: 0,
+            // display: "inline-block",
+          }}
         >
           <Settings />
         </IconButton>
@@ -322,7 +327,9 @@ export function DotPlotConfigurationPopover() {
             >
               <Button
                 variant={
-                  plotOptions.highlight == "rgg_order" ? "contained" : "outlined"
+                  plotOptions.highlight == "rgg_order"
+                    ? "contained"
+                    : "outlined"
                 }
                 onClick={() => {
                   dispatch(

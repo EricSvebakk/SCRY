@@ -9,7 +9,7 @@ import { theme } from "@/app/layout";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import DialogClustering from "../modals/DialogClustering";
 
-export default function ListLabels() {
+export default function ListClusterings() {
   
   const fileID = useAppSelector((state) => state.fileReducer.activeFile);
   
