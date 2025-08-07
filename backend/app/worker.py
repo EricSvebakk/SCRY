@@ -6,8 +6,13 @@ import pandas as pd
 import celltypist as ct
 import json
 from typing import Optional
+from anndata import AnnData
 
-from anndata_util import sort_by_dendro_rgg_rbb_order, get_dendro_tree, make_safe
+from dataclasses import dataclass
+from functools import partial
+from typing import Callable
+
+from anndata_util import sort_by_dendro_rgg_rbb_order, make_safe, build_dendrogram_tree
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 
@@ -20,7 +25,41 @@ celery_app = Celery(
 print("URL", CELERY_BROKER_URL)
 print(celery_app)
 
+@dataclass
+class PipelineStep:
+  description: str
+  func: Callable[[], bool]
+
+
 # ============================================================================================
+def start_progress(task):
+  
+  meta = {
+    "current": 0,
+    "total": None,
+    "step": "Opening AnnData object",
+    "status": f"Opening AnnData object"
+  }
+  
+  task.update_state(
+    state="PROGRESS",
+    meta=meta
+  )
+
+def end_progress(task):
+  
+  meta = {
+    "current": 0,
+    "total": None,
+    "step": "Writing new data to AnnData object",
+    "status": f"Writing new data to AnnData object"
+  }
+  
+  task.update_state(
+    state="PROGRESS",
+    meta=meta
+  )
+  
 def update_progress(task, step_index: int, steps: list[str]):
   total = len(steps)
   
@@ -39,300 +78,136 @@ def update_progress(task, step_index: int, steps: list[str]):
     )
 
 # ============================================================================================
-@celery_app.task(bind=True)
-def compute_ldr(
-  self,
-  file_path: str,
-  n_pcs: int = 30,
-):
-  
-  step_current = 0
-  function_steps = [
-    "Opening anndata object",
-  ]
-  
-  update_progress(self, step_current, function_steps)
-  
-  adata = sc.read_h5ad(file_path)
+def handle_pipeline_steps(task, pipeline_steps: list[PipelineStep]):
   
   changes_made = False
-  pca_key = f"X_pca"
+  step_current = 0
   
-  if (not (pca_key in adata.obsm_keys())) or (adata.obsm[pca_key].shape[1] < n_pcs):
+  pipeline_description_steps = [x.description for x in pipeline_steps]
+
+  for step in pipeline_steps:
     
-    function_steps.append("Computing PCA")
+    print(step.description)
+    
+    # # If it is the last step but no changes are made, ignore the last step
+    # if (step_current == len(pipeline_steps) - 1) and not changes_made:
+    #   break
+    
+    update_progress(task, step_current, pipeline_description_steps)
+    changes_made = step.func() or changes_made
     
     step_current += 1
-    update_progress(self, step_current, function_steps)
-    
-    changes_made = True
-    sc.pp.pca(
-      adata,
-      key_added=pca_key,
-      n_comps=n_pcs,
-    )
   
-  if changes_made:
-    
-    function_steps.append("Storing results to anndata object")
-    
-    step_current += 1
-    update_progress(self, step_current, function_steps)
-    
-    sc.write(file_path, adata)
-  
-  ldr_data = list(adata.obsm[pca_key][:, :2].tolist())
-  
-  adata.file.close()
-  
-  return {
-    "changes": changes_made,
-    "data": ldr_data,
-  }
+  return changes_made
 
 # ============================================================================================
-@celery_app.task(bind=True)
-def compute_nldr(
-  self,
-  file_path: str,
-  key: str,
-  n_pcs: int = 30,
-  min_dist: float = 0.5,
-  spread: float = 1.0,
-  n_neighbors: int = 15,
-):
-  
-  step_current = 0
-  function_steps = [
-    "Opening anndata object",
-  ]
-  
-  update_progress(self, step_current, function_steps)
-  
-  adata = sc.read_h5ad(file_path)
+def handle_pca(adata: AnnData, key_pca: str, n_pcs: int) -> bool:
   
   changes_made = False
-  neighbors_key = f"neighbors_{key}"
-  umap_key = f"X_umap_{key}"
-  pca_key = f"X_pca"
-
-  if (not (pca_key in adata.obsm_keys())) or (adata.obsm[pca_key].shape[1] < n_pcs):
-    
-    if (adata.obsm[pca_key].shape[1] < n_pcs):
-      pca_key = f"X_pca_{n_pcs}"
-    
-    function_steps.append("Computing PCA")
-    
-    step_current += 1
-    update_progress(self, step_current, function_steps)
+  
+  if (not (key_pca in adata.obsm_keys())) or (adata.obsm[key_pca].shape[1] < n_pcs):
     
     changes_made = True
     sc.pp.pca(
       adata,
-      key_added=pca_key,
+      key_added=key_pca,
       n_comps=n_pcs,
     )
+  
+  return changes_made
 
-  if not (neighbors_key in adata.uns_keys()):
-    
-    function_steps.append("Computing neighbors")
-    
-    step_current += 1
-    update_progress(self, step_current, function_steps)
+def handle_neighbors(adata: AnnData, key_neighbors: str, key_pca: str, n_pcs: int, n_neighbors: int) -> bool:
+  
+  changes_made = False
+  
+  if not (key_neighbors in adata.uns_keys()):
     
     changes_made = True
     sc.pp.neighbors(
       adata,
-      key_added=neighbors_key,
-      use_rep=pca_key,
+      key_added=key_neighbors,
+      use_rep=key_pca,
       n_pcs=n_pcs,
       n_neighbors=n_neighbors
     )
   
-  if not (umap_key in adata.obsm_keys()):
-    
-    function_steps.append("Computing UMAP")
-    
-    step_current += 1
-    update_progress(self, step_current, function_steps)
-    
+  return changes_made
+
+def handle_umap(adata: AnnData, key_umap: str, key_neighbors: str, min_dist: int, spread: int) -> bool:
+  
+  changes_made = False
+  
+  if not (key_umap in adata.obsm_keys()):
+
     changes_made = True
     sc.tl.umap(
       adata,
-      neighbors_key=neighbors_key,
-      key_added=umap_key,
+      neighbors_key=key_neighbors,
+      key_added=key_umap,
       min_dist=min_dist,
       spread=spread,
     )
   
-  if changes_made:
-    
-    function_steps.append("Storing results to anndata object")
-    
-    step_current += 1
-    update_progress(self, step_current, function_steps)
-    
-    sc.write(file_path, adata)
-  
-  obsm_data = list(adata.obsm[umap_key][:, :2].tolist())
-  
-  adata.file.close()
-  
-  return {
-    "changes": changes_made,
-    "data": obsm_data,
-  }
-  
-# ============================================================================================
-@celery_app.task(bind=True)
-def compute_clustering(
-  self,
-  file_path: str,
-  key: str,
-  resolution: float = 1
-):
-  
-  step_current = 0
-  function_steps = [
-    "Opening anndata object",
-    "Computing leiden clusters",
-    "Retrieving data",
-    "Storing results to anndata object"
-  ]
-  
-  update_progress(self, step_current, function_steps)
-  
-  adata = sc.read_h5ad(file_path)
-  
-  res_to_string = f"{resolution}".replace(".", "_")
-  resolution_key = f"leiden_{res_to_string}_{key}"
-  
-  step_current += 1
-  update_progress(self, step_current, function_steps)
-  
-  sc.tl.leiden(
-    adata,
-    neighbors_key=key,
-    key_added=resolution_key,
-    resolution=resolution,
-    flavor="igraph"
-  )
-  
-  step_current += 1
-  update_progress(self, step_current, function_steps)
-  
-  obs_data = adata.obs[resolution_key].astype("category")
-  labels = list(obs_data.cat.categories)
-  label_map = list(obs_data.cat.codes)
-  
-  step_current += 1
-  update_progress(self, step_current, function_steps)
-  
-  sc.write(file_path, adata)
-  
-  adata.file.close()
-  
-  return {
-    "labels": labels,
-    "label_map": label_map
-  }
+  return changes_made
 
-# ============================================================================================
-@celery_app.task(bind=True)
-def compute_rgg_dotplot(
-  self,
-  file_path: str,
-  uns_key: str,
-  n_genes: int,
-  selected_genes: Optional[list[str]]
-):
+def handle_leiden(adata: AnnData, key_neighbors: str, key_resolution: str, resolution: float) -> bool:
   
-  step_current = 0
-  function_steps = [
-    "Loading anndata object"
-  ]
+  changes_made = False
   
-  update_progress(self, step_current, function_steps)
-  
-  key_rgg = f"rank_genes_groups_{uns_key}"
-  key_dotplot = f"dotplot_stats_g{n_genes}_{'_'.join(selected_genes).lower() if (selected_genes != None) else ''}_{uns_key}"
-  
-  adata = sc.read_h5ad(file_path)
-  
-  if not (key_rgg in adata.uns_keys()): 
-    function_steps.append("Computing ranked genes groups")
-  
-  if (key_dotplot in adata.uns_keys()):
-    function_steps.append("Sort dataframe by dendrogram-rgg-rrb order")
-  
-  # else:
-  function_steps.extend([
-    "Compute sc.pl.rank_genes_groups_dotplot() for figure information",
-    "Remove duplicate columns",
-    "Convert dataframes to long-format",
-    "Combine dataframes",
-    "Retrieve pval, logfoldchange and rank from previous sc.tl.rank_genes_groups() computation and merge",
-    "Filter out results with pval_adj < 0.05",
-    "Store results to anndata object",
-    "Sort dataframe by dendrogram-rgg-rrb order",
-  ])
-  
-  
-  if not (key_rgg in adata.uns_keys()): 
+  if not (key_resolution in adata.obsm_keys()):
     
-    step_current += 1
-    update_progress(self, step_current, function_steps)
-    
+    changes_made = True
+    sc.tl.leiden(
+      adata,
+      neighbors_key=key_neighbors,
+      key_added=key_resolution,
+      resolution=resolution,
+      flavor="igraph"
+    )
+  
+  return changes_made
+
+def handle_rank_genes_groups(adata: AnnData, key_cluster: str, key_rgg: str) -> bool:
+  
+  changes_made = False
+  
+  if not (key_rgg in adata.uns_keys()):
+  
+    changes_made = True
     sc.tl.rank_genes_groups(
       adata,
       method="wilcoxon",
-      groupby=uns_key,
+      groupby=key_cluster,
       key_added=key_rgg
     )
+    
+  return changes_made
   
-  # Dotplot and dendrogram have already been generated
+def handle_dendrogram(adata: AnnData, key_cluster: str, key_dendrogram: str) -> bool:
+  
+  changes_made = False
+  
+  if not (key_dendrogram in adata.uns_keys()):
+  
+    changes_made = True
+    sc.tl.dendrogram(adata, groupby=key_cluster, key_added=key_dendrogram)
+    
+  return changes_made
+
+def handle_rgg_data_table(adata: AnnData, key_dotplot: str, key_rgg: str, n_genes: int) -> bool:
+  
   if (key_dotplot in adata.uns_keys()):
-    
-    step_current += 1
-    update_progress(self, step_current, function_steps)
-    
-    results = adata.uns[key_dotplot]
-    dendro_order = adata.uns[f"dendrogram_{uns_key}"]["categories_ordered"]
-    sorted_records = (
-      sort_by_dendro_rgg_rbb_order(
-        pd.DataFrame(results["data"]),
-        dendro_order,
-        n_genes
-      )
-      .to_dict(orient="records")
-    )
-    
-    return {
-      "data": sorted_records,
-      "dendro": results["dendro"],
-      "n_genes": int(results["n_genes"]),
-      "n_clusters": int(len(dendro_order))
-    }
-    
-  # Neither Dotplot or dendrogram have been generated
+    return False
   
-  step_current += 1
-  update_progress(self, step_current, function_steps)
-  
-  key_rgg = f"rank_genes_groups_{uns_key}"
   rgg = adata.uns[key_rgg]
   
   top_genes = set()
   for group in rgg["names"].dtype.names:
     top_genes.update(rgg["names"][group][:n_genes])
-    
-  if (selected_genes != None):
-    top_genes.update(selected_genes)
   
   fig = sc.pl.rank_genes_groups_dotplot(
     adata,
     key=key_rgg,
-    # n_genes=n_genes,
     var_names=list(top_genes),
     return_fig=True
   )
@@ -340,22 +215,24 @@ def compute_rgg_dotplot(
   mean_expr_df = fig.dot_color_df
   frac_expr_df = fig.dot_size_df
   
-  step_current += 1
-  update_progress(self, step_current, function_steps)
-  
   mean_expr_df_no_dup = mean_expr_df.loc[:, ~mean_expr_df.T.duplicated()]
   frac_expr_df_no_dup = frac_expr_df.loc[:, ~frac_expr_df.T.duplicated()]
   
-  n_genes_actual = len(mean_expr_df_no_dup.columns)
+  n_genes_present = len(mean_expr_df_no_dup.columns)
   
-  step_current += 1
-  update_progress(self, step_current, function_steps)
+  mean_expr_long = (
+    mean_expr_df_no_dup
+      .reset_index()
+      .melt(id_vars="index", var_name="gene", value_name="mean_expr")
+      .rename(columns={"index": "cluster"})
+  )
   
-  mean_expr_long = mean_expr_df_no_dup.reset_index().melt(id_vars="index", var_name="gene", value_name="mean_expr").rename(columns={"index": "cluster"})
-  frac_expr_long = frac_expr_df_no_dup.reset_index().melt(id_vars="index", var_name="gene", value_name="frac_expr").rename(columns={"index": "cluster"})
-
-  step_current += 1
-  update_progress(self, step_current, function_steps)
+  frac_expr_long = (
+    frac_expr_df_no_dup
+    .reset_index()
+    .melt(id_vars="index", var_name="gene", value_name="frac_expr")
+    .rename(columns={"index": "cluster"})
+  )
   
   merged_expr = mean_expr_long.merge(frac_expr_long, on=["gene", "cluster"])
   
@@ -363,9 +240,6 @@ def compute_rgg_dotplot(
   pvals = []
   logfcs = []
   ranks = []
-
-  step_current += 1
-  update_progress(self, step_current, function_steps)
   
   for index, row in merged_expr.iterrows():
     
@@ -393,48 +267,180 @@ def compute_rgg_dotplot(
   merged_expr["logfoldchange"] = logfcs
   merged_expr["rgg_order"] = ranks
   
-  step_current += 1
-  update_progress(self, step_current, function_steps)
-  
   filtered_df = merged_expr[merged_expr["pvals_adj"] < 0.05]
   
-  # Generate tree <3
-  dendro_tree = get_dendro_tree(adata, uns_key)
-  
-  # Convert types for storing in anndata
-  results = {
+  adata.uns[key_dotplot] = {
     "data": filtered_df.to_dict(orient="list"),
-    "n_genes": int(n_genes_actual),
-    "dendro": json.dumps(make_safe(dendro_tree))
+    "genes_present": int(n_genes_present),
   }
   
-  step_current += 1
-  update_progress(self, step_current, function_steps)
+  return True
+
+def handle_annotation():
+  pass
+
+# ============================================================================================
+@celery_app.task(bind=True)
+def compute_ldr(
+  self,
+  file_path: str,
+  n_pcs: int = 30,
+):
   
-  adata.uns[key_dotplot] = results
-  sc.write(file_path, adata)
-  adata.file.close()    
+  start_progress(self)
   
-  dendro_order = adata.uns[f"dendrogram_{uns_key}"]["categories_ordered"]
+  adata = sc.read_h5ad(file_path)
   
-  step_current += 1
-  update_progress(self, step_current, function_steps)
+  key_pca = "X_pca"
   
-  sorted_records = (
-    sort_by_dendro_rgg_rbb_order(
-      pd.DataFrame(results["data"]),
-      dendro_order,
-      n_genes
-    )
-    .to_dict(orient="records")
-  )
+  changes_made = handle_pipeline_steps(self, [
+    PipelineStep("Computing PCA", partial(handle_pca, adata, key_pca, n_pcs)),
+  ])
+  
+  end_progress(self)
+  
+  if (changes_made):
+    sc.write(file_path, adata)
+  
+  ldr_data = list(adata.obsm[key_pca][:, :2].tolist())
+  
+  adata.file.close()
   
   return {
-    "data": sorted_records,
-    "dendro": results["dendro"],
-    "n_genes": int(results["n_genes"]),
-    "n_clusters": int(len(dendro_order)),
+    # "changes": changes_made,
+    "data": ldr_data,
   }
+
+# ============================================================================================
+@celery_app.task(bind=True)
+def compute_nldr(
+  self,
+  file_path: str,
+  key: str,
+  n_pcs: int = 30,
+  min_dist: float = 0.5,
+  spread: float = 1.0,
+  n_neighbors: int = 15,
+):
+  
+  start_progress(self)
+  
+  adata = sc.read_h5ad(file_path)
+  
+  key_pca = "X_pca"
+  key_neighbors = f"{key}"
+  key_umap = f"X_umap_{key}"
+  
+  changes_made = handle_pipeline_steps(self, [
+    PipelineStep("Computing PCA", partial(handle_pca, adata, key_pca, n_pcs)),
+    PipelineStep("Computing neighbors distance matrix", partial(handle_neighbors, adata, key_neighbors, key_pca, n_pcs, n_neighbors)),
+    PipelineStep("Computing UMAP", partial(handle_umap, adata, key_umap, key_neighbors, min_dist, spread)),
+  ])
+  
+  end_progress(self)
+  
+  if changes_made:
+    sc.write(file_path, adata)
+  
+  obsm_data = list(adata.obsm[key_umap][:, :2].tolist())
+  
+  adata.file.close()
+  
+  return {
+    # "changes": changes_made,
+    "data": obsm_data,
+  }
+  
+# ============================================================================================
+@celery_app.task(bind=True)
+def compute_clustering(
+  self,
+  file_path: str,
+  key: str,
+  resolution: float = 1
+):
+  
+  start_progress(self)
+  
+  adata = sc.read_h5ad(file_path)
+  
+  res_to_string = f"{resolution}".replace(".", "_")
+  key_resolution = f"leiden_{res_to_string}_{key}"
+  key_neighbors = f"{key}"
+  
+  changes_made = handle_pipeline_steps(self, [
+    PipelineStep("Computing Leiden clusters", partial(handle_leiden, adata, key_neighbors, key_resolution, resolution)),
+  ])
+  
+  end_progress(self)
+  
+  if changes_made:
+    sc.write(file_path, adata)
+  
+  obs_data = adata.obs[key_resolution].astype("category")
+  labels = list(obs_data.cat.categories)
+  label_map = list(obs_data.cat.codes)
+  
+  adata.file.close()
+  
+  return {
+    "labels": labels,
+    "label_map": label_map
+  }
+
+# ============================================================================================
+@celery_app.task(bind=True)
+def compute_rgg_dotplot(
+  self,
+  file_path: str,
+  uns_key: str,
+  n_genes: int,
+  selected_genes: Optional[list[str]]
+):
+  
+  start_progress(self)
+  
+  adata = sc.read_h5ad(file_path)
+  
+  key_cluster = f"{uns_key}"
+  key_rgg = f"rank_genes_groups_{uns_key}"
+  key_dendrogram = f"dendrogram_{uns_key}"
+  key_dotplot = f"dotplot_stats_g{n_genes}_{'_'.join(selected_genes).lower() if (selected_genes != None) else ''}_{uns_key}"
+  
+  
+  changes_made = handle_pipeline_steps(self, [
+    PipelineStep(f"Computing gene-rankings from the clustering '{uns_key}'", partial(handle_rank_genes_groups, adata, key_cluster, key_rgg)),
+    PipelineStep(f"Computing dendrogram", partial(handle_dendrogram, adata, key_cluster, key_dendrogram)),
+    PipelineStep(f"Computing dotplot table", partial(handle_rgg_data_table, adata, key_dotplot, key_rgg, n_genes))
+  ])
+  
+  end_progress(self)
+  
+  if changes_made:
+    sc.write(file_path, adata)
+  
+  
+  dendro_data = adata.uns[key_dendrogram]
+  dendro_order = dendro_data["categories_ordered"]
+  dendro_tree = build_dendrogram_tree(dendro_data["linkage"], dendro_order)
+  
+  dotplot_data = adata.uns[key_dotplot]
+  data_sorted = sort_by_dendro_rgg_rbb_order(
+    pd.DataFrame(dotplot_data["data"]),
+    dendro_order,
+    n_genes
+  )
+  
+  results = {
+    "data": data_sorted.to_dict(orient="records"),
+    "n_genes": int(dotplot_data["genes_present"]),
+    "n_clusters": int(len(dendro_order)),
+    "dendro": json.dumps(make_safe(dendro_tree)),
+  }
+  
+  adata.file.close()  
+  
+  return results
   
 # ============================================================================================
 @celery_app.task(bind=True)
@@ -445,6 +451,27 @@ def compute_celltypist_annotations(
   connectivities_key: str,
   annotation_model: str = "Immune_All_Low.pkl",
 ):
+  
+  # TODO: FINISH REFACTORING OF FUNCTION TO USR PIPELINE-STRUCTURE
+  
+  # start_progress(self)
+  
+  # adata = sc.read_h5ad(file_path)
+
+  # key_prefix = f"{key}_"
+
+  
+  # changes_made = handle_pipeline_steps(self, [
+  #   PipelineStep("Predicting annotations", partial(handle_annotation, adata, annotation_model, key_prefix))
+  #   # PipelineStep(f"Computing gene-rankings from the clustering '{uns_key}'", partial(handle_rank_genes_groups, adata, key_cluster, key_rgg)),
+  #   # PipelineStep(f"Computing dendrogram", partial(handle_dendrogram, adata, key_cluster, key_dendrogram)),
+  #   # PipelineStep(f"Computing dotplot table", partial(handle_rgg_data_table, adata, key_dotplot, key_rgg, n_genes))
+  # ])
+  
+  # end_progress(self)
+  
+  # if changes_made:
+  #   sc.write(file_path, adata)
   
   step_current = 0
   function_steps = [
