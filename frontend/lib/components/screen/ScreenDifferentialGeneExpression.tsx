@@ -1,11 +1,12 @@
-import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
-import { Box, Grid, Stack, Typography } from "@mui/material";
+import { useAppSelector } from "@/lib/redux/hooks/hooks";
+import { Grid, Stack } from "@mui/material";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { DotPlot } from "../DotPlot";
 import DotplotDialog from "../modals/DotplotDialog";
 import { useState } from "react";
 import { theme } from "@/app/layout";
 import ButtonSecondary from "../custom/ButtonSecondary";
+import ListTableData from "../controls/ListTableData";
 
 export default function ScreenDifferentialGeneExpression() {
   
@@ -34,7 +35,7 @@ export default function ScreenDifferentialGeneExpression() {
           height: "100%",
           border: "1px solid grey",
         }}
-      >
+      > 
         <Stack
           direction="column"
           sx={{
@@ -51,23 +52,12 @@ export default function ScreenDifferentialGeneExpression() {
             }}
           />
 
+          <ListTableData />
+
           <DotplotDialog
             isOpen={isDotplotDialogOpen}
             setIsOpen={setIsDotplotDialogOpen}
           />
-          <Box
-            sx={{
-              width: "100%",
-              height: "100%",
-              // border: "1px solid red",
-              alignContent: "center",
-              justifyItems: "center",
-            }}
-          >
-            <Typography fontSize={theme.typography.fontSize}>
-              W.I.P component
-            </Typography>
-          </Box>
         </Stack>
       </Grid>
 
@@ -76,7 +66,6 @@ export default function ScreenDifferentialGeneExpression() {
         xs
         sx={{
           height: "100%",
-          // border: "1px solid grey",
         }}
       >
         <DotPlot />

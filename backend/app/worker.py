@@ -194,7 +194,7 @@ def handle_dendrogram(adata: AnnData, key_cluster: str, key_dendrogram: str) -> 
     
   return changes_made
 
-def handle_rgg_data_table(adata: AnnData, key_dotplot: str, key_rgg: str, n_genes: int) -> bool:
+def handle_rgg_data_table(adata: AnnData, key_cluster: str, key_dotplot: str, key_rgg: str, n_genes: int, selected_genes: Optional[list[str]]) -> bool:
   
   if (key_dotplot in adata.uns_keys()):
     return False
@@ -272,6 +272,11 @@ def handle_rgg_data_table(adata: AnnData, key_dotplot: str, key_rgg: str, n_gene
   adata.uns[key_dotplot] = {
     "data": filtered_df.to_dict(orient="list"),
     "genes_present": int(n_genes_present),
+    "params": {
+      "clustering": key_cluster,
+      "n_top_genes": n_genes,
+      "selected_genes": selected_genes,
+    }
   }
   
   return True
@@ -411,7 +416,7 @@ def compute_rgg_dotplot(
   changes_made = handle_pipeline_steps(self, [
     PipelineStep(f"Computing gene-rankings from the clustering '{uns_key}'", partial(handle_rank_genes_groups, adata, key_cluster, key_rgg)),
     PipelineStep(f"Computing dendrogram", partial(handle_dendrogram, adata, key_cluster, key_dendrogram)),
-    PipelineStep(f"Computing dotplot table", partial(handle_rgg_data_table, adata, key_dotplot, key_rgg, n_genes))
+    PipelineStep(f"Computing dotplot table", partial(handle_rgg_data_table, adata, key_cluster, key_dotplot, key_rgg, n_genes, selected_genes))
   ])
   
   end_progress(self)
