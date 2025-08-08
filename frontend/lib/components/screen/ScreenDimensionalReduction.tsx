@@ -3,6 +3,7 @@ import ListEmbeddings from "../controls/ListEmbeddings";
 import ListClusterings from "../controls/ListClusterings";
 import { ScatterPlot } from "@/lib/components/ScatterPlot";
 import { ListCluster } from "../controls/ListCluster";
+import ListConnectivities from "../controls/ListConnectivities";
 
 export default function ScreenDimensionalReduction() {
 
@@ -23,6 +24,17 @@ export default function ScreenDimensionalReduction() {
         height="100%"
         width={250}
       >
+        <Grid
+          item
+          xs
+          width="100%"
+          sx={{
+            border: "1px solid grey",
+          }}
+        >
+          <ListConnectivities />
+        </Grid>
+        
         <Grid
           item
           xs

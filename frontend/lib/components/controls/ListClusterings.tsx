@@ -47,7 +47,7 @@ export default function ListClusterings() {
       <Stack
         direction="column"
         sx={{
-          height: "60vh",
+          height: "50vh",
           width: "100%",
           overflowY: "auto",
           overflowX: "hidden",
