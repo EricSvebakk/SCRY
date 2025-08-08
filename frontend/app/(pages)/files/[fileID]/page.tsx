@@ -1,11 +1,16 @@
 "use client";
 
 import {
+  Box,
   Button,
   Grid,
+  IconButton,
+  Stack,
+  SvgIconProps,
+  Typography,
 } from "@mui/material";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { ReactElement, useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { setActiveFile } from "@/lib/redux/reducers/fileReducer";
 import { get_file_hierarchy } from "@/lib/fetch/get_file_hierarchy";
@@ -16,6 +21,7 @@ import ScreenDifferentialGeneExpression from "@/lib/components/screen/ScreenDiff
 import { theme } from "@/app/layout";
 import { tabOptions } from "@/lib/types";
 import { setCurrentTab } from "@/lib/redux/reducers/plotReducer";
+import { ScatterPlot, ViewCompact } from "@mui/icons-material";
 
 type step = {
   label: string;
@@ -23,7 +29,8 @@ type step = {
   loading: boolean;
   isOpen: boolean;
   function: Function;
-  screen: JSX.Element
+  screen: JSX.Element;
+  icon: ReactElement<SvgIconProps>;
 };
 
 export default function FileIdPage({}) {
@@ -40,12 +47,13 @@ export default function FileIdPage({}) {
   
   const steps: step[] = [
     {
-      label: "Dimensional Reduction & Clustering",
+      label: "Dimensional Reduction",
       id: "scatterplot",
       isOpen: isDRScreenOpen,
       function: (val: boolean) => setIsDRScreenOpen(val),
       loading: false,
       screen: <ScreenDimensionalReduction />,
+      icon: <ScatterPlot />,
     },
     {
       label: "Differential Expression",
@@ -54,6 +62,7 @@ export default function FileIdPage({}) {
       function: (val: boolean) => setIsDEScreenOpen(val),
       loading: status.get_rgg_dotplot.inProgress,
       screen: <ScreenDifferentialGeneExpression />,
+      icon: <ViewCompact />,
     },
   ];
 
@@ -84,55 +93,71 @@ export default function FileIdPage({}) {
       container
       direction="row"
       xs
-      sx={{
-        // border: "1px solid grey",
-        backgroundColor: theme.palette.background.default
-      }}
     >
       <Grid
         item
-        width={120}
+        container
+        direction="column"
         height="100%"
+        width={85}
         overflow="clip"
       >
-        <Grid
-          container
-          direction="column"
-          height="100%"
-        >
-          {steps.map((e, i) => {
-            return (
-              <Grid item xs key={`steps_item_grid_${i}`}>
-                <Button
-                  key={`steps_item_button_${i}`}
-                  fullWidth
+        {steps.map((e, i) => {
+          return (
+            <Grid
+              item
+              key={`steps_item_grid_${i}`}
+              height={85}
+            >
+              <Button
+                key={`steps_item_button_${i}`}
+                fullWidth
+                sx={{
+                  color: theme.palette.text.secondary,
+                  backgroundColor: e.isOpen
+                    ? theme.palette.primary.main
+                    : theme.palette.secondary.main,
+                  height: "100%",
+                  fontWeight: "bold",
+                  borderRadius: "0",
+                  "&:hover": {
+                    backgroundColor: "#aaa",
+                  },
+                  borderTop: e.isOpen && i !== 0 ? "1px solid grey" : "none",
+                  borderBottom: e.isOpen ? "1px solid grey" : "none",
+                  borderRight: e.isOpen ? "none" : "1px solid grey",
+                }}
+                onClick={() => {
+                  steps.forEach((e) => e.function(false));
+                  e.function(true);
+                  setSelectedStep(i);
+                  dispatch(setCurrentTab(e.id));
+                }}
+              >
+                <Stack
+                  direction="column"
                   sx={{
-                    color: theme.palette.text.secondary,
-                    backgroundColor: e.isOpen ? "none" : theme.palette.secondary.main,
-                    height: "100%",
-                    fontWeight: "bold",
-                    borderRadius: "0",
-                    "&:hover": {
-                      backgroundColor: "#aaa",
-                    },
-                    borderRight: e.isOpen ? "none" : "1px inset grey",
-                    borderTop: (e.isOpen && (i !== 0)) ? "1px inset grey" : "none",
-                    borderBottom: (e.isOpen && (i !== steps.length-1)) ? "1px inset grey" : "none",
-                  }}
-                  size="small"
-                  onClick={() => {
-                    steps.forEach((e) => e.function(false));
-                    e.function(true);
-                    setSelectedStep(i);
-                    dispatch(setCurrentTab(e.id))
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  {e.label}
-                </Button>
-              </Grid>
-            );
-          })}
-        </Grid>
+                  {e.icon}
+                  <Typography fontSize={9}>{e.label}</Typography>
+                </Stack>
+              </Button>
+            </Grid>
+          );
+        })}
+        <Grid
+          item
+          xs
+          sx={{
+            height: "100%",
+            width: "100%",
+            borderRight: "1px solid grey",
+            backgroundColor: theme.palette.secondary.main,
+          }}
+        />
       </Grid>
 
       <Grid
@@ -140,7 +165,8 @@ export default function FileIdPage({}) {
         xs
         height="100%"
         sx={{
-          p: "1vh"
+          p: "1vh",
+          backgroundColor: theme.palette.background.default,
         }}
       >
         {steps[selectedStep].screen}
