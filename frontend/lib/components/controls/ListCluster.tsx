@@ -25,6 +25,10 @@ export function ListCluster() {
       obs.indices.categories.forEach((label_temp, index_other) => {
         const otherCanvas = document.getElementById("points_" + label_temp);
 
+        if (otherCanvas === null) {
+          return;
+        }
+        
         if (selectedClusters.includes(label_temp)) {
           otherCanvas!.style.opacity = "100%";
         } else {
@@ -189,6 +193,10 @@ export function ListCluster() {
 function labelOnMouseEnter(label: string, indicies: AnndataIndices) {
   const canvas = document.getElementById("points_" + label);
 
+  if (canvas === null) {
+    return;
+  }
+  
   canvas!.style.zIndex = "8";
 
   indicies.categories.forEach((label_temp, index_other) => {
@@ -202,6 +210,10 @@ function labelOnMouseEnter(label: string, indicies: AnndataIndices) {
 function labelOnMouseLeave(label: string, indices: AnndataIndices) {
   const canvas = document.getElementById("points_" + label);
 
+  if (canvas === null) {
+    return;
+  }
+  
   canvas!.style.zIndex = "5";
 
   indices.categories.forEach((label_temp, index_other) => {
