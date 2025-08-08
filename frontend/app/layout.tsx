@@ -34,6 +34,12 @@ export const theme = createTheme({
       default: "#aaaaff"
     }
   },
+  typography: {
+    fontSize: 12,
+    subtitle1: {
+      fontSize: 9
+    }
+  }
   // spacing: 8
 });
 

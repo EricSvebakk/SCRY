@@ -2,12 +2,12 @@ import { Box, Button, Checkbox, Grid, Stack, Typography } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { my_colors } from "../ScatterPlotGenerator";
 import { AnndataIndices } from "../../types";
-import { LabelListItem } from "../LabelListItem";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { setSelectedClusters } from "@/lib/redux/reducers/plotReducer";
 import { useEffect } from "react";
 import { theme } from "@/app/layout";
 import ButtonSecondary from "../custom/ButtonSecondary";
+import { Square } from "@mui/icons-material";
 
 export function ListCluster() {
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
@@ -48,7 +48,7 @@ export function ListCluster() {
         width: "100%",
         backgroundColor: theme.palette.background.paper,
         border: "1px solid grey",
-        borderLeft: "none"
+        borderLeft: "none",
       }}
     >
       <Stack
@@ -60,7 +60,7 @@ export function ListCluster() {
         }}
       >
         <ButtonSecondary
-          title="Select all"
+          title="Show all"
           onClick={() => {
             if (obs.indices) {
               dispatch(setSelectedClusters(obs.indices?.categories));
@@ -69,7 +69,7 @@ export function ListCluster() {
         />
 
         <ButtonSecondary
-          title="Deselect all"
+          title="Hide all"
           onClick={() => {
             if (obs.indices) {
               dispatch(setSelectedClusters([]));
@@ -122,11 +122,31 @@ export function ListCluster() {
                   }}
                 >
                   <Grid item width="100%" xs>
-                    <LabelListItem
-                      key={"label_" + label}
-                      label={label}
-                      label_color={label_color}
-                    />
+                    <Stack direction="row" justifyContent="space-between">
+                      <Stack
+                        key={"label_stack_" + label}
+                        direction="row"
+                        alignItems="center"
+                        justifyContent="left"
+                      >
+                        <Square
+                          key={"label_square_" + label}
+                          sx={{
+                            width: 22,
+                            height: 22,
+                            marginRight: 1,
+                            color: label_color,
+                          }}
+                        />
+                        <Typography
+                          key={"label_typography_" + label}
+                          color={label_color}
+                          fontSize={theme.typography.fontSize}
+                        >
+                          {label}
+                        </Typography>
+                      </Stack>
+                    </Stack>
                   </Grid>
                   <Grid item>
                     <Checkbox
@@ -153,7 +173,9 @@ export function ListCluster() {
                 justifyItems: "center",
               }}
             >
-              <Typography>No clustering selected</Typography>
+              <Typography fontSize={theme.typography.fontSize}>
+                No clustering selected
+              </Typography>
             </Box>
           ) : (
             <></>

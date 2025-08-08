@@ -81,12 +81,7 @@ export function ScatterPlot() {
       {status.inProgress ? (
         <CurrentProgress status={status} />
       ) : (
-        <Stack
-          direction="row"
-          position="relative"
-          height="100%"
-          width="100%"
-        >
+        <Stack direction="row" position="relative" height="100%" width="100%">
           {obsm.data ? (
             obs.indices ? (
               obs.indices.categories.map((e, i) => {
@@ -139,7 +134,9 @@ export function ScatterPlot() {
                 justifyItems: "center",
               }}
             >
-              <Typography>No embedding selected</Typography>
+              <Typography fontSize={theme.typography.fontSize}>
+                No embedding selected
+              </Typography>
             </Box>
           ) : (
             <></>

@@ -57,10 +57,12 @@ export default function ListEmbeddings() {
                     key={"accordion_" + e}
                     disabled={obsm.selectedKey === e}
                     sx={{
-                      color: theme.palette.text.secondary,        
+                      color: theme.palette.text.secondary,
                       justifyContent: "start",
                       overflowX: "clip",
+                      textTransform: "initial",
                       fontWeight: obsm.selectedKey === e ? "bold" : "",
+                      fontSize: theme.typography.fontSize
                     }}
                     size="small"
                     onClick={() => {

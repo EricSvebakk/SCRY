@@ -61,10 +61,12 @@ export default function ScreenDifferentialGeneExpression() {
               height: "100%",
               // border: "1px solid red",
               alignContent: "center",
-              justifyItems: "center"
+              justifyItems: "center",
             }}
           >
-            <Typography>W.I.P component</Typography>
+            <Typography fontSize={theme.typography.fontSize}>
+              W.I.P component
+            </Typography>
           </Box>
         </Stack>
       </Grid>

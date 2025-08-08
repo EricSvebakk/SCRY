@@ -82,7 +82,7 @@ export function DotPlot() {
         <ImageSavingPopover />
         <DotPlotConfigurationPopover />
       </Stack>
-      
+
       <Box
         position="relative"
         overflow="auto"
@@ -113,14 +113,15 @@ export function DotPlot() {
               justifyItems: "center",
             }}
           >
-            <Typography>No Observations selected</Typography>
+            <Typography fontSize={theme.typography.fontSize}>
+              No Observations selected
+            </Typography>
           </Box>
         ) : (
           <></>
         )}
       </Box>
     </Stack>
-    
   );
   
 }

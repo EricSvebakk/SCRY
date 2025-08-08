@@ -12,6 +12,7 @@ import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { get_nldr } from "@/lib/fetch/workflow/get_nldr";
 import { setCurrentTab } from "@/lib/redux/reducers/plotReducer";
+import { theme } from "@/app/layout";
 
 export default function DialogDimensionalReduction(props: {
   isOpen: boolean;
@@ -38,7 +39,9 @@ export default function DialogDimensionalReduction(props: {
           title="This will generate both a linear and a non-linear dimensional reduction"
           placement="bottom"
         >
-          <Typography>Create Embedding (PCA & UMAP)</Typography>
+          <Typography fontSize={theme.typography.fontSize}>
+            Create Embedding (PCA & UMAP)
+          </Typography>
         </Tooltip>
       </DialogTitle>
 

@@ -20,11 +20,16 @@ export default function CurrentProgress({
         width: "100%",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: theme.palette.background.paper
+        backgroundColor: theme.palette.background.paper,
       }}
       gap={2}
     >
-      <Typography textAlign="center" sx={{ border: "1px solid red" }}>{status.message}</Typography>
+      <Typography
+        textAlign="center"
+        fontSize={theme.typography.fontSize}
+      >
+        {status.message}
+      </Typography>
 
       <CircularProgress size={indicatorSize} color="primary" />
     </Stack>

@@ -142,7 +142,7 @@ export default function FileIdPage({}) {
                   }}
                 >
                   {e.icon}
-                  <Typography fontSize={9}>{e.label}</Typography>
+                  <Typography fontSize={theme.typography.subtitle1.fontSize}>{e.label}</Typography>
                 </Stack>
               </Button>
             </Grid>

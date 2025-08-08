@@ -81,7 +81,8 @@ export default function ListClusterings() {
                     justifyContent: "start",
                     overflowX: "clip",
                     fontWeight: obs.selectedKey === e ? "bold" : "",
-                    fontSize: 10,
+                    textTransform: "initial",
+                    fontSize: theme.typography.fontSize,
                     "&:disabled": {
                       cursor: "not-allowed",
                       pointerEvents: "all !important",

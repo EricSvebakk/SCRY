@@ -19,6 +19,7 @@ export default function ButtonSecondary(props: ButtonSecondaryType) {
         color: theme.palette.text.secondary,
         overflowX: "clip",
         fontWeight: "bold",
+        fontSize: theme.typography.fontSize,
         borderRadius: "0",
         boxShadow: "initial",
         ...props.sx
