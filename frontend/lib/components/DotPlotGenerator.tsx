@@ -389,26 +389,29 @@ const DotPlotGenerator = (props: dotPlotGeneratorProps) => {
           top = event.pageY - tooltipHeight - offsetY;
         }
         
-        tooltip.style("left", `${left}px`).style("top", `${top}px`).html(`
+        tooltip
+        .style("left", `${left}px`)
+        .style("top", `${top}px`)
+        .html(`
             <table>
               <tr>
-                <td>Cluster label</td>
+                <td style="width:200px;">Cluster label</td>
                 <td>${record.cluster}</td>
               </tr>
               <tr>
                 <td>Gene label</td>
-                <td>${record.gene} (${genes.indexOf(gene_index)})</td>
+                <td>${record.gene}</td>
               </tr>
               <tr>
                 <td>Gene rank in cluster</td>
                 <td>#${record.rgg_order + 1}</td>
               </tr>
               <tr>
-                <td>% of expressed cells</td>
-                <td>${record.frac_expr.toFixed(2)}</td>
+                <td>% of cells expressing gene</td>
+                <td>${record.frac_expr * 100}%</td>
               </tr>
               <tr>
-                <td>Gene Expression</td>
+                <td>Average gene expression</td>
                 <td>${record.mean_expr.toFixed(2)}</td>
               </tr>
               <tr>

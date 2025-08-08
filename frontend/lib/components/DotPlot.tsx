@@ -102,17 +102,6 @@ export function DotPlot() {
           }}
           id="dotplot"
         />
-        <Box
-          component="div"
-          width="100%"
-          height="100%"
-          id="tooltip_box"
-          sx={{
-            position: "absolute",
-            display: "none",
-            zIndex: 0,
-          }}
-        />
         {!gde.expression ? (
           <Box
             sx={{
