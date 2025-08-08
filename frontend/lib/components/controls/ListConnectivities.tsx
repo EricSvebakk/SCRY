@@ -62,9 +62,10 @@ export default function ListConnectivities() {
         {connectivities ? (
           connectivities
             .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
-            .map((e) => {
+            .map((e, i) => {
               return (
                 <PopoverConnectivities
+                  key={"popover_connectivities" + i}
                   title={e}
                   connectivityParams={uns[e].params}
                   anchorEl={anchorEl}

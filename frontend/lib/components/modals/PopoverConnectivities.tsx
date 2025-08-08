@@ -65,14 +65,19 @@ export function PopoverConnectivities(props: {
               <Typography>{props.title}</Typography>
             </Stack>
             {props.connectivityParams ? (
-              Object.entries(props.connectivityParams).map((e) => (
+              Object.entries(props.connectivityParams).map((e, i) => (
                 <Stack
+                  key={"connectivity_param_" + i}
                   direction="row"
                   justifyContent="space-between"
                   width="100%"
                 >
-                  <Typography>{e[0]}</Typography>
-                  <Typography>{e[1]}</Typography>
+                  <Typography key={"connectivity_param_" + i + "_key"}>
+                    {e[0]}
+                  </Typography>
+                  <Typography key={"connectivity_param_" + i + "_value"}>
+                    {e[1]}
+                  </Typography>
                 </Stack>
               ))
             ) : (
