@@ -67,10 +67,12 @@ export default function ListConnectivities() {
                 <PopoverConnectivities
                   key={"popover_connectivities" + i}
                   title={e}
+                  titleLabel="Connectivity"
                   connectivityParams={uns[e].params}
                   anchorEl={anchorEl}
                   handleClick={handleClick}
                   handleClose={handleClose}
+                  width={200}
                 />
               );
             })

@@ -1,22 +1,19 @@
 
+
+
 import { Stack } from "@mui/material";
 import { useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { MouseEvent, useEffect, useState } from "react";
 import { theme } from "@/app/layout";
-import { PopoverTableData } from "../modals/popoverTableData";
-import ButtonSecondary from "../custom/ButtonSecondary";
-import DotplotDialog from "../modals/DotplotDialog";
+import { PopoverConnectivities } from "../modals/PopoverConnectivities";
 
-export default function ListTableData() {
+export default function ListRanking() {
   
   const status = useAppSelector((state) => state.plotReducer.status.get_file_hierarchy);
   const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;
   
-  const [isDotplotDialogOpen, setIsDotplotDialogOpen] = useState(false);
-  
-  const [tableData, setTableData] = useState<string[]>([]);
-  
+  const [rankings, setRankings] = useState<string[]>([]);
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
@@ -27,15 +24,16 @@ export default function ListTableData() {
     setAnchorEl(null);
   };
   
-   useEffect(() => {
-     if (uns) {
-       const newTableData = Object.keys(uns).filter((e: string) =>
-         Object.keys(uns[e]).includes("genes_present")
-       );
-
-       setTableData(newTableData);
-     }
-   }, [uns]);
+  useEffect(() => {
+    
+    if (uns) {
+      const newRankings = Object.keys(uns)
+        .filter((e: string) => e.includes("rank_genes_groups"))
+      
+      setRankings(newRankings)
+    }
+    
+  }, [uns])
   
   if (status.inProgress) {
     return (
@@ -58,24 +56,25 @@ export default function ListTableData() {
       <Stack
         direction="column"
         sx={{
-          height: "60vh",
           width: "100%",
+          height: "30vh",
           overflowY: "auto",
-          overflowX: "hidden",
         }}
       >
-        {tableData ? (
-          tableData
+        {rankings ? (
+          rankings
             .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
             .map((e, i) => {
               return (
-                <PopoverTableData
+                <PopoverConnectivities
                   key={"popover_connectivities" + i}
                   title={e}
-                  params={uns[e].params}
+                  titleLabel="Ranking"
+                  connectivityParams={uns[e].params}
                   anchorEl={anchorEl}
                   handleClick={handleClick}
                   handleClose={handleClose}
+                  width={400}
                 />
               );
             })
@@ -83,18 +82,7 @@ export default function ListTableData() {
           <></>
         )}
       </Stack>
-      <ButtonSecondary
-        title="+ Generate DGE"
-        onClick={() => setIsDotplotDialogOpen(true)}
-        sx={{
-          borderTop: "1px solid grey",
-        }}
-      />
 
-      <DotplotDialog
-        isOpen={isDotplotDialogOpen}
-        setIsOpen={setIsDotplotDialogOpen}
-      />
     </Stack>
   );
 }

@@ -1,19 +1,13 @@
 import { useAppSelector } from "@/lib/redux/hooks/hooks";
-import { Grid, Stack } from "@mui/material";
+import { Grid } from "@mui/material";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { DotPlot } from "../DotPlot";
-import DotplotDialog from "../modals/DotplotDialog";
-import { useState } from "react";
-import { theme } from "@/app/layout";
-import ButtonSecondary from "../custom/ButtonSecondary";
 import ListTableData from "../controls/ListTableData";
+import ListRanking from "../controls/ListRanking";
 
 export default function ScreenDifferentialGeneExpression() {
   
-  const statusHierarchy = useAppSelector((state) => state.plotReducer.status.get_file_hierarchy);
-  
-  const [isDotplotDialogOpen, setIsDotplotDialogOpen] = useState(false);
-  
+  const statusHierarchy = useAppSelector((state) => state.plotReducer.status.get_file_hierarchy);  
   
   if (statusHierarchy.inProgress) {
     return <CurrentProgress status={statusHierarchy} />;
@@ -30,35 +24,34 @@ export default function ScreenDifferentialGeneExpression() {
     >
       <Grid
         item
+        container
         width={250}
+        rowGap={1}
         sx={{
           height: "100%",
-          border: "1px solid grey",
         }}
-      > 
-        <Stack
-          direction="column"
+      >
+        <Grid
+          item
+          xs
+          width="100%"
           sx={{
-            width: "100%",
-            height: "100%",
-            backgroundColor: theme.palette.background.paper,
+            border: "1px solid grey",
           }}
         >
-          <ButtonSecondary
-            title="+ Generate DGE"
-            onClick={() => setIsDotplotDialogOpen(true)}
-            sx={{
-              borderBottom: "1px solid grey",
-            }}
-          />
+          <ListRanking />
+        </Grid>
 
+        <Grid
+          item
+          xs
+          width="100%"
+          sx={{
+            border: "1px solid grey",
+          }}
+        >
           <ListTableData />
-
-          <DotplotDialog
-            isOpen={isDotplotDialogOpen}
-            setIsOpen={setIsDotplotDialogOpen}
-          />
-        </Stack>
+        </Grid>
       </Grid>
 
       <Grid

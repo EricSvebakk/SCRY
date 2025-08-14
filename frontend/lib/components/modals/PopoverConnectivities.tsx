@@ -10,10 +10,12 @@ import { MouseEvent } from "react";
 
 export function PopoverConnectivities(props: {
   title: string;
+  titleLabel: string;
   connectivityParams: Object;
   anchorEl: HTMLButtonElement | null;
   handleClick: (event: MouseEvent<HTMLButtonElement>) => void;
   handleClose: () => void;
+  width: number;
 }) {
   
   const open = Boolean(props.anchorEl);
@@ -48,7 +50,7 @@ export function PopoverConnectivities(props: {
       >
         <Stack
           direction="column"
-          width={200}
+          width={props.width}
           height="fit-content"
           p={1}
           gap={1}
@@ -61,7 +63,7 @@ export function PopoverConnectivities(props: {
             p={1}
           >
             <Stack direction="row" justifyContent="space-between" width="100%">
-              <Typography>connectivity</Typography>
+              <Typography>{props.titleLabel}</Typography>
               <Typography>{props.title}</Typography>
             </Stack>
             {props.connectivityParams ? (

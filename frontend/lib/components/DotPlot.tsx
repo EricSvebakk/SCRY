@@ -48,15 +48,7 @@ export function DotPlot() {
     window.addEventListener("resize", updateCounter);
     return () => window.removeEventListener("resize", updateCounter);
   }, [updateCounter]);
-  
-  if (status.inProgress) {
-    return (
-      <CurrentProgress
-        status={status}
-      />
-    )
-  }
-  
+
   return (
     <Stack
       direction="column"
@@ -65,7 +57,6 @@ export function DotPlot() {
         width: "100%",
         backgroundColor: theme.palette.background.paper,
         border: "1px solid grey",
-        borderRight: "none",
       }}
     >
       <Stack
@@ -82,45 +73,52 @@ export function DotPlot() {
         <ImageSavingPopover />
         <DotPlotConfigurationPopover />
       </Stack>
-
-      <Box
-        position="relative"
-        overflow="auto"
-        height="100%"
-        sx={{
-          backgroundColor: theme.palette.background.paper,
-        }}
-      >
-        <Box
-          component="svg"
-          ref={svgRef}
-          width={gde.nGenes ? gde.nGenes * 15 : "100%"}
-          height={gde.nClusters ? gde.nClusters * 15 : "100%"}
-          sx={{
-            position: "absolute",
-            zIndex: 1,
-          }}
-          id="dotplot"
-        />
-        {!gde.expression ? (
+      
+      {
+        status.inProgress ? (
+          <CurrentProgress status={status} />
+        ) : (          
           <Box
+            position="relative"
+            overflow="auto"
+            height="100%"
             sx={{
-              position: "absolute",
-              width: "100%",
-              height: "100%",
-              // border: "1px solid yellow",
-              alignContent: "center",
-              justifyItems: "center",
+              backgroundColor: theme.palette.background.paper,
             }}
           >
-            <Typography fontSize={theme.typography.fontSize}>
-              No Observations selected
-            </Typography>
+            <Box
+              component="svg"
+              ref={svgRef}
+              width={gde.nGenes ? gde.nGenes * 15 : "100%"}
+              height={gde.nClusters ? gde.nClusters * 15 : "100%"}
+              sx={{
+                position: "absolute",
+                zIndex: 1,
+              }}
+              id="dotplot"
+            />
+            {!gde.expression ? (
+              <Box
+                sx={{
+                  position: "absolute",
+                  width: "100%",
+                  height: "100%",
+                  // border: "1px solid yellow",
+                  alignContent: "center",
+                  justifyItems: "center",
+                }}
+              >
+                <Typography fontSize={theme.typography.fontSize}>
+                  No Observations selected
+                </Typography>
+              </Box>
+            ) : (
+              <></>
+            )}
           </Box>
-        ) : (
-          <></>
-        )}
-      </Box>
+        )
+      }
+      
     </Stack>
   );
   
