@@ -108,7 +108,7 @@ export function DotPlot() {
               position: "absolute",
               width: "100%",
               height: "100%",
-              border: "1px solid yellow",
+              // border: "1px solid yellow",
               alignContent: "center",
               justifyItems: "center",
             }}

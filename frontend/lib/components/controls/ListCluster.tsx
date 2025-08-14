@@ -61,6 +61,7 @@ export function ListCluster() {
           height: 32,
           backgroundColor: theme.palette.secondary.main,
           borderBottom: "1px solid grey",
+          borderLeft: "1px solid grey"
         }}
       >
         <ButtonSecondary

@@ -21,7 +21,7 @@ export const theme = createTheme({
       main: "#aaaaff",
     },
     secondary: {
-      main: "#ccccff"
+      main: "#d9d9feff"
     },
     // text: {
     //   secondary: "#ffffff"
