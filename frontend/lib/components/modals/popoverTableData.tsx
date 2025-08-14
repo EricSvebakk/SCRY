@@ -1,9 +1,12 @@
 
 import { theme } from "@/app/layout";
+import { get_rgg_dotplot } from "@/lib/fetch/workflow/get_rgg_dotplot";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import {
   Button,
   Popover,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { MouseEvent } from "react";
@@ -16,27 +19,31 @@ export function PopoverTableData(props: {
   handleClose: () => void;
 }) {
   
+  const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
+  
+  const dispatch = useAppDispatch();
+  
   const open = Boolean(props.anchorEl);
   const id = open ? "simple-popover-table-data" : undefined;
-
-  console.log(props.params)
   
   return (
     <>
-      <Button
-        fullWidth
-        sx={{
-          color: theme.palette.text.secondary,
-          justifyContent: "start",
-          overflowX: "clip",
-          textTransform: "initial",
-          fontSize: theme.typography.fontSize,
-        }}
-        size="small"
-        onClick={props.handleClick}
-      >
-        {props.title}
-      </Button>
+      <Tooltip title={props.title} placement="right">  
+        <Button
+          fullWidth
+          sx={{
+            color: theme.palette.text.secondary,
+            justifyContent: "start",
+            overflowX: "clip",
+            textTransform: "initial",
+            fontSize: theme.typography.fontSize,
+          }}
+          size="small"
+          onClick={props.handleClick}
+        >
+          {props.title}
+        </Button>
+      </Tooltip>
 
       <Popover
         id={id}
@@ -61,6 +68,7 @@ export function PopoverTableData(props: {
               border: "1px solid grey",
             }}
             p={1}
+            rowGap={1}
           >
             {props.params ? (
               Object.entries(props.params).map((e, i) => (
@@ -81,6 +89,26 @@ export function PopoverTableData(props: {
             ) : (
               <></>
             )}
+            <Button
+              variant="contained"
+              onClick={() => {
+                
+                if (("n_top_genes" in props.params) && ("clustering" in props.params)) {
+                  
+                  get_rgg_dotplot(
+                    activeFile,
+                    props.params.clustering as string,
+                    props.params.n_top_genes as number,
+                    [],
+                    dispatch
+                  )
+                  
+                  props.handleClose();
+                }
+              }}
+            >
+              Show plot
+            </Button>
           </Stack>
         </Stack>
       </Popover>

@@ -111,7 +111,7 @@ function get_rgg_dotplot_result(taskID: string, dispatch: Function) {
   const request = `${BACKEND_ENDPOINT}/get_finished_task?task_id=${taskID}`;
 
   type parsedDataType = {
-    data: geneExpressionData[];
+    table: geneExpressionData[];
     dendro: string;
     n_genes: number;
     n_clusters: number;
@@ -132,7 +132,7 @@ function get_rgg_dotplot_result(taskID: string, dispatch: Function) {
       dispatch(
         setGDEField({
           field: "expression",
-          value: data.data
+          value: data.table
         })
       );
       dispatch(
