@@ -1,10 +1,8 @@
 "use client";
 
 import {
-  Box,
   Button,
   Grid,
-  IconButton,
   Stack,
   SvgIconProps,
   Typography,
@@ -21,15 +19,13 @@ import ScreenDifferentialGeneExpression from "@/lib/components/screen/ScreenDiff
 import { theme } from "@/app/layout";
 import { tabOptions } from "@/lib/types";
 import { setCurrentTab } from "@/lib/redux/reducers/plotReducer";
-import { ScatterPlot, ViewCompact } from "@mui/icons-material";
+import { ScatterPlot, Tune, ViewCompact } from "@mui/icons-material";
+import ScreenManageAnnData from "@/lib/components/screen/ScreenManageAnnData";
 
-type step = {
+type Screen = {
   label: string;
   id: tabOptions;
-  loading: boolean;
-  isOpen: boolean;
-  function: Function;
-  screen: JSX.Element;
+  component: JSX.Element;
   icon: ReactElement<SvgIconProps>;
 };
 
@@ -41,28 +37,26 @@ export default function FileIdPage({}) {
 
   const dispatch = useAppDispatch();
 
-  const [isDRScreenOpen, setIsDRScreenOpen] = useState(true);
-  const [isDEScreenOpen, setIsDEScreenOpen] = useState(false);
-  const [selectedStep, setSelectedStep] = useState<number>(0);
+  const [selectedScreen, setSelectedScreen] = useState<number>(0);
   
-  const steps: step[] = [
+  const screens: Screen[] = [
     {
       label: "Dimensional Reduction",
       id: "scatterplot",
-      isOpen: isDRScreenOpen,
-      function: (val: boolean) => setIsDRScreenOpen(val),
-      loading: false,
-      screen: <ScreenDimensionalReduction />,
+      component: <ScreenDimensionalReduction />,
       icon: <ScatterPlot />,
     },
     {
       label: "Differential Expression",
       id: "dotplot",
-      isOpen: isDEScreenOpen,
-      function: (val: boolean) => setIsDEScreenOpen(val),
-      loading: status.get_rgg_dotplot.inProgress,
-      screen: <ScreenDifferentialGeneExpression />,
+      component: <ScreenDifferentialGeneExpression />,
       icon: <ViewCompact />,
+    },
+    {
+      label: "Manage AnnData",
+      id: "table",
+      component: <ScreenManageAnnData />,
+      icon: <Tune />,
     },
   ];
 
@@ -73,8 +67,7 @@ export default function FileIdPage({}) {
     if (typeof fileID === "string") {
       dispatch(setActiveFile(fileID));
       
-      setSelectedStep(0);
-      steps[0].function(true);
+      setSelectedScreen(0);
       
       if (!status.get_file_hierarchy.inProgress) {
         get_file_hierarchy(fileID, dispatch);
@@ -102,19 +95,17 @@ export default function FileIdPage({}) {
         width={85}
         overflow="clip"
       >
-        {steps.map((e, i) => {
+        {screens.map((e, i) => {
+          const isOpen = selectedScreen === i;
+          
           return (
-            <Grid
-              item
-              key={`steps_item_grid_${i}`}
-              height={85}
-            >
+            <Grid item key={`screen_item_grid_${i}`} height={85}>
               <Button
-                key={`steps_item_button_${i}`}
+                key={`screen_item_button_${i}`}
                 fullWidth
                 sx={{
                   color: theme.palette.text.secondary,
-                  backgroundColor: e.isOpen
+                  backgroundColor: isOpen
                     ? theme.palette.primary.main
                     : theme.palette.secondary.main,
                   height: "100%",
@@ -123,18 +114,17 @@ export default function FileIdPage({}) {
                   "&:hover": {
                     backgroundColor: "#aaa",
                   },
-                  borderTop: e.isOpen && i !== 0 ? "1px solid grey" : "none",
-                  borderBottom: e.isOpen ? "1px solid grey" : "none",
-                  borderRight: e.isOpen ? "none" : "1px solid grey",
+                  borderTop: isOpen && i !== 0 ? "1px solid grey" : "none",
+                  borderBottom: isOpen ? "1px solid grey" : "none",
+                  borderRight: isOpen ? "none" : "1px solid grey",
                 }}
                 onClick={() => {
-                  steps.forEach((e) => e.function(false));
-                  e.function(true);
-                  setSelectedStep(i);
+                  setSelectedScreen(i);
                   dispatch(setCurrentTab(e.id));
                 }}
               >
                 <Stack
+                  key={`screen_item_stack_${i}`}
                   direction="column"
                   sx={{
                     alignItems: "center",
@@ -142,7 +132,12 @@ export default function FileIdPage({}) {
                   }}
                 >
                   {e.icon}
-                  <Typography fontSize={theme.typography.subtitle1.fontSize}>{e.label}</Typography>
+                  <Typography
+                    key={`screen_item_text_${i}`}
+                    fontSize={theme.typography.subtitle1.fontSize}
+                  >
+                    {e.label}
+                  </Typography>
                 </Stack>
               </Button>
             </Grid>
@@ -169,7 +164,7 @@ export default function FileIdPage({}) {
           backgroundColor: theme.palette.background.default,
         }}
       >
-        {steps[selectedStep].screen}
+        {screens[selectedScreen].component}
       </Grid>
     </Grid>
   );
