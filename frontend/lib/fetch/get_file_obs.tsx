@@ -13,6 +13,7 @@ export function get_file_obs(
     setStatus({
       type: "get_file_obs",
       value: true,
+      message: "Loading in obs data",
     })
   );
 

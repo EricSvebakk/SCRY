@@ -15,6 +15,7 @@ export function get_filenames(dispatch: AppDispatch) {
   dispatch(setStatus({
     type: "get_filenames",
     value: true,
+    message: "Fetching filenames"
   }));
   
   fetch(`${BACKEND_ENDPOINT}/get_filenames`, {
