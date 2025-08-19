@@ -9,7 +9,7 @@ from typing import Optional
 import celltypist as ct
 
 from celery.result import AsyncResult
-from worker import compute_rgg_dotplot, compute_nldr, compute_ldr, compute_clustering, compute_celltypist_annotations
+from worker import compute_rgg_dotplot, compute_nldr, compute_ldr, compute_clustering, compute_celltypist_annotations, compute_save_file_as
 
 import os
 import logging
@@ -287,6 +287,29 @@ async def start_task_compute_celltypist_annotations(
     return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
   
   task = compute_celltypist_annotations.delay(file_path, annotation_key, connectivities_key, annotation_model)
+  
+  return JSONResponse(content={
+    "task_id": task.id
+  })
+  
+@app.post("/start_task_compute_save_file_as/", tags=["WORKFLOW"])
+async def start_task_compute_save_file_as(
+  file_id: str = Form(...),
+  new_file_id: str = Form(...),
+  selected_obs: str = Form(...),
+  selected_obs_clusters: list[str] = Form(...),
+):
+  
+  file_path = os.path.join(UPLOAD_DIR, file_id)
+  new_file_path = os.path.join(UPLOAD_DIR, new_file_id)
+  
+  if (not os.path.exists(file_path)):
+    return JSONResponse(content=f"File ID '{file_id}' is not valid.")
+  
+  if (not file_path.endswith(".h5ad")):
+    return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
+  
+  task = compute_save_file_as.delay(file_path, new_file_path, selected_obs, selected_obs_clusters)
   
   return JSONResponse(content={
     "task_id": task.id

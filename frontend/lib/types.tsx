@@ -121,6 +121,7 @@ export const fetchOptions = [
   "get_clustering",
   "get_celltypist_annotations",
   "get_model_types",
+  "save_file_as",
 ] as const;
 
 export type statusOptions = {

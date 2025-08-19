@@ -4,12 +4,16 @@ import ListSelectedObservations from "../controls/ListSelectedObservations";
 import { useState } from "react";
 import DialogFileSelctor from "../modals/DialogFileSelector";
 import ButtonSecondary from "../custom/ButtonSecondary";
-
-
+import DialogFileSaver from "../modals/DialogFileSaver";
+import CurrentProgress from "../OverlayCurrentProgress";
+import { useAppSelector } from "@/lib/redux/hooks/hooks";
 
 export default function ScreenManageAnnData() {
   
+  const status = useAppSelector((state) => state.plotReducer.status.save_file_as)
+  
   const [isFileSelectorOpen, setIsFileSelectorOpen] = useState(false);
+  const [isFileSaverOpen, setIsFileSaverOpen] = useState(false);
   
   return (
     <Grid
@@ -49,8 +53,7 @@ export default function ScreenManageAnnData() {
 
         <ButtonSecondary
           title="Save File as"
-          onClick={() => setIsFileSelectorOpen(true)}
-          disabled
+          onClick={() => setIsFileSaverOpen(true)}
           sx={{
             borderBottom: "1px solid grey",
           }}
@@ -60,7 +63,12 @@ export default function ScreenManageAnnData() {
           isOpen={isFileSelectorOpen}
           setIsOpen={setIsFileSelectorOpen}
         />
-        
+
+        <DialogFileSaver
+          isOpen={isFileSaverOpen}
+          setIsOpen={setIsFileSaverOpen}
+        />
+
         {/* TODO: ADD SOMETHING HERE */}
       </Grid>
 
@@ -96,6 +104,9 @@ export default function ScreenManageAnnData() {
           p: 1,
         }}
       >
+        
+        { status.inProgress ? <CurrentProgress status={status} /> : <></> }
+        
         {/* TODO: ADD SOMETHING HERE */}
       </Grid>
     </Grid>

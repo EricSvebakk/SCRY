@@ -23,6 +23,7 @@ import { theme } from "@/app/layout";
 import { get_filenames } from "@/lib/fetch/get_filenames";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { useRouter } from "next/navigation";
+import { reset } from "@/lib/redux/reducers/plotReducer";
 
 function formatFileSize(value: number) {
   if (value === 0) {
@@ -55,7 +56,7 @@ export default function DialogFileSelctor(props: {
   
   useEffect(() => {
     get_filenames(dispatch);
-  }, [])
+  }, [filenames.length])
 
   return (
     <Dialog
@@ -158,7 +159,10 @@ export default function DialogFileSelctor(props: {
                           <Button
                             variant="contained"
                             disabled={e.id === activeFile}
-                            onClick={() => { router.push("/files/" + e.id); }}
+                            onClick={() => { 
+                              dispatch(reset(true));
+                              router.push("/files/" + e.id);
+                             }}
                           >
                             Open
                           </Button>

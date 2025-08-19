@@ -59,7 +59,22 @@ def end_progress(task):
     state="PROGRESS",
     meta=meta
   )
+
+def simple_update_progress(task, status: str):
   
+  meta = {
+    "current": 1,
+    "total": 1,
+    "step": status,
+    "status": "Status: " + status
+  }
+    
+  task.update_state(
+    state="PROGRESS",
+    meta=meta
+  )
+  
+
 def update_progress(task, step_index: int, steps: list[str]):
   total = len(steps)
   
@@ -445,6 +460,31 @@ def compute_rgg_dotplot(
   adata.file.close()  
   
   return results
+
+@celery_app.task(bind=True)
+def compute_save_file_as(
+  self,
+  file_path: str,
+  new_file_path: str,
+  selected_obs: str,
+  selected_obs_clusters: list[str],
+):
+  
+  simple_update_progress(self, "Opening AnnData object")
+  
+  adata = sc.read_h5ad(file_path)
+  
+  simple_update_progress(self, "Slicing object using selected clusters")
+
+  adata_subset = adata[adata.obs[selected_obs].isin(selected_obs_clusters), :]
+  
+  simple_update_progress(self, "Saving slice as new file")
+  
+  sc.write(new_file_path, adata_subset)
+  
+  adata.file.close()
+  
+  return True
   
 # ============================================================================================
 @celery_app.task(bind=True)
