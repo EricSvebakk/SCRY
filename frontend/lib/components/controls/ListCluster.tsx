@@ -39,7 +39,7 @@ export function ListCluster() {
   }, [obs.indices, selectedClusters]);
 
   useEffect(() => {
-    if (obs.indices) {
+    if (obs.indices && selectedClusters.length === 0) {
       dispatch(setSelectedClusters(obs.indices.categories));
     }
   }, [obs.indices]);

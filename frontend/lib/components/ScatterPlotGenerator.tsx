@@ -21,6 +21,7 @@ const ScatterPlotGenerator = (props: {
   groupRefs: HTMLCanvasElement[];
   indices: AnndataIndices | undefined;
   coordinates: number[][];
+  selectedClusters: string[];
   dispatch: Function;
   imageTrigger: any | null;
 }) => {
@@ -140,7 +141,14 @@ const ScatterPlotGenerator = (props: {
       .domain(d3.extent(coordinates, (d: number[]) => d[1]) as [number, number])
       .range([imageHeight - paddingHeight, paddingHeight]);
 
+    // console.log(labels, props.selectedClusters)
+      
     labels.forEach((label, labelIndex) => {
+      
+      if (!props.selectedClusters.includes(label)) {
+        return;
+      }
+      
       labelMap.map((labelPosition, positionIndex) => {
         if (labelPosition !== labelIndex) return;
 

@@ -13,6 +13,7 @@ export function ScatterPlot() {
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
   const imageTrigger = useAppSelector((state) => state.plotReducer.navigation.triggers.saveScatterPlotImage);
   const status = useAppSelector((state) => state.plotReducer.status.get_embedding);
+  const selectedCluster = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);
   
   const [counter, setCounter] = useState(0);
   const dispatch = useAppDispatch();
@@ -30,6 +31,7 @@ export function ScatterPlot() {
         groupRefs: groupRefs.current,
         indices: obs.indices,
         coordinates: obsm.data,
+        selectedClusters: selectedCluster,
         dispatch: dispatch,
         imageTrigger: imageTrigger,
       });
