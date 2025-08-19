@@ -4,7 +4,8 @@ import { Button, SxProps, Theme } from "@mui/material";
 type ButtonSecondaryType = {
   title: string;
   onClick: Function;
-  sx?: SxProps<Theme>
+  sx?: SxProps<Theme>;
+  disabled?: boolean;
 }
 
 export default function ButtonSecondary(props: ButtonSecondaryType) {
@@ -15,6 +16,7 @@ export default function ButtonSecondary(props: ButtonSecondaryType) {
       size="small"
       variant="contained"
       color="secondary"
+      disabled={props.disabled ? props.disabled : false}
       sx={{
         color: theme.palette.text.secondary,
         overflowX: "clip",

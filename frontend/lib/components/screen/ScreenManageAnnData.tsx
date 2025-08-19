@@ -1,17 +1,15 @@
-import { useAppSelector } from "@/lib/redux/hooks/hooks";
+
 import { Grid } from "@mui/material";
-import CurrentProgress from "../OverlayCurrentProgress";
-import { DotPlot } from "../DotPlot";
-import ListRanking from "../controls/ListRanking";
-import ListTableData from "../controls/ListTableData";
+import ListSelectedObservations from "../controls/ListSelectedObservations";
+import { useState } from "react";
+import DialogFileSelctor from "../modals/DialogFileSelector";
+import ButtonSecondary from "../custom/ButtonSecondary";
+
+
 
 export default function ScreenManageAnnData() {
   
-  const statusHierarchy = useAppSelector((state) => state.plotReducer.status.get_file_hierarchy);  
-  
-  if (statusHierarchy.inProgress) {
-    return <CurrentProgress status={statusHierarchy} />;
-  }
+  const [isFileSelectorOpen, setIsFileSelectorOpen] = useState(false);
   
   return (
     <Grid
@@ -21,13 +19,56 @@ export default function ScreenManageAnnData() {
       sx={{
         height: "100%",
         width: "100%",
+        maxHeight: "100%",
+        overflow: "hidden",
       }}
     >
       <Grid
         item
+        width={200}
+        sx={{
+          border: "1px solid grey",
+        }}
+      >
+        <ButtonSecondary
+          title="Open File"
+          onClick={() => setIsFileSelectorOpen(true)}
+          sx={{
+            borderBottom: "1px solid grey",
+          }}
+        />
+
+        <ButtonSecondary
+          title="Merge with file"
+          onClick={() => setIsFileSelectorOpen(true)}
+          disabled
+          sx={{
+            borderBottom: "1px solid grey",
+          }}
+        />
+
+        <ButtonSecondary
+          title="Save File as"
+          onClick={() => setIsFileSelectorOpen(true)}
+          disabled
+          sx={{
+            borderBottom: "1px solid grey",
+          }}
+        />
+
+        <DialogFileSelctor
+          isOpen={isFileSelectorOpen}
+          setIsOpen={setIsFileSelectorOpen}
+        />
+        
+        {/* TODO: ADD SOMETHING HERE */}
+      </Grid>
+
+      <Grid
+        item
         container
         direction="column"
-        width={250}
+        width={400}
         rowGap={1}
         sx={{
           height: "100%",
@@ -41,18 +82,7 @@ export default function ScreenManageAnnData() {
             border: "1px solid grey",
           }}
         >
-          {/* <ListRanking /> */}
-        </Grid>
-
-        <Grid
-          item
-          xs
-          width="100%"
-          sx={{
-            border: "1px solid grey",
-          }}
-        >
-          {/* <ListTableData /> */}
+          <ListSelectedObservations />
         </Grid>
       </Grid>
 
@@ -62,9 +92,11 @@ export default function ScreenManageAnnData() {
         sx={{
           height: "100%",
           border: "1px solid grey",
+          backgroundColor: "white",
+          p: 1,
         }}
       >
-        {/* <DotPlot /> */}
+        {/* TODO: ADD SOMETHING HERE */}
       </Grid>
     </Grid>
   );

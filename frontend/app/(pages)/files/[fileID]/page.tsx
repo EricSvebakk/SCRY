@@ -37,9 +37,15 @@ export default function FileIdPage({}) {
 
   const dispatch = useAppDispatch();
 
-  const [selectedScreen, setSelectedScreen] = useState<number>(0);
+  const [selectedScreen, setSelectedScreen] = useState<number>(1);
   
   const screens: Screen[] = [
+    {
+      label: "Manage AnnData",
+      id: "table",
+      component: <ScreenManageAnnData />,
+      icon: <Tune />,
+    },
     {
       label: "Dimensional Reduction",
       id: "scatterplot",
@@ -52,22 +58,16 @@ export default function FileIdPage({}) {
       component: <ScreenDifferentialGeneExpression />,
       icon: <ViewCompact />,
     },
-    {
-      label: "Manage AnnData",
-      id: "table",
-      component: <ScreenManageAnnData />,
-      icon: <Tune />,
-    },
   ];
 
   useEffect(() => {
     
     // console.log(typeof fileID, status);
-
+    
     if (typeof fileID === "string") {
       dispatch(setActiveFile(fileID));
       
-      setSelectedScreen(0);
+      setSelectedScreen(1);
       
       if (!status.get_file_hierarchy.inProgress) {
         get_file_hierarchy(fileID, dispatch);
