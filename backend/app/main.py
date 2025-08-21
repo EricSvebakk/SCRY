@@ -7,6 +7,7 @@ from pathlib import Path
 from math import ceil, log10
 from typing import Optional
 import celltypist as ct
+import scanpy as sc
 
 from celery.result import AsyncResult
 from worker import compute_rgg_dotplot, compute_nldr, compute_ldr, compute_clustering, compute_celltypist_annotations, compute_save_file_as
@@ -121,7 +122,7 @@ async def get_file_obs(file_id: str, obs: str):
   obj = "Something went wrong while fetching obs"
   
   if (not os.path.exists(file_path)):
-    return JSONResponse(content=f"File ID '{file_id}' is not a valid.")
+    return JSONResponse(content=f"File ID '{file_id}' does not exist.")
   
   if (file_path.endswith(".zarr")):
     obj = zu.get_zarr_file_obs(file_path, obs)
@@ -141,7 +142,7 @@ async def get_file_obsm(file_id: str, obsm: str):
   obj = "Something went wrong while fetching obs"
   
   if (not os.path.exists(file_path)):
-    return JSONResponse(content=f"File ID '{file_id}' is not a valid.")
+    return JSONResponse(content=f"File ID '{file_id}' does not exist.")
   
   if (file_path.endswith(".zarr")):
     obj = zu.get_zarr_file_obsm(file_path, obsm)
@@ -163,12 +164,32 @@ async def get_genes(
   obj = "Something went wrong while generating leiden"
   
   if (not os.path.exists(file_path)):
-    return JSONResponse(content=f"File ID '{file_id}' is not a valid.")
+    return JSONResponse(content=f"File ID '{file_id}' does not exist.")
   
   if (file_path.endswith(".h5ad")):
     obj = au.get_genes_h5ad(file_path)
   
   return JSONResponse(content=obj)
+
+@app.get("/get_feature_coordinates", tags=["ANNDATA"])
+async def get_feature_coordinates(
+  file_id: str,
+  feature_key: str,
+):
+  
+  file_path = os.path.join(UPLOAD_DIR, file_id)
+  obj = "Something went wrong while generating leiden"
+  
+  if (not os.path.exists(file_path)):
+    return JSONResponse(content=f"File ID '{file_id}' does not exist.")
+  
+  if (not file_path.endswith(".h5ad")):
+    return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
+  
+  obj = au.get_anndata_feature_indices(file_path, feature_key)
+  
+  return JSONResponse(content=obj)
+  
 
 # ============================================================================================
 @app.get("/get_model_types", tags=["CELLTYPIST"])

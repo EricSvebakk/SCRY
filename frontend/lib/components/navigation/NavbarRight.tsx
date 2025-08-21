@@ -1,14 +1,31 @@
 
-import { Box, Button, Collapse, Grid, Stack, SxProps, Typography } from "@mui/material";
-import React, { useRef, useState } from "react";
+import { Autocomplete, Box, Button, Collapse, createFilterOptions, Grid, Stack, SxProps, TextField, Typography } from "@mui/material";
+import React, { useEffect, useRef, useState } from "react";
 import { theme } from "@/app/layout";
-import { GroupWork, Height } from "@mui/icons-material";
+import { GroupWork } from "@mui/icons-material";
+import { FeatureScatterPlot } from "../plots/FeatureScatterPlot";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
+import { AutocompleteOption } from "@/lib/types";
+import { get_feature_coordinates } from "@/lib/fetch/get_feature_coordinates";
+import { LoadingButton } from "@mui/lab";
 
 
-export default function NavbarRight(props: {
-}) {
+export default function NavbarRight() {
   
+  const fileID = useAppSelector((state) => state.fileReducer.activeFile);  
+  const genes = useAppSelector((state) => state.plotReducer.data.genes);
+  const status = useAppSelector((state) => state.plotReducer.status.get_feature_coordinates);
+  
+  const ref = useRef();
+  const dispatch = useAppDispatch();  
+  
+
   const [open, setOpen] = useState(false);
+  const [selectedGene, setSelectedGene] = useState<AutocompleteOption | null>(null);  
+  const [geneOptionsFiltered, setGeneOptionsFiltered] = useState<AutocompleteOption[]>([]);
+    
+  const unsFilterOptions = createFilterOptions({ limit: 20 });
+  
   
   const navItemProps = (isOpen: boolean, index: number | null = null) => {
     return {
@@ -28,11 +45,19 @@ export default function NavbarRight(props: {
     } as SxProps;
   };
   
-  const ref = useRef();
+  
+    useEffect(() => {
+      if (genes) {
+        const genesStructuredOptions: AutocompleteOption[] = genes.map(
+          (e, i) => ({ label: e, id: i })
+        );
+  
+        setGeneOptionsFiltered(genesStructuredOptions);
+      }
+    }, [genes]);
   
   return (
     <Box
-      // direction="row"
       height="100%"
     >
       <Collapse
@@ -45,52 +70,88 @@ export default function NavbarRight(props: {
           right: 85,
           top: 0,
           height: "100%",
-          zIndex: 500
+          zIndex: 500,
         }}
       >
         <Stack
           direction="column"
           height="100%"
           width={300}
+          rowGap={1}
           sx={{
-            // p: 1,
+            p: 1,
             borderLeft: "1px solid grey",
-            backgroundColor: "white",
+            backgroundColor: theme.palette.primary.main,
             // boxShadow: 2
             WebkitBoxShadow: "-1px 0 2px -1px #000000",
             boxShadow: "-1px 0 2px -1px #000000",
           }}
         >
-          <Box
-            sx={{
-              p: 1,
-              backgroundColor: theme.palette.secondary.main,
-              height: theme.typography.fontSize,
-              borderBottom: "1px solid grey"
-            }}
-          />
-          
+          <FeatureScatterPlot />
+
           <Stack
             direction="column"
+            rowGap={1}
             sx={{
-              p: 1
+              border: "1px solid grey",
+              p: 1,
+              pt: 2,
+              backgroundColor: theme.palette.background.paper,
             }}
           >
-            <Typography>Please select a gene from the DE dotplot.</Typography>
-          </Stack>
-          
-          
-          {/* <Button
-            fullWidth
-            sx={navItemProps(false)}
-            onClick={() => {
-              setOpen(!open);
-            }}
-          >
-            hello
-          </Button> */}
-        </Stack>
+            <Autocomplete
+              disabled={genes.length === 0}
+              size="small"
+              fullWidth
+              value={selectedGene}
+              options={geneOptionsFiltered}
+              isOptionEqualToValue={(option, value) =>
+                (option as AutocompleteOption).id ===
+                (value as AutocompleteOption).id
+              }
+              onChange={(event: any, value: any, reason, details) => {
+                const selectedOption = details?.option as any;
 
+                if (reason === "selectOption") {
+                  setSelectedGene(selectedOption);
+                } else if (reason === "removeOption") {
+                  setSelectedGene(null);
+                } else if (reason === "clear") {
+                  setSelectedGene(null);
+                }
+              }}
+              filterOptions={unsFilterOptions}
+              noOptionsText="No matching gene"
+              renderInput={(params) => {
+                return (
+                  <TextField
+                    {...params}
+                    label="Select gene"
+                    placeholder="gene"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                );
+              }}
+            />
+
+            <LoadingButton
+              variant="outlined"
+              size="medium"
+              loading={status.inProgress}
+              onClick={() => {
+                if (selectedGene) {
+                  get_feature_coordinates(
+                    fileID as string,
+                    selectedGene.label,
+                    dispatch
+                  );
+                }
+              }}
+            >
+              Fetch feature data
+            </LoadingButton>
+          </Stack>
+        </Stack>
       </Collapse>
 
       <Grid
@@ -100,13 +161,13 @@ export default function NavbarRight(props: {
         height="100%"
         overflow="clip"
         sx={{
-          zIndex: 1200
+          zIndex: 1200,
         }}
       >
         <Grid item height={70}>
           <Button
             fullWidth
-            sx={navItemProps(false)}
+            sx={navItemProps(open)}
             onClick={() => {
               setOpen(!open);
             }}

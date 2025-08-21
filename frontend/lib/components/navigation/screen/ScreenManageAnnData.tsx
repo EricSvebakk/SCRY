@@ -1,11 +1,11 @@
 
 import { Grid } from "@mui/material";
-import ListSelectedObservations from "../controls/ListSelectedObservations";
+import ListSelectedObservations from "../../controls/ListSelectedObservations";
 import { useState } from "react";
-import DialogFileSelctor from "../modals/DialogFileSelector";
-import ButtonSecondary from "../custom/ButtonSecondary";
-import DialogFileSaver from "../modals/DialogFileSaver";
-import CurrentProgress from "../OverlayCurrentProgress";
+import DialogFileSelctor from "../../modals/DialogFileSelector";
+import ButtonSecondary from "../../custom/ButtonSecondary";
+import DialogFileSaver from "../../modals/DialogFileSaver";
+import CurrentProgress from "../../OverlayCurrentProgress";
 import { useAppSelector } from "@/lib/redux/hooks/hooks";
 
 export default function ScreenManageAnnData() {

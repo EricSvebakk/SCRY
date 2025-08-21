@@ -85,6 +85,32 @@ def get_anndata_file_obsm(file_path: str, selectedObsm: str) -> dict[str, object
   except:
     return -1
 
+def get_anndata_feature_indices(file_path: str, feature_key: str):
+  
+  adata = sc.read_h5ad(file_path)
+  
+  if (feature_key in adata.var.index):
+    
+    expr = np.ravel(
+      adata[:, feature_key].X.toarray() 
+      if not isinstance(adata[:, feature_key].X, np.ndarray) 
+      else adata[:, feature_key].X
+    )
+    
+    mask = expr > 0
+    
+    indices = np.where(mask)[0]
+    values = expr[mask]
+    
+    return {
+      "categories": values.tolist(),  
+      "codes": indices.tolist(),
+    }
+  
+  else:
+    return -1
+  
+
 def build_dendrogram_tree(linkage_matrix, labels: list[str]):
   
   tree, nodes = to_tree(linkage_matrix, rd=True)

@@ -2,11 +2,11 @@
 import { Box, Stack, Typography } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import DotPlotGenerator from "./DotPlotGenerator";
-import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
-import CurrentProgress from "./OverlayCurrentProgress";
+import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
+import CurrentProgress from "../OverlayCurrentProgress";
 import { theme } from "@/app/layout";
-import { ImageSavingPopover } from "./modals/ImageSavingPopover";
-import { DotPlotConfigurationPopover } from "./modals/DotPlotConfigurationPopover";
+import { ImageSavingPopover } from "../modals/ImageSavingPopover";
+import { DotPlotConfigurationPopover } from "../modals/DotPlotConfigurationPopover";
 
 export function DotPlot() {
 

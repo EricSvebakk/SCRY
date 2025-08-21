@@ -38,7 +38,7 @@ export type AnndataAttributeFields<T> = {
 };
 
 export type AnndataIndices = {
-  categories: string[];
+  categories: string[] | number[];
   codes: number[];
 };
 
@@ -121,6 +121,7 @@ export const fetchOptions = [
   "get_clustering",
   "get_celltypist_annotations",
   "get_model_types",
+  "get_feature_coordinates",
   "save_file_as",
 ] as const;
 

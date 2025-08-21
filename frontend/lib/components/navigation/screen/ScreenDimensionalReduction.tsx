@@ -1,9 +1,9 @@
 import { Grid } from "@mui/material";
-import ListEmbeddings from "../controls/ListEmbeddings";
-import ListClusterings from "../controls/ListClusterings";
-import { ScatterPlot } from "@/lib/components/ScatterPlot";
-import { ListCluster } from "../controls/ListCluster";
-import ListConnectivities from "../controls/ListConnectivities";
+import ListEmbeddings from "../../controls/ListEmbeddings";
+import ListClusterings from "../../controls/ListClusterings";
+import { ClusterScatterPlot } from "@/lib/components/plots/ClusterScatterPlot";
+import { ListCluster } from "../../controls/ListCluster";
+import ListConnectivities from "../../controls/ListConnectivities";
 
 export default function ScreenDimensionalReduction() {
 
@@ -68,7 +68,7 @@ export default function ScreenDimensionalReduction() {
           item
           xs
         >
-          <ScatterPlot />
+          <ClusterScatterPlot />
         </Grid>
 
         <Grid

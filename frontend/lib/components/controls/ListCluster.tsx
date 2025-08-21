@@ -1,6 +1,6 @@
 import { Box, Button, Checkbox, Grid, Stack, Typography } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
-import { my_colors } from "../ScatterPlotGenerator";
+import { my_colors } from "../plots/ClusterScatterPlotGenerator";
 import { AnndataIndices } from "../../types";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { setSelectedClusters } from "@/lib/redux/reducers/plotReducer";
@@ -22,7 +22,7 @@ export function ListCluster() {
 
   useEffect(() => {
     if (obs.indices) {
-      obs.indices.categories.forEach((label_temp, index_other) => {
+      (obs.indices.categories as string[]).forEach((label_temp: string, index_other) => {
         const otherCanvas = document.getElementById("points_" + label_temp);
 
         if (otherCanvas === null) {
@@ -40,7 +40,7 @@ export function ListCluster() {
 
   useEffect(() => {
     if (obs.indices && selectedClusters.length === 0) {
-      dispatch(setSelectedClusters(obs.indices.categories));
+      dispatch(setSelectedClusters(obs.indices.categories as string[]));
     }
   }, [obs.indices]);
 
@@ -68,7 +68,7 @@ export function ListCluster() {
           title="Show all"
           onClick={() => {
             if (obs.indices) {
-              dispatch(setSelectedClusters(obs.indices?.categories));
+              dispatch(setSelectedClusters(obs.indices?.categories as string[]));
             }
           }}
         />
@@ -95,7 +95,7 @@ export function ListCluster() {
             // border: "1px solid green",
           }}
         >
-          {obs.indices?.categories.map((label, i) => {
+          {(obs.indices?.categories as string[])?.map((label, i) => {
             let label_color = my_colors[i % my_colors.length];
 
             return (

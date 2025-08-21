@@ -1,9 +1,9 @@
 import { useAppSelector } from "@/lib/redux/hooks/hooks";
 import { Grid } from "@mui/material";
-import CurrentProgress from "../OverlayCurrentProgress";
-import { DotPlot } from "../DotPlot";
-import ListTableData from "../controls/ListTableData";
-import ListRanking from "../controls/ListRanking";
+import CurrentProgress from "../../OverlayCurrentProgress";
+import { DotPlot } from "../../plots/DotPlot";
+import ListTableData from "../../controls/ListTableData";
+import ListRanking from "../../controls/ListRanking";
 
 export default function ScreenDifferentialGeneExpression() {
   

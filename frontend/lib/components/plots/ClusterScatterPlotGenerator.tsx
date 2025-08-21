@@ -1,8 +1,8 @@
 
 
 import * as d3 from "d3";
-import { AnndataIndices } from "../types";
-import { setTrigger } from "../redux/reducers/plotReducer";
+import { AnndataIndices } from "../../types";
+import { setTrigger } from "../../redux/reducers/plotReducer";
 
 export const my_colors = [
   "#1f77b4",
@@ -16,15 +16,17 @@ export const my_colors = [
   "#17becf",
 ];
 
-const ScatterPlotGenerator = (props: {
+const ClusterScatterPlotGenerator = (props: {
   svgCurrent: HTMLCanvasElement;
   groupRefs: HTMLCanvasElement[];
   indices: AnndataIndices | undefined;
   coordinates: number[][];
   selectedClusters: string[];
+  // attr: "var" | "obs";
   dispatch: Function;
   imageTrigger: any | null;
 }) => {
+  
   const containerRect = props.svgCurrent.getBoundingClientRect();
   const height = containerRect.height;
   const width = containerRect.width;
@@ -35,33 +37,10 @@ const ScatterPlotGenerator = (props: {
   const paddingRatio = 24;
   const paddingWidth = canvasWidth / paddingRatio;
   const paddingHeight = canvasHeight / paddingRatio;
-
-  let labels = props.indices ? props.indices.categories : ["none"];
-  let labelMap = props.indices
-    ? props.indices.codes
-    : props.coordinates.map((e) => 0);
-  let colorScheme = props.indices ? my_colors : ["black"];
+  
   let coordinates = props.coordinates;
-
-  let labelSizeMap: { [key: string]: number } = {};
-
-  props.indices?.categories.forEach((e: string) => {
-    labelSizeMap[e] = 0;
-  });
-
-  props.indices?.codes.forEach((f: number) => {
-    const labelIndex = props.indices?.categories[f]!;
-    labelSizeMap[labelIndex]++;
-  });
-
-  // props.dispatch(setLabelSize(labelSizeMap))
-
   const pointSize = 3.5 - 0.5 * Math.log10(coordinates.length);
 
-  const colorScale = d3
-    .scaleOrdinal<string>()
-    .domain(labels)
-    .range(colorScheme);
 
   const xScale = d3
     .scaleLinear()
@@ -73,13 +52,60 @@ const ScatterPlotGenerator = (props: {
     .domain(d3.extent(coordinates, (d: number[]) => d[1]) as [number, number])
     .range([height - paddingHeight, paddingHeight]);
 
-  const svgContext = d3
-    .select(props.svgCurrent)
-    .append("svg")
-    .attr("id", "herewego")
-    .attr("width", width)
-    .attr("height", height);
+  // const svgContext = d3
+  //   .select(props.svgCurrent)
+  //   .append("svg")
+  //   .attr("id", "herewego")
+  //   .attr("width", width)
+  //   .attr("height", height);
 
+  let labels = props.indices
+    ? (props.indices.categories as string[])
+    : ["none"];
+  let labelMap = props.indices
+    ? props.indices.codes
+    : props.coordinates.map((e) => 0);
+    
+  let colorScheme = props.indices ? my_colors : ["black"];
+
+  let labelSizeMap: { [key: string]: number } = {};
+
+  props.indices?.categories.forEach((e: string | number) => {
+    labelSizeMap[e] = 0;
+  });
+
+  props.indices?.codes.forEach((f: number) => {
+    const labelIndex = props.indices?.categories[f]!;
+    labelSizeMap[labelIndex]++;
+  });
+
+  const colorScale = d3
+    .scaleOrdinal<string>()
+    .domain(labels)
+    .range(colorScheme)
+  
+  // const svgContext: CanvasRenderingContext2D = props.svgCurrent.getContext("2d")!
+    
+  // svgContext.canvas.width = width;
+  // svgContext.canvas.height = height;
+  // svgContext.canvas.style.width = (width * 30).toString();
+  // svgContext.canvas.style.height = (height * 30).toString();
+  
+  // coordinates.forEach((e, i) => {
+  //   svgContext.beginPath();
+  //   svgContext.arc(
+  //     xScale(e[0]),
+  //     yScale(e[1]),
+  //     pointSize * 1,
+  //     0,
+  //     2 * Math.PI
+  //   );
+
+  //   svgContext.fillStyle = "#888";
+  //   svgContext.fill();
+  //   svgContext.closePath();
+  // });
+    
   labels.forEach((label, labelIndex) => {
     const someContext: CanvasRenderingContext2D =
       props.groupRefs[labelIndex].getContext("2d")!;
@@ -102,24 +128,25 @@ const ScatterPlotGenerator = (props: {
         0,
         2 * Math.PI
       );
-      
+
       someContext.fillStyle =
         labels.length > 0
-          ? colorScale(labels[labelMap[positionIndex]])
+          ? (colorScale as d3.ScaleOrdinal<string, string>)(labels[labelMap[positionIndex]])
           : "black";
+      
       someContext.fill();
       someContext.closePath();
-      
     });
   });
-
+  
+  
   if (!!props.imageTrigger) {
     const scale = 3;
 
     // const imageWidth = 1584 * scale;
     // const imageHeight = 396 * scale;
-    const imageWidth = width * scale;
-    const imageHeight = height * scale;
+    const imageWidth = 1000 * scale;
+    const imageHeight = 1000 * scale;
 
     const finalCanvas = document.createElement("canvas");
     finalCanvas.width = imageWidth;
@@ -128,7 +155,7 @@ const ScatterPlotGenerator = (props: {
     const finalCtx = finalCanvas.getContext("2d")!;
     finalCtx.imageSmoothingEnabled = true;
 
-    finalCtx.fillStyle = "white";
+    finalCtx.fillStyle = "black";
     finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
     const scaledxScale = d3
@@ -143,6 +170,21 @@ const ScatterPlotGenerator = (props: {
 
     // console.log(labels, props.selectedClusters)
       
+    coordinates.forEach((e, i) => {
+      finalCtx.beginPath();
+      finalCtx.arc(
+        scaledxScale(e[0]),
+        scaledyScale(e[1]),
+        pointSize * 2,
+        0,
+        2 * Math.PI
+      );
+
+      finalCtx.fillStyle = "#888";
+      finalCtx.fill();
+      finalCtx.closePath();
+    });
+    
     labels.forEach((label, labelIndex) => {
       
       if (!props.selectedClusters.includes(label)) {
@@ -164,7 +206,7 @@ const ScatterPlotGenerator = (props: {
         );
         finalCtx.fillStyle =
           labels.length > 0
-            ? colorScale(labels[labelMap[positionIndex]])
+            ? (colorScale as d3.ScaleOrdinal<string, string>)(labels[labelMap[positionIndex]])
             : "black";
         finalCtx.fill();
         finalCtx.closePath();
@@ -179,10 +221,20 @@ const ScatterPlotGenerator = (props: {
 
     props.dispatch(setTrigger({ type: "saveScatterPlotImage", value: null }));
   }
+  
+  
+  
+  
+  // else {
+    
+  // }
+
+    
+
 
   return () => {
-    svgContext.remove();
+    // svgContext.remove();
   };
 };
 
-export default ScatterPlotGenerator;
+export default ClusterScatterPlotGenerator;

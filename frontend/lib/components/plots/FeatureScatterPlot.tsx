@@ -1,15 +1,17 @@
 
-import { Box, Stack, Typography } from "@mui/material";
-import ScatterPlotGenerator from "./ScatterPlotGenerator";
-import { useEffect, useRef, useState } from "react";
-import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
-import CurrentProgress from "./OverlayCurrentProgress";
-import { theme } from "@/app/layout";
-import { ImageSavingPopover } from "./modals/ImageSavingPopover";
 
-export function ScatterPlot() {
+import { Box, Stack, Typography } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
+import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
+import CurrentProgress from "../OverlayCurrentProgress";
+import { theme } from "@/app/layout";
+import { ImageSavingPopover } from "../modals/ImageSavingPopover";
+import FeatureScatterPlotGenerator from "./FeatureScatterPlotGenerator";
+
+export function FeatureScatterPlot() {
   
-  const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
+  const vars = useAppSelector((state) => state.plotReducer.anndata.var);
+  
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
   const imageTrigger = useAppSelector((state) => state.plotReducer.navigation.triggers.saveScatterPlotImage);
   const status = useAppSelector((state) => state.plotReducer.status.get_embedding);
@@ -26,10 +28,10 @@ export function ScatterPlot() {
     
     if (obsm.data && svgRef.current && groupRefs.current.length !== 0) {
       
-      cleanUpFunction = ScatterPlotGenerator({
+      cleanUpFunction = FeatureScatterPlotGenerator({
         svgCurrent: svgRef.current,
         groupRefs: groupRefs.current,
-        indices: obs.indices,
+        indices: vars.indices,
         coordinates: obsm.data,
         selectedClusters: selectedCluster,
         dispatch: dispatch,
@@ -40,10 +42,10 @@ export function ScatterPlot() {
     return cleanUpFunction;
     
   }, [
-    obs,
+    vars,
     obsm,
     imageTrigger,
-    counter
+    counter,
   ]);
   
   const updateCounter = () => {
@@ -59,11 +61,11 @@ export function ScatterPlot() {
     <Stack
       direction="column"
       sx={{
-        height: "98vh",
+        height: "30vh",
         width: "100%",
         backgroundColor: theme.palette.background.paper,
         border: "1px solid grey",
-        borderRight: "none",
+        // borderRight: "none",
       }}
     >
       <Stack
@@ -85,43 +87,21 @@ export function ScatterPlot() {
       ) : (
         <Stack direction="row" position="relative" height="100%" width="100%">
           {obsm.data ? (
-            obs.indices ? (
-              obs.indices.categories.map((e, i) => {
-                return (
-                  <Box
-                    component="canvas"
-                    key={"points_" + e}
-                    id={"points_" + e}
-                    height="100%"
-                    width="100%"
-                    style={{
-                      position: "absolute",
-                    }}
-                    ref={(el: HTMLCanvasElement | null) => {
-                      if (el) {
-                        groupRefs.current[i] = el!;
-                      }
-                    }}
-                  />
-                );
-              })
-            ) : (
-              <Box
-                component="canvas"
-                key={"points_single"}
-                id={"points_single"}
-                height="100%"
-                width="100%"
-                style={{
-                  position: "absolute",
-                }}
-                ref={(el: HTMLCanvasElement | null) => {
-                  if (el) {
-                    groupRefs.current[0] = el!;
-                  }
-                }}
-              />
-            )
+            <Box
+              component="canvas"
+              key={"points_gene"}
+              id={"points_gene"}
+              height="100%"
+              width="100%"
+              style={{
+                position: "absolute",
+              }}
+              ref={(el: HTMLCanvasElement | null) => {
+                if (el) {
+                  groupRefs.current[0] = el!;
+                }
+              }}
+            />
           ) : (
             <></>
           )}
@@ -144,7 +124,7 @@ export function ScatterPlot() {
             <></>
           )}
 
-          <Box
+          {/* <Box
             component="svg"
             sx={{
               position: "relative",
@@ -154,7 +134,7 @@ export function ScatterPlot() {
             }}
             id="svgHere"
             ref={svgRef}
-          />
+          /> */}
         </Stack>
       )}
     </Stack>

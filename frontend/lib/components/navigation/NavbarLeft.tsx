@@ -1,12 +1,8 @@
 
 import { Button, Grid, Stack, SvgIconProps, SxProps, Typography } from "@mui/material";
 import { ReactElement } from "react";
-import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { theme } from "@/app/layout";
 import { tabOptions } from "@/lib/types";
-import { setCurrentTab, setSelectedAttribute } from "@/lib/redux/reducers/plotReducer";
-import { Hub } from "@mui/icons-material";
-import { get_feature_coordinates } from "@/lib/fetch/get_feature_coordinates";
 
 type Screen = {
   label: string;
@@ -20,11 +16,6 @@ export default function NavbarLeft(props: {
   selectedScreen: number;
   setSelectedScreen: Function;
 }) {
-  
-  const fileID = useAppSelector((state) => state.fileReducer.activeFile);
-  const attr = useAppSelector((state) => state.plotReducer.filtering.selected.attribute);
-  
-  const dispatch = useAppDispatch();  
   
   const navItemProps = (isOpen: boolean, index: number | null = null) => {
     return {
@@ -64,7 +55,6 @@ export default function NavbarLeft(props: {
               sx={navItemProps(isOpen, i)}
               onClick={() => {
                 props.setSelectedScreen(i);
-                dispatch(setCurrentTab(e.id));
               }}
             >
               <Stack
@@ -87,52 +77,6 @@ export default function NavbarLeft(props: {
           </Grid>
         );
       })}
-
-      <Grid item height={70}>
-        <Button
-          fullWidth
-          sx={navItemProps(false)}
-          onClick={() => {
-            get_feature_coordinates(fileID as string, "IFI27", dispatch);
-          }}
-        >
-          <Stack
-            direction="column"
-            sx={{
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {<Hub />}
-            <Typography fontSize={theme.typography.subtitle1.fontSize}>
-              click me
-            </Typography>
-          </Stack>
-        </Button>
-      </Grid>
-
-      <Grid item height={70}>
-        <Button
-          fullWidth
-          sx={navItemProps(false)}
-          onClick={() => {
-            dispatch(setSelectedAttribute(attr === "obs" ? "var" : "obs"));
-          }}
-        >
-          <Stack
-            direction="column"
-            sx={{
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {<Hub />}
-            <Typography fontSize={theme.typography.subtitle1.fontSize}>
-              toggle attr
-            </Typography>
-          </Stack>
-        </Button>
-      </Grid>
 
       <Grid
         item

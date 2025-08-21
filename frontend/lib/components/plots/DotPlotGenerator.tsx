@@ -1,9 +1,9 @@
 
 
 import * as d3 from "d3";
-import { DotplotOptions, GDEFields, geneExpressionData } from "../types";
-import { AppDispatch } from "../redux/stores/store";
-import { setGDEField } from "../redux/reducers/plotReducer";
+import { DotplotOptions, GDEFields, geneExpressionData } from "../../types";
+import { AppDispatch } from "../../redux/stores/store";
+import { setGDEField } from "../../redux/reducers/plotReducer";
 
 
 type dotPlotGeneratorProps = {
