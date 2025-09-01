@@ -8,6 +8,7 @@ export type InitialPlotStateProps = {
     }
     genes: string[];
     GDE: GDEFields;
+    geneReport?: geneReport;
   };
   filtering: {
     selected: SelectedFields;
@@ -145,6 +146,19 @@ export type CelltypistModel = {
   model: CelltypistModelType;
   description: string;
 };
+
+export type geneReport = {
+  id: string;
+  symbol: string;
+  description: string;
+  summary: string[];
+  synonyms: string[];
+  source: string;
+  taxonmy: {
+    id: string;
+    name: string;
+  }
+}
 
 // ==== Not related to reducer =============================================================
 

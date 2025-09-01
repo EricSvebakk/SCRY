@@ -11,6 +11,7 @@ import {
   statusAttributes,
   triggerOptions,
   CelltypistModel,
+  geneReport,
 } from "@/lib/types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
@@ -171,6 +172,9 @@ export const plotSlice = createSlice({
       action: PayloadAction<CelltypistModel[]>
     ) => {
       state.data.annotationModels.models = action.payload;
+    },
+    setGeneReport(state, action: PayloadAction<geneReport>) {
+      state.data.geneReport = action.payload;
     }
   },
 });
@@ -187,6 +191,7 @@ export const {
   setCurrentTab,
   setStatus,
   setModelTypes,
+  setGeneReport,
 } = plotSlice.actions;
 
 export default plotSlice.reducer;
