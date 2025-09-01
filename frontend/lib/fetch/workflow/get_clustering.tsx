@@ -21,6 +21,7 @@ export function get_clustering(
     setStatus({
       type: "get_clustering",
       value: true,
+      message: "Getting clustering?"
     })
   );
 
@@ -34,7 +35,7 @@ export function get_clustering(
         console.error("Something went wrong with get_clustering(): not ok");
         dispatch(
           setStatus({
-            type: "get_embedding",
+            type: "get_clustering",
             value: false,
           })
         );
@@ -54,7 +55,7 @@ export function get_clustering(
       console.error("Something went wrong with get_clustering()", error);
       dispatch(
         setStatus({
-          type: "get_embedding",
+          type: "get_clustering",
           value: false,
         })
       );
@@ -77,7 +78,7 @@ function poll_clustering_status(
           console.error("Something went wrong with poll_clustering_status()");
           dispatch(
             setStatus({
-              type: "get_embedding",
+              type: "get_clustering",
               value: false,
             })
           );
@@ -92,7 +93,7 @@ function poll_clustering_status(
         } else if (data.status === "PROGRESS") {
           dispatch(
             setStatus({
-              type: "get_embedding",
+              type: "get_clustering",
               value: true,
               message: data.progress.status,
             })
@@ -106,7 +107,7 @@ function poll_clustering_status(
         );
         dispatch(
           setStatus({
-            type: "get_embedding",
+            type: "get_clustering",
             value: false,
           })
         );
@@ -150,7 +151,7 @@ function get_clustering_result(
 
       dispatch(
         setStatus({
-          type: "get_embedding",
+          type: "get_clustering",
           value: false,
         })
       );
@@ -159,7 +160,7 @@ function get_clustering_result(
       console.error("Something went wrong with get_clustering_result()", error);
       dispatch(
         setStatus({
-          type: "get_embedding",
+          type: "get_clustering",
           value: false,
         })
       );

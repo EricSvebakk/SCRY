@@ -13,7 +13,6 @@ import { get_genes } from "@/lib/fetch/get_genes";
 import ScreenDimensionalReduction from "@/lib/components/navigation/screen/ScreenDimensionalReduction";
 import ScreenDifferentialGeneExpression from "@/lib/components/navigation/screen/ScreenDifferentialGeneExpression";
 import { theme } from "@/app/layout";
-import { tabOptions } from "@/lib/types";
 import { ScatterPlot, Tune, ViewCompact } from "@mui/icons-material";
 import ScreenManageAnnData from "@/lib/components/navigation/screen/ScreenManageAnnData";
 import NavbarLeft from "@/lib/components/navigation/NavbarLeft";
@@ -22,7 +21,7 @@ import { get_model_types } from "@/lib/fetch/get_model_types";
 
 type Screen = {
   label: string;
-  id: tabOptions;
+  id: string;
   component: JSX.Element;
   icon: ReactElement<SvgIconProps>;
 };

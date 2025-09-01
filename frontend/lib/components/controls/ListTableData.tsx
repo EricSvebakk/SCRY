@@ -4,7 +4,7 @@ import { useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { MouseEvent, useEffect, useState } from "react";
 import { theme } from "@/app/layout";
-import { PopoverTableData } from "../modals/popoverTableData";
+import { PopoverTableData } from "../modals/popover/popoverTableData";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import DotplotDialog from "../modals/DotplotDialog";
 

@@ -11,7 +11,6 @@ import {
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { get_nldr } from "@/lib/fetch/workflow/get_nldr";
-import { setCurrentTab } from "@/lib/redux/reducers/plotReducer";
 import { theme } from "@/app/layout";
 
 export default function DialogDimensionalReduction(props: {
@@ -116,7 +115,6 @@ export default function DialogDimensionalReduction(props: {
               variant="outlined"
               size="medium"
               onClick={() => {
-                dispatch(setCurrentTab("scatterplot"));
                 get_nldr(
                   activeFile,
                   adataKey,

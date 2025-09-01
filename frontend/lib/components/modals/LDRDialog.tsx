@@ -8,7 +8,6 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
-import { setCurrentTab } from "@/lib/redux/reducers/plotReducer";
 import { get_ldr } from "@/lib/fetch/workflow/get_ldr";
 
 export default function LDRDialog(props: {
@@ -40,7 +39,6 @@ export default function LDRDialog(props: {
             variant="outlined"
             size="medium"
             onClick={() => {
-              dispatch(setCurrentTab("scatterplot"));
               get_ldr(activeFile, numPCs, dispatch);
 
               props.setIsOpen(false);

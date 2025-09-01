@@ -14,7 +14,6 @@ import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { get_rgg_dotplot } from "@/lib/fetch/workflow/get_rgg_dotplot";
 import { AutocompleteOption } from "@/lib/types";
-import { setCurrentTab } from "@/lib/redux/reducers/plotReducer";
 
 export default function DotplotDialog(props: {
   isOpen: boolean;
@@ -165,7 +164,6 @@ export default function DotplotDialog(props: {
               
               if (selectedUns) {
 
-                dispatch(setCurrentTab("dotplot"));
                 get_rgg_dotplot(
                   activeFile,
                   selectedUns.label,

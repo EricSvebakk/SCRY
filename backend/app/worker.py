@@ -367,7 +367,7 @@ def compute_nldr(
   
   return {
     # "changes": changes_made,
-    "data": obsm_data,
+    "coordinates": obsm_data,
   }
   
 # ============================================================================================
