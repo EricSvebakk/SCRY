@@ -1,8 +1,10 @@
 
 
 import * as d3 from "d3";
-import { AnndataIndices } from "../../types";
+import { AnndataIndices, PlotConfigurationData, PlotConfigurationFields } from "../../types";
 import { setTrigger } from "../../redux/reducers/plotReducer";
+import { linearScaleColorOptions, sequentialScaleColorOptions } from "@/lib/design";
+import { toPng, toSvg } from "html-to-image";
 
 export const my_colors = [
   "#1f77b4",
@@ -17,17 +19,24 @@ export const my_colors = [
 ];
 
 const ClusterScatterPlotGenerator = (props: {
-  svgCurrent: HTMLCanvasElement;
+  // svgCurrent: HTMLCanvasElement;
   groupRefs: HTMLCanvasElement[];
+  config: PlotConfigurationFields<PlotConfigurationData["cluster"]>;
   indices: AnndataIndices | undefined;
   coordinates: number[][];
   selectedClusters: string[];
   // attr: "var" | "obs";
   dispatch: Function;
   imageTrigger: any | null;
-}) => {
-  
-  const containerRect = props.svgCurrent.getBoundingClientRect();
+}): () => void => {
+  // const containerRect = props.svgCurrent.getBoundingClientRect();
+
+  if (props.groupRefs.length == 0) {
+    return () => {};
+  }
+
+  const containerRect = props.groupRefs[0].getBoundingClientRect();
+
   const height = containerRect.height;
   const width = containerRect.width;
 
@@ -37,10 +46,10 @@ const ClusterScatterPlotGenerator = (props: {
   const paddingRatio = 24;
   const paddingWidth = canvasWidth / paddingRatio;
   const paddingHeight = canvasHeight / paddingRatio;
-  
+  const paddingRight = 100;
+
   let coordinates = props.coordinates;
   const pointSize = 3.5 - 0.5 * Math.log10(coordinates.length);
-
 
   const xScale = d3
     .scaleLinear()
@@ -65,8 +74,8 @@ const ClusterScatterPlotGenerator = (props: {
   let labelMap = props.indices
     ? props.indices.codes
     : props.coordinates.map((e) => 0);
-    
-  let colorScheme = props.indices ? my_colors : ["black"];
+
+  let colorScheme = props.indices && props.config.palette ? sequentialScaleColorOptions[props.config.palette] : ["black"];
 
   let labelSizeMap: { [key: string]: number } = {};
 
@@ -82,15 +91,15 @@ const ClusterScatterPlotGenerator = (props: {
   const colorScale = d3
     .scaleOrdinal<string>()
     .domain(labels)
-    .range(colorScheme)
-  
+    .range(colorScheme);
+
   // const svgContext: CanvasRenderingContext2D = props.svgCurrent.getContext("2d")!
-    
+
   // svgContext.canvas.width = width;
   // svgContext.canvas.height = height;
   // svgContext.canvas.style.width = (width * 30).toString();
   // svgContext.canvas.style.height = (height * 30).toString();
-  
+
   // coordinates.forEach((e, i) => {
   //   svgContext.beginPath();
   //   svgContext.arc(
@@ -105,15 +114,15 @@ const ClusterScatterPlotGenerator = (props: {
   //   svgContext.fill();
   //   svgContext.closePath();
   // });
-    
+
   labels.forEach((label, labelIndex) => {
     const someContext: CanvasRenderingContext2D =
       props.groupRefs[labelIndex].getContext("2d")!;
 
     someContext.canvas.width = width;
     someContext.canvas.height = height;
-    someContext.canvas.style.width = (width * 30).toString();
-    someContext.canvas.style.height = (height * 30).toString();
+    someContext.canvas.style.width = (width * 100).toString();
+    someContext.canvas.style.height = (height * 100).toString();
 
     labelMap.map((labelPosition, positionIndex) => {
       if (labelPosition !== labelIndex) return;
@@ -131,22 +140,29 @@ const ClusterScatterPlotGenerator = (props: {
 
       someContext.fillStyle =
         labels.length > 0
-          ? (colorScale as d3.ScaleOrdinal<string, string>)(labels[labelMap[positionIndex]])
+          ? (colorScale as d3.ScaleOrdinal<string, string>)(
+              labels[labelMap[positionIndex]]
+            )
           : "black";
-      
+
       someContext.fill();
       someContext.closePath();
     });
+    
   });
-  
-  
-  if (!!props.imageTrigger) {
-    const scale = 3;
 
-    // const imageWidth = 1584 * scale;
-    // const imageHeight = 396 * scale;
-    const imageWidth = 1000 * scale;
-    const imageHeight = 1000 * scale;
+  if (!!props.imageTrigger) {
+    const scale = props.config.scale ?? 1;
+
+    const plotWidth = 1000 * scale;
+    const legendWidth = props.selectedClusters.length !== 0 ? (500 * scale) : 0;
+    const imageWidth = (plotWidth + legendWidth);
+    const imageHeight = plotWidth;
+    const imagePadding = plotWidth / 24;
+    
+    const fontSize = plotWidth / 50;
+    const legendSquareSize = plotWidth / 40;
+    // const legendPadding = canvasWidth / 50;
 
     const finalCanvas = document.createElement("canvas");
     finalCanvas.width = imageWidth;
@@ -155,27 +171,30 @@ const ClusterScatterPlotGenerator = (props: {
     const finalCtx = finalCanvas.getContext("2d")!;
     finalCtx.imageSmoothingEnabled = true;
 
-    finalCtx.fillStyle = "black";
+    finalCtx.fillStyle = props.config.background ? props.config.background : "white";
     finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
     const scaledxScale = d3
       .scaleLinear()
       .domain(d3.extent(coordinates, (d: number[]) => d[0]) as [number, number])
-      .range([paddingWidth, imageWidth - paddingWidth]);
+      .range([imagePadding, imageWidth - (legendWidth + imagePadding)]);
 
     const scaledyScale = d3
       .scaleLinear()
       .domain(d3.extent(coordinates, (d: number[]) => d[1]) as [number, number])
-      .range([imageHeight - paddingHeight, paddingHeight]);
+      .range([imageHeight - imagePadding, imagePadding]);
 
-    // console.log(labels, props.selectedClusters)
+    const legendScale = d3
+      .scaleBand(labels, [imageHeight - imagePadding, imagePadding])
       
+    // console.log(labels, props.selectedClusters)
+
     coordinates.forEach((e, i) => {
       finalCtx.beginPath();
       finalCtx.arc(
         scaledxScale(e[0]),
         scaledyScale(e[1]),
-        pointSize * 2,
+        pointSize * scale,
         0,
         2 * Math.PI
       );
@@ -184,13 +203,12 @@ const ClusterScatterPlotGenerator = (props: {
       finalCtx.fill();
       finalCtx.closePath();
     });
-    
+
     labels.forEach((label, labelIndex) => {
-      
       if (!props.selectedClusters.includes(label)) {
         return;
       }
-      
+
       labelMap.map((labelPosition, positionIndex) => {
         if (labelPosition !== labelIndex) return;
 
@@ -200,17 +218,37 @@ const ClusterScatterPlotGenerator = (props: {
         finalCtx.arc(
           scaledxScale(point[0]),
           scaledyScale(point[1]),
-          pointSize * 2,
+          pointSize * scale,
           0,
           2 * Math.PI
         );
         finalCtx.fillStyle =
           labels.length > 0
-            ? (colorScale as d3.ScaleOrdinal<string, string>)(labels[labelMap[positionIndex]])
+            ? (colorScale as d3.ScaleOrdinal<string, string>)(
+                labels[labelMap[positionIndex]]
+              )
             : "black";
         finalCtx.fill();
         finalCtx.closePath();
       });
+      
+      const legendX = plotWidth + imagePadding;
+      const step = legendScale.step();
+      
+      finalCtx.fillRect(
+        legendX,
+        (legendScale(label) ?? 0) - step / 2,
+        legendSquareSize,
+        legendSquareSize
+      );
+      
+      finalCtx.textBaseline = "middle";
+      finalCtx.font = `${fontSize}px serif`;
+      finalCtx.fillText(
+        label,
+        legendX + legendSquareSize + fontSize / 2,
+        legendScale(label) ?? 0
+      );
     });
 
     // Export the final canvas as an image
@@ -221,16 +259,6 @@ const ClusterScatterPlotGenerator = (props: {
 
     props.dispatch(setTrigger({ type: "saveScatterPlotImage", value: null }));
   }
-  
-  
-  
-  
-  // else {
-    
-  // }
-
-    
-
 
   return () => {
     // svgContext.remove();

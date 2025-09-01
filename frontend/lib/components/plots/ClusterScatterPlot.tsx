@@ -5,31 +5,32 @@ import { useEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { theme } from "@/app/layout";
-import { ImageSavingPopover } from "../modals/ImageSavingPopover";
+import { ImageSavingPopover } from "../modals/popover/ImageSavingPopover";
+import { PopoverScatterplotSettings } from "../modals/popover/popoverScatterplotSettings";
 
 export function ClusterScatterPlot() {
   
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
-  
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
+  const config = useAppSelector((state) => state.plotReducer.plot.cluster);
   const imageTrigger = useAppSelector((state) => state.plotReducer.navigation.triggers.saveScatterPlotImage);
   const status = useAppSelector((state) => state.plotReducer.status.get_embedding);
   const selectedCluster = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);
   
   const [counter, setCounter] = useState(0);
   const dispatch = useAppDispatch();
-  const svgRef = useRef<HTMLCanvasElement>(null);
-  const groupRefs = useRef<HTMLCanvasElement[]>([]);
+  const svgRef = useRef<SVGElement>(null);
+  const clusterRefs = useRef<HTMLCanvasElement[]>([]);
   
   useEffect(() => {
 
-    let cleanUpFunction;
+    let cleanUpFunction1 = () => {};
     
-    if (obsm.data && svgRef.current && groupRefs.current.length !== 0) {
+    if (obsm.data && clusterRefs.current.length !== 0) {
       
-      cleanUpFunction = ClusterScatterPlotGenerator({
-        svgCurrent: svgRef.current,
-        groupRefs: groupRefs.current,
+      cleanUpFunction1 = ClusterScatterPlotGenerator({
+        groupRefs: clusterRefs.current,
+        config: config,
         indices: obs.indices,
         coordinates: obsm.data,
         selectedClusters: selectedCluster,
@@ -38,14 +39,19 @@ export function ClusterScatterPlot() {
       });
     }
     
-    return cleanUpFunction;
+    return () => {
+      cleanUpFunction1();
+    };
     
   }, [
     obs,
     obsm,
+    config,
     imageTrigger,
     counter,
   ]);
+  
+  
   
   const updateCounter = () => {
     setCounter((counter) => counter += 1);
@@ -62,7 +68,9 @@ export function ClusterScatterPlot() {
       sx={{
         height: "98vh",
         width: "100%",
-        backgroundColor: theme.palette.background.paper,
+        backgroundColor: config.background
+          ? config.background
+          : theme.palette.background.paper,
         border: "1px solid grey",
         borderRight: "none",
       }}
@@ -78,87 +86,72 @@ export function ClusterScatterPlot() {
           borderBottom: "1px solid grey",
         }}
       >
-        <ImageSavingPopover />
+        <ImageSavingPopover plot="cluster" trigger="saveScatterPlotImage" />
+        <PopoverScatterplotSettings />
       </Stack>
 
-      {status.inProgress ? (
-        <CurrentProgress status={status} />
-      ) : (
-        <Stack direction="row" position="relative" height="100%" width="100%">
-          {obsm.data ? (
-            obs.indices ? (
-              obs.indices.categories.map((e, i) => {
-                return (
-                  <Box
-                    component="canvas"
-                    key={"points_" + e}
-                    id={"points_" + e}
-                    height="100%"
-                    width="100%"
-                    style={{
-                      position: "absolute",
-                      zIndex: 2
-                    }}
-                    ref={(el: HTMLCanvasElement | null) => {
-                      if (el) {
-                        groupRefs.current[i] = el!;
-                      }
-                    }}
-                  />
-                );
-              })
+      <Stack width="100%" height="100%" direction="row" columnGap={1}>
+        {status.inProgress ? (
+          <CurrentProgress status={status} />
+        ) : (
+          <Stack direction="row" position="relative" height="100%" width="100%">
+            {obsm.data ? (
+              obs.indices ? (
+                obs.indices.categories.map((e, i) => {
+                  return (
+                    <Box
+                      component="canvas"
+                      key={"points_" + e}
+                      id={"points_" + e}
+                      height="100%"
+                      width="100%"
+                      style={{
+                        position: "absolute",
+                        zIndex: 2,
+                      }}
+                      ref={(el: HTMLCanvasElement | null) => {
+                        if (el) {
+                          clusterRefs.current[i] = el!;
+                        }
+                      }}
+                    />
+                  );
+                })
+              ) : (
+                <Box
+                  component="canvas"
+                  key={"points_single"}
+                  id={"points_single"}
+                  height="100%"
+                  width="100%"
+                  style={{
+                    position: "absolute",
+                  }}
+                  ref={(el: HTMLCanvasElement | null) => {
+                    if (el) {
+                      clusterRefs.current[0] = el!;
+                    }
+                  }}
+                />
+              )
             ) : (
               <Box
-                component="canvas"
-                key={"points_single"}
-                id={"points_single"}
-                height="100%"
-                width="100%"
-                style={{
+                sx={{
                   position: "absolute",
+                  width: "100%",
+                  height: "100%",
+                  alignContent: "center",
+                  justifyItems: "center",
                 }}
-                ref={(el: HTMLCanvasElement | null) => {
-                  if (el) {
-                    groupRefs.current[0] = el!;
-                  }
-                }}
-              />
-            )
-          ) : (
-            <></>
-          )}
-
-          {!obsm.data ? (
-            <Box
-              sx={{
-                position: "absolute",
-                width: "100%",
-                height: "100%",
-                alignContent: "center",
-                justifyItems: "center",
-              }}
-            >
-              <Typography fontSize={theme.typography.fontSize}>
-                No embedding selected
-              </Typography>
-            </Box>
-          ) : (
-            <></>
-          )}
-
-          {/* <Box
-            component="canvas"
-            height="100%"
-            width="100%"
-            sx={{
-              position: "absolute",
-              zIndex: 1
-            }}
-            id="svgHere"
-            ref={svgRef}
-          /> */}
-        </Stack>
-      )}
+              >
+                <Typography fontSize={theme.typography.fontSize}>
+                  No embedding selected
+                </Typography>
+              </Box>
+            )}
+          </Stack>
+        )}
+      </Stack>
     </Stack>
   );
 }

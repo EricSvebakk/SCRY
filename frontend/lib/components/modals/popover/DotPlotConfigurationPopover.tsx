@@ -74,7 +74,6 @@ export function DotPlotConfigurationPopover() {
             p: 0,
             minHeight: 0,
             minWidth: 0,
-            // display: "inline-block",
           }}
         >
           <Settings />

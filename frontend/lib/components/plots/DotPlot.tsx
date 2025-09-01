@@ -5,8 +5,8 @@ import DotPlotGenerator from "./DotPlotGenerator";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { theme } from "@/app/layout";
-import { ImageSavingPopover } from "../modals/ImageSavingPopover";
-import { DotPlotConfigurationPopover } from "../modals/DotPlotConfigurationPopover";
+import { ImageSavingPopover } from "../modals/popover/ImageSavingPopover";
+import { DotPlotConfigurationPopover } from "../modals/popover/DotPlotConfigurationPopover";
 
 export function DotPlot() {
 
@@ -70,7 +70,7 @@ export function DotPlot() {
           borderBottom: "1px solid grey",
         }}
       >
-        <ImageSavingPopover />
+        {/* <ImageSavingPopover  /> */}
         <DotPlotConfigurationPopover />
       </Stack>
       

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { theme } from "@/app/layout";
-import { ImageSavingPopover } from "../modals/ImageSavingPopover";
+import { ImageSavingPopover } from "../modals/popover/ImageSavingPopover";
 import FeatureScatterPlotGenerator from "./FeatureScatterPlotGenerator";
 
 export function FeatureScatterPlot() {
@@ -13,24 +13,24 @@ export function FeatureScatterPlot() {
   const vars = useAppSelector((state) => state.plotReducer.anndata.var);
   
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
-  const imageTrigger = useAppSelector((state) => state.plotReducer.navigation.triggers.saveScatterPlotImage);
+  const imageTrigger = useAppSelector((state) => state.plotReducer.navigation.triggers.saveFeaturePlotImage);
   const status = useAppSelector((state) => state.plotReducer.status.get_embedding);
   const selectedCluster = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);
+  const config = useAppSelector((state) => state.plotReducer.plot.feature);
   
   const [counter, setCounter] = useState(0);
   const dispatch = useAppDispatch();
-  const svgRef = useRef<HTMLCanvasElement>(null);
-  const groupRefs = useRef<HTMLCanvasElement[]>([]);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   
   useEffect(() => {
 
     let cleanUpFunction;
     
-    if (obsm.data && svgRef.current && groupRefs.current.length !== 0) {
+    if (obsm.data && canvasRef.current) {
       
       cleanUpFunction = FeatureScatterPlotGenerator({
-        svgCurrent: svgRef.current,
-        groupRefs: groupRefs.current,
+        canvasRef: canvasRef.current,
+        config: config,
         indices: vars.indices,
         coordinates: obsm.data,
         selectedClusters: selectedCluster,
@@ -44,6 +44,7 @@ export function FeatureScatterPlot() {
   }, [
     vars,
     obsm,
+    config,
     imageTrigger,
     counter,
   ]);
@@ -65,7 +66,6 @@ export function FeatureScatterPlot() {
         width: "100%",
         backgroundColor: theme.palette.background.paper,
         border: "1px solid grey",
-        // borderRight: "none",
       }}
     >
       <Stack
@@ -79,7 +79,7 @@ export function FeatureScatterPlot() {
           borderBottom: "1px solid grey",
         }}
       >
-        <ImageSavingPopover />
+        <ImageSavingPopover plot="feature" trigger="saveFeaturePlotImage" />
       </Stack>
 
       {status.inProgress ? (
@@ -89,18 +89,13 @@ export function FeatureScatterPlot() {
           {obsm.data ? (
             <Box
               component="canvas"
-              key={"points_gene"}
-              id={"points_gene"}
+              id="points_gene"
               height="100%"
               width="100%"
               style={{
                 position: "absolute",
               }}
-              ref={(el: HTMLCanvasElement | null) => {
-                if (el) {
-                  groupRefs.current[0] = el!;
-                }
-              }}
+              ref={canvasRef}
             />
           ) : (
             <></>
@@ -123,18 +118,6 @@ export function FeatureScatterPlot() {
           ) : (
             <></>
           )}
-
-          {/* <Box
-            component="svg"
-            sx={{
-              position: "relative",
-              width: "100%",
-              height: "100%",
-              zIndex: 10,
-            }}
-            id="svgHere"
-            ref={svgRef}
-          /> */}
         </Stack>
       )}
     </Stack>

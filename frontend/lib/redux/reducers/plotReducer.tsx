@@ -1,7 +1,6 @@
 import {
   InitialPlotStateProps,
   fetchOptions,
-  tabOptions,
   GDEFields,
   AnndataAttributeFields,
   AnndataAttributeData,
@@ -11,6 +10,7 @@ import {
   statusAttributes,
   triggerOptions,
   CelltypistModel,
+  PlotConfiguration,
   geneReport,
 } from "@/lib/types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
@@ -23,6 +23,21 @@ const initialPlotState: InitialPlotStateProps = {
     },
     {} as AnndataAttributes
   ),
+  plot: {
+    feature: {
+      pointSize: 1,
+      palette: "orange",
+      background: "white",
+    },
+    cluster: {
+      pointSize: 1,
+      palette: "obs10",
+      background: "white",
+    },
+    expression: {
+      palette: ""
+    }
+  },
   data: {
     genes: [],
     GDE: {
@@ -54,8 +69,8 @@ const initialPlotState: InitialPlotStateProps = {
     },
   },
   navigation: {
-    currentTab: "scatterplot",
     triggers: {
+      saveFeaturePlotImage: null,
       saveScatterPlotImage: null
     }
   },
@@ -124,6 +139,29 @@ export const plotSlice = createSlice({
         }
       }
     },
+    setPlotConfigField<
+      A extends keyof PlotConfiguration
+      // B extends PlotConfigurationData[A],
+      // C extends keyof PlotConfigurationFields<B>,
+    >(
+      state: InitialPlotStateProps,
+      action: PayloadAction<{
+        plot: A;
+        config: PlotConfiguration[A];
+        // test: B;
+        // field: C;
+        // value: PlotConfigurationFields<PlotConfigurationData[A]>[B];
+      }>
+    ) {
+      const { plot, config } = action.payload;
+      
+      state.plot[plot] = config;
+      
+      // state.plot[plot][field] = value;
+      // obj[field]
+      // (
+      // )[field] = value;
+    },
     setGDEField<K extends keyof GDEFields>(
       state: InitialPlotStateProps,
       action: PayloadAction<{ field: K; value: GDEFields[K] }>
@@ -138,12 +176,6 @@ export const plotSlice = createSlice({
     },
     setSelectedGenes: (state, action: PayloadAction<string[]>) => {
       state.filtering.selected.genes = action.payload;
-    },
-    setCurrentTab: (
-      state: InitialPlotStateProps,
-      action: PayloadAction<tabOptions>
-    ) => {
-      state.navigation.currentTab = action.payload;
     },
     setTrigger<K extends keyof triggerOptions>(
       state: InitialPlotStateProps,
@@ -183,12 +215,12 @@ export const {
   reset,
   setAnndataField,
   setFieldAcrossAnndata,
+  setPlotConfigField,
   setGDEField,
   setGenes,
   setSelectedGenes,
   setSelectedClusters,
   setTrigger,
-  setCurrentTab,
   setStatus,
   setModelTypes,
   setGeneReport,

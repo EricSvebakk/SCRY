@@ -1,5 +1,5 @@
 import { Button, Stack } from "@mui/material";
-import { setAnndataField, setCurrentTab } from "../../redux/reducers/plotReducer";
+import { setAnndataField } from "../../redux/reducers/plotReducer";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { get_file_obsm } from "@/lib/fetch/get_file_obsm";
 import CurrentProgress from "../OverlayCurrentProgress";
@@ -33,7 +33,6 @@ export default function ListEmbeddings() {
         width: "100%",
         minHeight: "100%",
         backgroundColor: theme.palette.background.paper,
-        // border: "1px solid grey",
       }}
       justifyContent="space-between"
     >
@@ -43,7 +42,6 @@ export default function ListEmbeddings() {
           width: "100%",
           height: "20vh",
           overflowY: "auto",
-          // border: "1px solid yellow",
         }}
       >
         {obsm.keys ? (
@@ -73,7 +71,6 @@ export default function ListEmbeddings() {
                           value: e,
                         })
                       );
-                      dispatch(setCurrentTab("scatterplot"));
                       get_file_obsm(fileID, e, dispatch);
                     }}
                   >

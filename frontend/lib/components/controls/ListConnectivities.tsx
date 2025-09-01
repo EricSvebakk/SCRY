@@ -4,7 +4,7 @@ import { useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { MouseEvent, useEffect, useState } from "react";
 import { theme } from "@/app/layout";
-import { PopoverConnectivities } from "../modals/PopoverConnectivities";
+import { PopoverConnectivities } from "../modals/popover/PopoverConnectivities";
 
 export default function ListConnectivities() {
   

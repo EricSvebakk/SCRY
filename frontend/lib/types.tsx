@@ -1,6 +1,7 @@
 // ==== Related to reducer =================================================================
 export type InitialPlotStateProps = {
   anndata: AnndataAttributes;
+  plot: PlotConfiguration;
   data: {
     annotationModels: {
       models: CelltypistModel[]
@@ -14,7 +15,6 @@ export type InitialPlotStateProps = {
     selected: SelectedFields;
   };
   navigation: {
-    currentTab: tabOptions;
     triggers: {
       [key in keyof triggerOptions]: triggerOptions[key] | null;
     };
@@ -49,6 +49,7 @@ export type AnndataAttributes = {
   >;
 };
 
+// Used in initialization of state
 export const AnndataAttributeKeys: (keyof AnndataAttributeData)[] = [
   "obs",
   "var",
@@ -56,6 +57,35 @@ export const AnndataAttributeKeys: (keyof AnndataAttributeData)[] = [
   "obsm",
   "varm",
   "obsp",
+] as const;
+
+export type PlotConfigurationData = {
+  feature: {
+    pointSize: number;
+  },
+  cluster: {
+    pointSize: number;
+  },
+  expression: {}
+}
+
+export type PCOther = {
+  palette: string;
+  background?: string;
+  scale?: number;
+}
+
+export type PlotConfigurationFields<T extends PlotConfigurationData[keyof PlotConfigurationData]> = PCOther & T
+
+export type PlotConfiguration = {
+  [K in keyof PlotConfigurationData]: PlotConfigurationFields<PlotConfigurationData[K]>
+}
+
+// Used in initialization of state
+export const PlotTypes: (keyof PlotConfigurationData)[] = [
+  "feature",
+  "cluster",
+  "expression",
 ] as const;
 
 export type geneExpressionData = {
@@ -105,8 +135,6 @@ export type colorTypes = "mean_expr" | "logfoldchange" | "pvals_adj";
 
 export type highlightType = "cluster" | "gene" | "rgg_order" | "none";
 
-export type tabOptions = "dotplot" | "scatterplot" | "table";
-
 export const fetchOptions = [
   "generate_leiden",
   "generate_umap",
@@ -137,7 +165,7 @@ export type statusAttributes = {
 
 export type triggerOptions = {
   saveScatterPlotImage: string;
-  // somethingElse: boolean;
+  saveFeaturePlotImage: string;
 };
 
 export type CelltypistModelType = string;

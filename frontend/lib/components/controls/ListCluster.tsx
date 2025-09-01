@@ -1,6 +1,5 @@
 import { Box, Button, Checkbox, Grid, Stack, Typography } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
-import { my_colors } from "../plots/ClusterScatterPlotGenerator";
 import { AnndataIndices } from "../../types";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { setSelectedClusters } from "@/lib/redux/reducers/plotReducer";
@@ -8,8 +7,11 @@ import { useEffect } from "react";
 import { theme } from "@/app/layout";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import { Square } from "@mui/icons-material";
+import { sequentialScaleColorOptions } from "@/lib/design";
 
 export function ListCluster() {
+  
+  const config = useAppSelector((state) => state.plotReducer.plot.cluster);
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
   const status = useAppSelector(
     (state) => state.plotReducer.status.get_file_obs
@@ -43,6 +45,8 @@ export function ListCluster() {
       dispatch(setSelectedClusters(obs.indices.categories as string[]));
     }
   }, [obs.indices]);
+  
+  const palette =  sequentialScaleColorOptions[config.palette]
 
   return (
     <Stack
@@ -50,7 +54,7 @@ export function ListCluster() {
       sx={{
         height: "98vh",
         width: "100%",
-        backgroundColor: theme.palette.background.paper,
+        backgroundColor: config.background ? config.background : theme.palette.background.paper,
         border: "1px solid grey",
         borderLeft: "none",
       }}
@@ -59,7 +63,6 @@ export function ListCluster() {
         direction="row"
         sx={{
           height: 32,
-          backgroundColor: theme.palette.secondary.main,
           borderBottom: "1px solid grey",
           borderLeft: "1px solid grey"
         }}
@@ -87,16 +90,15 @@ export function ListCluster() {
         <CurrentProgress status={status} />
       ) : (
         <Stack
+          className="legend_sequential"
           sx={{
             height: "100%",
             overflowY: "auto",
-            // p: "1vh",
-            backgroundColor: theme.palette.background.paper,
-            // border: "1px solid green",
           }}
         >
           {(obs.indices?.categories as string[])?.map((label, i) => {
-            let label_color = my_colors[i % my_colors.length];
+            let label_color = palette[i % palette.length];
+            const isSelected = selectedClusters.includes(label);
 
             return (
               <Button
@@ -109,14 +111,14 @@ export function ListCluster() {
                 size="small"
                 fullWidth
                 onClick={() => {
-                  const newSelectedClusters = selectedClusters.includes(label)
+                  const newSelectedClusters = isSelected
                     ? selectedClusters.filter((e) => e !== label)
                     : [...selectedClusters, label];
 
                   dispatch(setSelectedClusters(newSelectedClusters));
                 }}
-                onMouseEnter={() => labelOnMouseEnter(label, obs.indices!)}
-                onMouseLeave={() => labelOnMouseLeave(label, obs.indices!)}
+                onMouseEnter={() => labelOnMouseEnter(label, obs.indices!, isSelected)}
+                onMouseLeave={() => labelOnMouseLeave(label, obs.indices!, isSelected)}
               >
                 <Grid
                   container
@@ -173,7 +175,6 @@ export function ListCluster() {
                 position: "relative",
                 width: "100%",
                 height: "100%",
-                // border: "1px solid yellow",
                 alignContent: "center",
                 justifyItems: "center",
               }}
@@ -191,7 +192,7 @@ export function ListCluster() {
   );
 }
 
-function labelOnMouseEnter(label: string, indicies: AnndataIndices) {
+function labelOnMouseEnter(label: string, indicies: AnndataIndices, isSelected: boolean) {
   const canvas = document.getElementById("points_" + label);
 
   if (canvas === null) {
@@ -208,7 +209,7 @@ function labelOnMouseEnter(label: string, indicies: AnndataIndices) {
   });
 }
 
-function labelOnMouseLeave(label: string, indices: AnndataIndices) {
+function labelOnMouseLeave(label: string, indices: AnndataIndices, isSelected: boolean) {
   const canvas = document.getElementById("points_" + label);
 
   if (canvas === null) {

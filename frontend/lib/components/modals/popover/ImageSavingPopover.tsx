@@ -1,9 +1,9 @@
 
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
-import { setTrigger } from "@/lib/redux/reducers/plotReducer";
+import { setPlotConfigField, setTrigger } from "@/lib/redux/reducers/plotReducer";
+import { PlotConfigurationData, triggerOptions } from "@/lib/types";
 import { Close, Save } from "@mui/icons-material";
-import { Autocomplete, Button, IconButton, Popover, Stack, TextField, Tooltip } from "@mui/material";
-import d3ToPng from "d3-svg-to-png";
+import { Button, IconButton, Popover, Stack, TextField, Tooltip } from "@mui/material";
 import { MouseEvent, useEffect, useState } from "react";
 
 type plotOption = {
@@ -16,14 +16,15 @@ const plotOptions: plotOption[] = [
   { label: "Dot plot", id: "dotplot" },
 ]
 
-export function ImageSavingPopover() {
+export function ImageSavingPopover(props: {
+  trigger: keyof triggerOptions;
+  plot: keyof PlotConfigurationData;
+}) {
  
   const expression = useAppSelector((state) => state.plotReducer.data.GDE.expression);
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm.selectedKey);
-  const currentTab = useAppSelector((state) => state.plotReducer.navigation.currentTab);
+  const config = useAppSelector((state) => state.plotReducer.plot[props.plot]);
   const dispatch = useAppDispatch();
-  
-  const [selectedPlot, setSelectedPlot] = useState<plotOption | null>(plotOptions.find((e) => e.id === currentTab) ?? null);
   
   const [title, setTitle] = useState("");
   const [scale, setScale] = useState("1");
@@ -53,14 +54,8 @@ export function ImageSavingPopover() {
   }
   
   useEffect(() => {
-    if (selectedPlot && selectedPlot.id !== currentTab) {
-      setSelectedPlot(plotOptions.find((e) => e.id === currentTab) ?? null);
-    }
-  }, [currentTab]);
-  
-  useEffect(() => {
-    if (open && selectedPlot && title === "") {
-      setTitle(selectedPlot.label.toLowerCase().replace(" ", "") + "_" + (new Date().toISOString().split('T')[0]))
+    if (open && title === "") {
+      setTitle("plot_" + props.plot + "_" + (new Date().toISOString().split('T')[0]))
     }
   }, [anchorEl]);
   
@@ -75,7 +70,6 @@ export function ImageSavingPopover() {
           p: 0,
           minHeight: 0,
           minWidth: 0,
-          // display: "inline-block",
         }}
       >
         <Save />
@@ -106,29 +100,6 @@ export function ImageSavingPopover() {
               <Close />
             </IconButton>
           </Stack>
-
-          <Autocomplete
-            value={selectedPlot}
-            options={filteredOptions}
-            onChange={(event: any, value: any, reason, details) => {
-              if (reason === "selectOption") {
-                setSelectedPlot(details?.option as any);
-              } else if (reason === "removeOption" || reason === "clear") {
-                setSelectedPlot(null);
-              }
-            }}
-            renderInput={(params) => {
-              return (
-                <TextField
-                  {...params}
-                  size="small"
-                  label="Select plot"
-                  placeholder="plot"
-                  InputLabelProps={{ shrink: true }}
-                />
-              );
-            }}
-          />
 
           <TextField
             variant="outlined"
@@ -173,20 +144,18 @@ export function ImageSavingPopover() {
                 if (!parsedScale || title === "") {
                   return;
                 }
+                
+                dispatch(setPlotConfigField({
+                  plot: props.plot,
+                  config: {
+                    ...config,
+                    scale: parsedScale
+                  }
+                }))
 
-                if (selectedPlot?.id === "scatterplot") {
-                  dispatch(
-                    setTrigger({ type: "saveScatterPlotImage", value: title })
-                  );
-                } else if (selectedPlot?.id === "dotplot") {
-                  d3ToPng("#dotplot", title, {
-                    scale: parsedScale,
-                    format: "png",
-                    cssinline: 0,
-                    download: true,
-                    background: "white",
-                  });
-                }
+                dispatch(
+                  setTrigger({ type: props.trigger, value: title })
+                );
               }}
             >
               Create Image
