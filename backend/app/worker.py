@@ -286,6 +286,7 @@ def handle_rgg_data_table(adata: AnnData, key_cluster: str, key_dotplot: str, ke
   
   adata.uns[key_dotplot] = {
     "data": filtered_df.to_dict(orient="list"),
+    "n_genes": n_genes_present,
     "params": {
       "clustering": key_cluster,
       "n_top_genes": n_genes,
@@ -452,7 +453,7 @@ def compute_rgg_dotplot(
   
   results = {
     "table": data_sorted.to_dict(orient="records"),
-    "n_genes": int(dotplot_data["genes_present"]),
+    "n_genes": int(dotplot_data["n_genes"]),
     "n_clusters": int(len(dendro_order)),
     "dendro": json.dumps(make_safe(dendro_tree)),
   }
