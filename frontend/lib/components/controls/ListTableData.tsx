@@ -30,7 +30,7 @@ export default function ListTableData() {
    useEffect(() => {
      if (uns) {
        const newTableData = Object.keys(uns).filter((e: string) =>
-         Object.keys(uns[e]).includes("genes_present")
+         uns[e] && Object.keys(uns[e]).includes("n_genes")
        );
 
        setTableData(newTableData);

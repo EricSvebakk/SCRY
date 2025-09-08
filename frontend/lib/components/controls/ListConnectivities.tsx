@@ -25,8 +25,11 @@ export default function ListConnectivities() {
   useEffect(() => {
     
     if (uns) {
+      
+      console.log(uns);
+      
       const newConnectivities = Object.keys(uns)
-        .filter((e: string) => Object.keys(uns[e]).includes("connectivities_key"))
+        .filter((e: string) => uns[e] && Object.keys(uns[e]).includes("connectivities_key"));
       
       setConnectivities(newConnectivities)
     }

@@ -35,7 +35,7 @@ export default function DialogClustering(props: {
   useEffect(() => {
     if (uns && obsp) {
       const structuredOptions: AutocompleteOption[] = Object.keys(uns)
-        .filter((e: string) => Object.keys(uns[e]).includes("connectivities_key"))
+        .filter((e: string) => uns[e] && Object.keys(uns[e]).includes("connectivities_key"))
         .map((e, i) => ({ label: e, id: i }));
 
       setOptionsFiltered(structuredOptions);
