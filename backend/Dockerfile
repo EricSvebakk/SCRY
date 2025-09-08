@@ -15,10 +15,6 @@ COPY ./requirements.txt /usr/src/app/requirements.txt
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir --upgrade -r /usr/src/app/requirements.txt
 
-ARG FRONTEND_ENDPOINT
-
-ENV FRONTEND_ENDPOINT=${FRONTEND_ENDPOINT}
-
 # Copy project files into the container
 COPY ./app /usr/src/app
 

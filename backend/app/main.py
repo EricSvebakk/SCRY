@@ -24,13 +24,13 @@ import anndata_util as au
 
 load_dotenv()
 FRONTEND_ENDPOINT = os.environ.get("FRONTEND_ENDPOINT")
+PATH_BACKEND = os.environ.get("PATH_BACKEND")
+
 ORIGINS = [
-    "https://thesis.tepohi.no",
-    "https://www.thesis.tepohi.no",
     FRONTEND_ENDPOINT,
 ]
 config = dotenv_values(".env")
-app = FastAPI()
+app = FastAPI(root_path=PATH_BACKEND)
 
 print(config, ORIGINS)
 

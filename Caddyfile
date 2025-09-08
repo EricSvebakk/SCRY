@@ -1,13 +1,24 @@
 
-thesis.tepohi.no {
-  reverse_proxy thesis_frontend:3000
+{$HOST}:80 {
+  
+  tls internal
+
+  handle_path {$BACKEND_PATH}* {
+    reverse_proxy thesis_backend:8000
+  }
+
+  handle_path /* {
+    reverse_proxy thesis_frontend:3000
+  }
 }
 
-api.thesis.tepohi.no {
-  reverse_proxy thesis_backend:8000 {
-    transport http {
-      read_timeout 1800s
-      write_timeout 1800s
-    }
+{$HOST}:443 {
+  
+  handle_path {$BACKEND_PATH}* {
+    reverse_proxy thesis_backend:8000
+  }
+
+  handle_path /* {
+    reverse_proxy thesis_frontend:3000
   }
 }
