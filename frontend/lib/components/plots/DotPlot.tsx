@@ -90,7 +90,7 @@ export function DotPlot() {
               component="svg"
               ref={svgRef}
               width={gde.nGenes ? gde.nGenes * 15 : "100%"}
-              height={gde.nClusters ? gde.nClusters * 15 : "100%"}
+              height={gde.nClusters ? (gde.nClusters * 15) + 150 : "100%"}
               sx={{
                 position: "absolute",
                 zIndex: 1,

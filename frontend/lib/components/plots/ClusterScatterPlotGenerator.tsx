@@ -184,8 +184,8 @@ const ClusterScatterPlotGenerator = (props: {
       .domain(d3.extent(coordinates, (d: number[]) => d[1]) as [number, number])
       .range([imageHeight - imagePadding, imagePadding]);
 
-    const legendScale = d3
-      .scaleBand(labels, [imageHeight - imagePadding, imagePadding])
+    // const legendScale = d3
+    //   .scaleBand(labels, [imagePadding, imageHeight - imagePadding])
       
     // console.log(labels, props.selectedClusters)
 
@@ -233,11 +233,11 @@ const ClusterScatterPlotGenerator = (props: {
       });
       
       const legendX = plotWidth + imagePadding;
-      const step = legendScale.step();
+      const step = legendSquareSize + legendSquareSize / 2;
       
       finalCtx.fillRect(
         legendX,
-        (legendScale(label) ?? 0) - step / 2,
+        imagePadding + (labelIndex * step) - legendSquareSize / 2, //+ step / 2,
         legendSquareSize,
         legendSquareSize
       );
@@ -247,7 +247,7 @@ const ClusterScatterPlotGenerator = (props: {
       finalCtx.fillText(
         label,
         legendX + legendSquareSize + fontSize / 2,
-        legendScale(label) ?? 0
+        imagePadding + (labelIndex * step)
       );
     });
 

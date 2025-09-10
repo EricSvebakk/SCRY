@@ -30,8 +30,10 @@ export default function CurrentProgress({
       >
         {status.message}
       </Typography>
-
-      <CircularProgress size={indicatorSize} color="primary" />
+      
+      {status.inProgress ? (
+        <CircularProgress size={indicatorSize} color="primary" />
+      ) : <></>}
     </Stack>
   );
 }

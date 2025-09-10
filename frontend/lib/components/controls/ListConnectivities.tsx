@@ -71,7 +71,7 @@ export default function ListConnectivities() {
                   key={"popover_connectivities" + i}
                   title={e}
                   titleLabel="Connectivity"
-                  connectivityParams={uns[e].params}
+                  connectivityParams={uns[e]?.params}
                   anchorEl={anchorEl}
                   handleClick={handleClick}
                   handleClose={handleClose}

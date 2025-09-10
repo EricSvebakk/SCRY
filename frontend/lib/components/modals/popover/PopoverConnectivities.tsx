@@ -11,7 +11,7 @@ import { MouseEvent } from "react";
 export function PopoverConnectivities(props: {
   title: string;
   titleLabel: string;
-  connectivityParams: Object;
+  connectivityParams: Object | undefined;
   anchorEl: HTMLButtonElement | null;
   handleClick: (event: MouseEvent<HTMLButtonElement>) => void;
   handleClose: () => void;
