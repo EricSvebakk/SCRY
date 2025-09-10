@@ -188,6 +188,17 @@ export type geneReport = {
   }
 }
 
+export type Cluster = {
+  label: string;
+  subclusters: string[];
+}
+
+export type Reclustering = {
+  name: string;
+  base: string;
+  clusters: Cluster[];
+}
+
 // ==== Not related to reducer =============================================================
 
 export type dgeAttributes = {

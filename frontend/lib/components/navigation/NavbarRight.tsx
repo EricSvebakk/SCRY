@@ -2,17 +2,19 @@
 import { Box, Button, Grid, Stack, SxProps, Typography } from "@mui/material";
 import React, { useState } from "react";
 import { theme } from "@/app/layout";
-import { FileOpen, GroupWork } from "@mui/icons-material";
+import { BlurCircular, FileOpen, GroupWork, ScatterPlot } from "@mui/icons-material";
 import PanelGenes from "./panel/PanelGenes";
 import PanelFiles from "./panel/PanelFiles";
+import PanelReclustering from "./panel/PanelReclustering";
 
 export default function NavbarRight() {
   
 
   const [openPanelGenes, setOpenPanelGenes] = useState(false);
+  const [openPanelRecluster, setOpenPanelRecluster] = useState(false);
   const [openPanelFiles, setOpenPanelFiles] = useState(false);
   
-  const navItemProps = (isOpen: boolean, index: number | null = null) => {
+  const navItemProps = (isOpen: boolean, up: boolean = false, down: boolean = false) => {
     return {
       color: theme.palette.text.secondary,
       backgroundColor: isOpen
@@ -24,15 +26,16 @@ export default function NavbarRight() {
       "&:hover": {
         backgroundColor: "#aaa",
       },
-      borderTop: isOpen && index && index !== 0 ? "1px solid grey" : "none",
-      borderBottom: isOpen ? "1px solid grey" : "none",
-      borderLeft: isOpen ? "none" : "1px solid grey",
+      borderTop: isOpen && up ? "1px solid grey" : "none",
+      borderBottom: isOpen && down ? "1px solid grey" : "none",
+      borderLeft: isOpen  ? "none" : "1px solid grey",
     } as SxProps;
   };
   
   return (
     <Box height="100%">
       <PanelGenes open={openPanelGenes} setOpen={setOpenPanelGenes}/>
+      <PanelReclustering open={openPanelRecluster} setOpen={setOpenPanelRecluster}/>
       {/* <PanelFiles open={openPanelFiles} setOpen={setOpenPanelFiles}/> */}
 
       <Grid
@@ -71,7 +74,7 @@ export default function NavbarRight() {
         <Grid item height={70}>
           <Button
             fullWidth
-            sx={navItemProps(openPanelGenes)}
+            sx={navItemProps(openPanelGenes, false, true)}
             onClick={() => {
               setOpenPanelGenes(!openPanelGenes);
             }}
@@ -85,7 +88,30 @@ export default function NavbarRight() {
             >
               {<GroupWork />}
               <Typography fontSize={theme.typography.subtitle1.fontSize}>
-                Gene view
+                View Gene
+              </Typography>
+            </Stack>
+          </Button>
+        </Grid>
+        
+        <Grid item height={70}>
+          <Button
+            fullWidth
+            sx={navItemProps(openPanelRecluster, true, true)}
+            onClick={() => {
+              setOpenPanelRecluster(!openPanelRecluster);
+            }}
+          >
+            <Stack
+              direction="column"
+              sx={{
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {<BlurCircular />}
+              <Typography fontSize={theme.typography.subtitle1.fontSize}>
+                Re-cluster observation
               </Typography>
             </Stack>
           </Button>

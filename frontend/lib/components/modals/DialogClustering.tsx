@@ -44,7 +44,7 @@ export default function DialogClustering(props: {
 
   return (
     <Dialog open={props.isOpen} onClose={() => props.setIsOpen(false)}>
-      <DialogTitle>Create Clustering (Leiden)</DialogTitle>
+      <DialogTitle>Create Observation (Leiden)</DialogTitle>
       <DialogContent>
         <Stack direction="column" rowGap={2} pt={2}>
           <Autocomplete

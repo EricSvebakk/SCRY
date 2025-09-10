@@ -1,6 +1,6 @@
 import { Grid } from "@mui/material";
 import ListEmbeddings from "../../controls/ListEmbeddings";
-import ListClusterings from "../../controls/ListClusterings";
+import ListClusterings from "../../controls/ListObservations";
 import { ClusterScatterPlot } from "@/lib/components/plots/ClusterScatterPlot";
 import { ListCluster } from "../../controls/ListCluster";
 import ListConnectivities from "../../controls/ListConnectivities";

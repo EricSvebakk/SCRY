@@ -39,7 +39,6 @@ export default function ListClusterings() {
       sx={{
         width: "100%",
         minHeight: "100%",
-        // border: "1px solid green",
         backgroundColor: theme.palette.background.paper,
       }}
       justifyContent="space-between"
@@ -52,16 +51,13 @@ export default function ListClusterings() {
           overflowY: "auto",
           overflowX: "hidden",
           backgroundColor: theme.palette.background.paper,
-          // pointerEvents: "none",
-          // cursor: ""
         }}
       >
         {obs.keys ? (
           [...obs.keys]
             .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
             .map((e) => {
-              const isDisabled =
-                obsm.selectedKey === undefined || obs.selectedKey === e;
+              const isSelected = obs.selectedKey === e;
 
               return (
                 // <Tooltip
@@ -70,23 +66,19 @@ export default function ListClusterings() {
                 //   leaveDelay={0}
                 //   placement="right"
                 // >
-                //   <Box width="100%">
                 <Button
                   key={"accordion_" + e}
                   size="small"
                   variant="text"
-                  disabled={isDisabled}
+                  disabled={isSelected}
                   sx={{
+                    backgroundColor: isSelected ? theme.palette.action.selected : "",
                     color: theme.palette.text.secondary,
                     justifyContent: "start",
                     overflowX: "clip",
                     fontWeight: obs.selectedKey === e ? "bold" : "",
                     textTransform: "initial",
                     fontSize: theme.typography.fontSize,
-                    "&:disabled": {
-                      cursor: "not-allowed",
-                      pointerEvents: "all !important",
-                    },
                   }}
                   onClick={() => {
                     if (obs.selectedKey !== e) {
@@ -108,7 +100,6 @@ export default function ListClusterings() {
                 >
                   {e}
                 </Button>
-                //   </Box>
                 // </Tooltip>
               );
             })
@@ -118,7 +109,7 @@ export default function ListClusterings() {
       </Stack>
 
       <ButtonSecondary
-        title="+ Create Clustering"
+        title="+ Create Observation"
         onClick={() => setIsClusteringDialogOpen(true)}
         sx={{
           borderTop: "1px solid grey",

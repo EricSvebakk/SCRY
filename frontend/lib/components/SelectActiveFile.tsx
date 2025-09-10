@@ -109,17 +109,19 @@ export default function SelectActiveFile() {
               </TableHead>
               <TableBody>
                 {filenames.map((e, i) => {
+                  const isSelected = e.id === selectedFile;
                   return (
                     <Tooltip key={`file_table_row_${i}_tooltip`} title={e.name} placement="right">
                       <TableRow
                         key={`file_table_row_${i}_row`}
-                        selected={e.id === selectedFile}
+                        selected={isSelected}
                         onClick={() => setSelectedFile(e.id)}
                         sx={{
-                            cursor: "pointer",
-                            "&:hover": {
-                              backgroundColor: (theme) => theme.palette.action.hover,
-                            },
+                          backgroundColor: isSelected ? theme.palette.action.selected : "",
+                          cursor: "pointer",
+                          "&:hover": {
+                            backgroundColor: (theme) => theme.palette.action.hover,
+                          },
                         }}
                       >
                         <TableCell

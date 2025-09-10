@@ -48,18 +48,21 @@ export default function ListEmbeddings() {
           [...obsm.keys]
             .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
             .map((e) => {
+              const isSelected = obsm.selectedKey === e;
+              
               return (
                 <Stack key={"stack" + e} direction="row">
                   <Button
                     fullWidth
                     key={"accordion_" + e}
-                    disabled={obsm.selectedKey === e}
+                    disabled={isSelected}
                     sx={{
+                      backgroundColor: isSelected ? theme.palette.action.selected : "",                    
                       color: theme.palette.text.secondary,
                       justifyContent: "start",
                       overflowX: "clip",
                       textTransform: "initial",
-                      fontWeight: obsm.selectedKey === e ? "bold" : "",
+                      fontWeight: isSelected ? "bold" : "",
                       fontSize: theme.typography.fontSize
                     }}
                     size="small"
