@@ -1,13 +1,9 @@
 
-"use client"
-
 import {
   Box,
   Button,
-  Dialog,
-  DialogContent,
-  DialogTitle,
   Paper,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -17,61 +13,53 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
+import React, { useEffect, useState } from "react";
 import { theme } from "@/app/layout";
-import { get_filenames } from "@/lib/fetch/get_filenames";
-import CurrentProgress from "../OverlayCurrentProgress";
-import { useRouter } from "next/navigation";
-import { reset } from "@/lib/redux/reducers/plotReducer";
 import formatFileSize from "@/lib/util/formatFileSize";
+import { useRouter } from "next/navigation";
+import CurrentProgress from "./OverlayCurrentProgress";
+import { get_filenames } from "../fetch/get_filenames";
 
-export default function DialogFileSelctor(props: {
-  isOpen: boolean;
-  setIsOpen: Function;
-}) {
+export default function SelectActiveFile() {
   
-  const status = useAppSelector((state) => state.plotReducer.status.get_filenames);
   const filenames = useAppSelector((state) => state.fileReducer.files);
   const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
+  const status = useAppSelector((state) => state.plotReducer.status.save_file_as);
   
-  const dispatch = useAppDispatch();
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  
   const router = useRouter();
+  const dispatch = useAppDispatch();
   
   useEffect(() => {
     get_filenames(dispatch);
   }, [filenames.length])
-
+  
   return (
-    <Dialog
-      open={props.isOpen}
-      onClose={() => props.setIsOpen(false)}
-      maxWidth="md"
+    <Stack
+      direction="column"
+      rowGap={1}
+      sx={{
+        height: "100%"
+      }}
     >
-      <DialogTitle>Select File</DialogTitle>
-      <DialogContent
+      <Stack
+        direction="column"
         sx={{
-          p: 2,
-          width: 600,
-          maxWidth: 600,
-          overflow: "hidden",
+          width: 500,
+          height: "100%"
         }}
       >
-        
-        
         {status.inProgress ? (
-          <Box
-            sx={{
-              height: 500,
-            }}
-          >
+          <Box>
             <CurrentProgress status={status}/>
           </Box>
         ) : (
           <TableContainer
             component={Paper}
             sx={{
-              height: 500,
+              height: "100%",
               borderRadius: 0,
               border: "1px solid grey",
               scrollbarWidth: "thin",
@@ -82,7 +70,6 @@ export default function DialogFileSelctor(props: {
               <TableHead
                 sx={{
                   borderBottom: "1px solid grey",
-                  width: 50,
                 }}
               >
                 <TableRow
@@ -94,7 +81,7 @@ export default function DialogFileSelctor(props: {
                     sx={{
                       backgroundColor: theme.palette.secondary.main,
                       borderBottom: "1px solid grey",
-                      width: 50,
+                      // width: 50,
                       fontWeight: "bold",
                     }}
                   >
@@ -116,40 +103,48 @@ export default function DialogFileSelctor(props: {
                       fontWeight: "bold",
                     }}
                   >
-                    Select
+                    Usage
                   </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filenames.map((e) => {
+                {filenames.map((e, i) => {
                   return (
-                    <Tooltip title={e.name} placement="right">
-                      <TableRow>
-                        <TableCell>
+                    <Tooltip key={`file_table_row_${i}_tooltip`} title={e.name} placement="right">
+                      <TableRow
+                        key={`file_table_row_${i}_row`}
+                        selected={e.id === selectedFile}
+                        onClick={() => setSelectedFile(e.id)}
+                        sx={{
+                            cursor: "pointer",
+                            "&:hover": {
+                              backgroundColor: (theme) => theme.palette.action.hover,
+                            },
+                        }}
+                      >
+                        <TableCell
+                          key={`file_table_row_${i}_cell_label`}
+                        >
                           <Typography
+                            key={`file_table_row_${i}_cell_label_text`}
                             sx={{
                               fontSize: theme.typography.fontSize,
                               textOverflow: "ellipsis",
                               overflow: "clip",
-                              width: 200,
+                              // width: 200,
                               textWrap: "nowrap",
                             }}
                           >
                             {e.name}
                           </Typography>
                         </TableCell>
-                        <TableCell>{formatFileSize(e.fileSize)}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="contained"
-                            disabled={e.id === activeFile}
-                            onClick={() => { 
-                              dispatch(reset(true));
-                              router.push("/files/" + e.id);
-                             }}
-                          >
-                            Open
-                          </Button>
+                        <TableCell
+                          key={`file_table_row_${i}_cell_size`}
+                        >{formatFileSize(e.fileSize)}</TableCell>
+                        <TableCell
+                          key={`file_table_row_${i}_cell_usage`}
+                        >
+                          {e.id === activeFile ? "In-use" : "Available"}
                         </TableCell>
                       </TableRow>
                     </Tooltip>
@@ -159,7 +154,45 @@ export default function DialogFileSelctor(props: {
             </Table>
           </TableContainer>
         )}
-      </DialogContent>
-    </Dialog>
+      </Stack>
+      
+      <Stack
+        direction="row"
+        columnGap={1}
+        sx={{
+          width: "100%",
+          justifyContent: "end"
+        }}
+      >
+        <Button
+          variant="contained"
+          color="secondary"
+        >
+          Delete file
+        </Button>
+        
+        <Button
+          variant="contained"
+          color="secondary"
+        >
+          Copy file
+        </Button>
+        
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={() => { 
+            router.push("/files/" + selectedFile);
+            router.refresh();
+            // dispatch(reset(true));
+          }}
+        >
+          Open file
+        </Button>
+
+      </Stack>
+      
+    </Stack>
   );
+  
 }
