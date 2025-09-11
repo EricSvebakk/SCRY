@@ -5,7 +5,7 @@ import plotReducer from "../reducers/plotReducer";
 import { someApi } from "../api/api";
 import { setupListeners } from "@reduxjs/toolkit/query";
 
-console.info("Creating store...")
+// console.info("Creating store...")
 export const store = configureStore({
   reducer: {
     fileReducer: fileReducer,

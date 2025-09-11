@@ -43,7 +43,7 @@ export default function PagesLayout({
     const selectedFileObjects = files
       .filter((file) => selectedFiles.includes(file.id) || (file.id === activeFile))
       .map((file) => {
-        console.log(file)
+        // console.log(file)
         return {
           id: file.id,
           path: `/files/${file.id}`,

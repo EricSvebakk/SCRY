@@ -26,7 +26,7 @@ export default function ListConnectivities() {
     
     if (uns) {
       
-      console.log(uns);
+      // console.log(uns);
       
       const newConnectivities = Object.keys(uns)
         .filter((e: string) => uns[e] && Object.keys(uns[e]).includes("connectivities_key"));
