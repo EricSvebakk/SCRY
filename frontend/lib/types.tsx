@@ -152,6 +152,7 @@ export const fetchOptions = [
   "get_model_types",
   "get_feature_coordinates",
   "save_file_as",
+  "post_new_observation",
 ] as const;
 
 export type statusOptions = {
@@ -194,6 +195,7 @@ export type Cluster = {
 }
 
 export type Reclustering = {
+  file: string;
   name: string;
   base: string;
   clusters: Cluster[];

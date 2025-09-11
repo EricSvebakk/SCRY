@@ -1,11 +1,13 @@
 
 
-import { Autocomplete, Box, Button, Collapse, Grid, IconButton, Stack, TextField } from "@mui/material";
+import { Autocomplete, Box, Collapse, Grid, IconButton, Stack, TextField } from "@mui/material";
 import React, { useEffect, useRef, useState } from "react";
 import { theme } from "@/app/layout";
-import { useAppSelector } from "@/lib/redux/hooks/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { AutocompleteOption, Cluster, Reclustering } from "@/lib/types";
 import { Close } from "@mui/icons-material";
+import { post_new_observation } from "@/lib/fetch/post_new_observation";
+import { LoadingButton } from "@mui/lab";
 
 export default function PanelReclustering(props: {
   open: boolean;
@@ -13,6 +15,9 @@ export default function PanelReclustering(props: {
 }) {
   
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
+  const fileID = useAppSelector((state) => state.fileReducer.activeFile);
+  const statusObs = useAppSelector((state) => state.plotReducer.status.get_file_obs);
+  const statusNewObs = useAppSelector((state) => state.plotReducer.status.post_new_observation);
   
   const [observationName, setObservationName] = useState<string>("");
   const [catOptions, setCatOptions] = useState<AutocompleteOption[]>([]);
@@ -20,6 +25,7 @@ export default function PanelReclustering(props: {
   const [clusters, setClusters] = useState<AutocompleteOption[][]>([]);
   
   const ref = useRef();
+  const dispatch = useAppDispatch();
   
   useEffect(() => {
     if (obs.selectedKey && obs.indices) {
@@ -92,8 +98,9 @@ export default function PanelReclustering(props: {
             value={obs.selectedKey ? obs.selectedKey : "[Please select observation]"}
           />
           
-          <Button
+          <LoadingButton
             variant="contained"
+            loading={statusObs.inProgress}
             disabled={!obs.selectedKey}
             onClick={() => {
               setClusters([...clusters, []])
@@ -104,7 +111,7 @@ export default function PanelReclustering(props: {
             }}
           >
             + Add cluster
-          </Button>
+          </LoadingButton>
           
           <Stack
             direction="column"
@@ -135,8 +142,9 @@ export default function PanelReclustering(props: {
             ))}
           </Stack>
           
-          <Button
+          <LoadingButton
             variant="contained"
+            loading={statusObs.inProgress || statusNewObs.inProgress}
             disabled={!obs.selectedKey}
             fullWidth
             sx={{
@@ -146,6 +154,7 @@ export default function PanelReclustering(props: {
               
               if (observationName !== "" && obs.selectedKey && clusters.length > 0) {
                 const newObservation: Reclustering = {
+                  file: fileID,
                   name: observationName,
                   base: obs.selectedKey,
                   clusters: clusters.map((cluster, index) => ({
@@ -154,13 +163,13 @@ export default function PanelReclustering(props: {
                   }) as Cluster)
                 };
                 
-                console.log(newObservation);
+                post_new_observation(fileID, newObservation, dispatch);
               }
               
             }}
           >
             Create observation
-          </Button>
+          </LoadingButton>
           
         </Stack>
 

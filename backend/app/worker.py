@@ -11,6 +11,7 @@ from anndata import AnnData
 from dataclasses import dataclass
 from functools import partial
 from typing import Callable
+from my_types import newObservation
 
 from anndata_util import sort_by_dendro_rgg_rbb_order, make_safe, build_dendrogram_tree
 
@@ -560,4 +561,37 @@ def compute_celltypist_annotations(
     "labels": labels
   }
   
+# ============================================================================================
+@celery_app.task(bind=True)
+def compute_new_observation(
+  self,
+  file_path: str,
+  observation_dict: dict
+):
   
+  observation = newObservation.model_validate(observation_dict)
+  
+  start_progress(self)
+  
+  adata = sc.read_h5ad(file_path)
+  
+  obs_map = {
+    sub: cluster.label
+    for cluster in observation.clusters
+    for sub in cluster.subclusters
+  }
+  
+  obs_key = observation.name
+  
+  adata.obs[obs_key] = adata.obs[observation.base].replace(obs_map)
+  adata.obs[obs_key] = adata.obs[obs_key].astype("category")
+
+  end_progress(self)
+  
+  sc.write(file_path, adata)
+  
+  adata.file.close()
+  
+  return {
+    "key": obs_key
+  }

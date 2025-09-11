@@ -8,9 +8,10 @@ from math import ceil, log10
 from typing import Optional
 import celltypist as ct
 import scanpy as sc
+from my_types import newObservation
 
 from celery.result import AsyncResult
-from worker import compute_rgg_dotplot, compute_nldr, compute_ldr, compute_clustering, compute_celltypist_annotations, compute_save_file_as
+from worker import compute_rgg_dotplot, compute_nldr, compute_ldr, compute_clustering, compute_celltypist_annotations, compute_save_file_as, compute_new_observation
 
 import os
 import logging
@@ -24,13 +25,13 @@ import anndata_util as au
 
 load_dotenv()
 FRONTEND_ENDPOINT = os.environ.get("FRONTEND_ENDPOINT")
-PATH_BACKEND = os.environ.get("PATH_BACKEND")
+BACKEND_PATH = os.environ.get("BACKEND_PATH")
 
 ORIGINS = [
     FRONTEND_ENDPOINT,
 ]
 config = dotenv_values(".env")
-app = FastAPI(root_path=PATH_BACKEND)
+app = FastAPI(root_path=BACKEND_PATH)
 
 print(config, ORIGINS)
 
@@ -331,6 +332,27 @@ async def start_task_compute_save_file_as(
     return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
   
   task = compute_save_file_as.delay(file_path, new_file_path, selected_obs, selected_obs_clusters)
+  
+  return JSONResponse(content={
+    "task_id": task.id
+  })
+  
+  
+@app.post("/start_task_create_observation/", tags=["SYSTEM"])
+async def start_task_create_observation(
+  observation: newObservation
+):
+  
+  file_id = observation.file
+  file_path = os.path.join(UPLOAD_DIR, file_id)
+  
+  if (not os.path.exists(file_path)):
+    return JSONResponse(content=f"File ID '{file_id}' is not valid.")
+  
+  if (not file_path.endswith(".h5ad")):
+    return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
+  
+  task = compute_new_observation.delay(file_path, observation.model_dump())
   
   return JSONResponse(content={
     "task_id": task.id

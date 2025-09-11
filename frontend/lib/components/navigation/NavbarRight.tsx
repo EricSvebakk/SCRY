@@ -6,9 +6,11 @@ import { BlurCircular, FileOpen, GroupWork, ScatterPlot } from "@mui/icons-mater
 import PanelGenes from "./panel/PanelGenes";
 import PanelFiles from "./panel/PanelFiles";
 import PanelReclustering from "./panel/PanelReclustering";
+import { useAppSelector } from "@/lib/redux/hooks/hooks";
 
 export default function NavbarRight() {
   
+  const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
 
   const [openPanelGenes, setOpenPanelGenes] = useState(false);
   const [openPanelRecluster, setOpenPanelRecluster] = useState(false);
@@ -97,6 +99,7 @@ export default function NavbarRight() {
         <Grid item height={70}>
           <Button
             fullWidth
+            disabled={!obs.selectedKey}
             sx={navItemProps(openPanelRecluster, true, true)}
             onClick={() => {
               setOpenPanelRecluster(!openPanelRecluster);

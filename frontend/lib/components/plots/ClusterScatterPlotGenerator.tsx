@@ -3,8 +3,7 @@
 import * as d3 from "d3";
 import { AnndataIndices, PlotConfigurationData, PlotConfigurationFields } from "../../types";
 import { setTrigger } from "../../redux/reducers/plotReducer";
-import { linearScaleColorOptions, sequentialScaleColorOptions } from "@/lib/design";
-import { toPng, toSvg } from "html-to-image";
+import { sequentialScaleColorOptions } from "@/lib/design";
 
 export const my_colors = [
   "#1f77b4",
@@ -19,17 +18,14 @@ export const my_colors = [
 ];
 
 const ClusterScatterPlotGenerator = (props: {
-  // svgCurrent: HTMLCanvasElement;
   groupRefs: HTMLCanvasElement[];
   config: PlotConfigurationFields<PlotConfigurationData["cluster"]>;
   indices: AnndataIndices | undefined;
   coordinates: number[][];
   selectedClusters: string[];
-  // attr: "var" | "obs";
   dispatch: Function;
   imageTrigger: any | null;
 }): () => void => {
-  // const containerRect = props.svgCurrent.getBoundingClientRect();
 
   if (props.groupRefs.length == 0) {
     return () => {};
@@ -61,13 +57,6 @@ const ClusterScatterPlotGenerator = (props: {
     .domain(d3.extent(coordinates, (d: number[]) => d[1]) as [number, number])
     .range([height - paddingHeight, paddingHeight]);
 
-  // const svgContext = d3
-  //   .select(props.svgCurrent)
-  //   .append("svg")
-  //   .attr("id", "herewego")
-  //   .attr("width", width)
-  //   .attr("height", height);
-
   let labels = props.indices
     ? (props.indices.categories as string[])
     : ["none"];
@@ -92,28 +81,6 @@ const ClusterScatterPlotGenerator = (props: {
     .scaleOrdinal<string>()
     .domain(labels)
     .range(colorScheme);
-
-  // const svgContext: CanvasRenderingContext2D = props.svgCurrent.getContext("2d")!
-
-  // svgContext.canvas.width = width;
-  // svgContext.canvas.height = height;
-  // svgContext.canvas.style.width = (width * 30).toString();
-  // svgContext.canvas.style.height = (height * 30).toString();
-
-  // coordinates.forEach((e, i) => {
-  //   svgContext.beginPath();
-  //   svgContext.arc(
-  //     xScale(e[0]),
-  //     yScale(e[1]),
-  //     pointSize * 1,
-  //     0,
-  //     2 * Math.PI
-  //   );
-
-  //   svgContext.fillStyle = "#888";
-  //   svgContext.fill();
-  //   svgContext.closePath();
-  // });
 
   labels.forEach((label, labelIndex) => {
     const someContext: CanvasRenderingContext2D =
@@ -203,6 +170,8 @@ const ClusterScatterPlotGenerator = (props: {
       finalCtx.fill();
       finalCtx.closePath();
     });
+    
+    let step_index = 0;
 
     labels.forEach((label, labelIndex) => {
       if (!props.selectedClusters.includes(label)) {
@@ -237,7 +206,7 @@ const ClusterScatterPlotGenerator = (props: {
       
       finalCtx.fillRect(
         legendX,
-        imagePadding + (labelIndex * step) - legendSquareSize / 2, //+ step / 2,
+        imagePadding + (step_index * step) - legendSquareSize / 2,
         legendSquareSize,
         legendSquareSize
       );
@@ -247,8 +216,10 @@ const ClusterScatterPlotGenerator = (props: {
       finalCtx.fillText(
         label,
         legendX + legendSquareSize + fontSize / 2,
-        imagePadding + (labelIndex * step)
+        imagePadding + (step_index * step)
       );
+            
+      step_index += 1;
     });
 
     // Export the final canvas as an image
