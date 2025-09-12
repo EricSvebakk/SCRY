@@ -11,7 +11,7 @@ export default function SelectClusterForFile() {
   
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
   const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
-  const statusHierarchy = useAppSelector((state) => state.plotReducer.status.get_file_hierarchy);
+  const statusHierarchy = useAppSelector((state) => state.plotReducer.statusBackend.HIERARCHY);
   const statusObs = useAppSelector((state) => state.plotReducer.status.get_file_obs);
   
   const dispatch = useAppDispatch();

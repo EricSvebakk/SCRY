@@ -12,6 +12,9 @@ import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { AutocompleteOption } from "@/lib/types";
 import { get_clustering } from "@/lib/fetch/workflow/get_clustering";
+import { useCeleryFileLeidenMutation } from "@/lib/redux/api/api";
+import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
+import { setAnndataField } from "@/lib/redux/reducers/plotReducer";
 
 export default function DialogClustering(props: {
   isOpen: boolean;
@@ -22,16 +25,38 @@ export default function DialogClustering(props: {
   const obsp = useAppSelector((state) => state.plotReducer.anndata.obsp.keys);
 
   const dispatch = useAppDispatch();
-  const [selectedUns, setSelectedUns] = useState<AutocompleteOption | null>(
-    null
-  );
-  const [optionsFiltered, setOptionsFiltered] = useState<AutocompleteOption[]>(
-    []
-  );
+  const [getLeiden, { data, isSuccess } ] = useCeleryFileLeidenMutation()
+  
+  const [selectedUns, setSelectedUns] = useState<AutocompleteOption | null>(null);
+  const [optionsFiltered, setOptionsFiltered] = useState<AutocompleteOption[]>([]);
   const [resolution, setResolution] = useState<number>(1);
 
   const filterOptions = createFilterOptions({ limit: 20 });
 
+  useEffect(() => {
+    if (isSuccess) {
+      pollTaskStatus(
+        data.response.id,
+        "LEIDEN",
+        dispatch,
+        () => {
+          
+          const resToString = `${resolution}`.replace(".", "_");
+          const resKey = `leiden_${resToString}_${selectedUns?.label}`;
+
+          dispatch(
+            setAnndataField({
+              attribute: "obs",
+              field: "selectedKey",
+              value: resKey,
+            })
+          );
+          
+        }
+      );
+    }
+  }, [data, isSuccess]);
+  
   useEffect(() => {
     if (uns && obsp) {
       const structuredOptions: AutocompleteOption[] = Object.keys(uns)
@@ -97,12 +122,14 @@ export default function DialogClustering(props: {
             size="medium"
             onClick={() => {
               if (selectedUns) {
-                get_clustering(
-                  activeFile,
-                  selectedUns?.label,
-                  resolution,
-                  dispatch
-                );
+                
+                getLeiden({
+                  fileID: activeFile,
+                  unsKey: selectedUns?.label,
+                  resolution: resolution,
+                  
+                })
+                
                 props.setIsOpen(false);
               }
             }}

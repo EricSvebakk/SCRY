@@ -9,6 +9,7 @@ import { theme } from "@/app/layout";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import DialogClustering from "../modals/DialogClustering";
 import AutoAnnotationDialog from "../modals/AutoAnnotationDialog";
+import { useLazyFileObsQuery } from "@/lib/redux/api/api";
 
 export default function ListClusterings() {
   
@@ -16,11 +17,11 @@ export default function ListClusterings() {
   
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
-  const status = useAppSelector((state) => state.plotReducer.status.get_file_hierarchy)
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.HIERARCHY)
   
   const dispatch = useAppDispatch();
+  const [getObs, { data, isSuccess } ] = useLazyFileObsQuery();
   
-  const [expanded, setExpanded] = useState(false);
   const [isClusteringDialogOpen, setIsClusteringDialogOpen] = useState<boolean>(false);
   const [isAutoAnnotDialogOpen, setIsAutoAnnotDialogOpen] = useState<boolean>(false);
   
@@ -60,12 +61,6 @@ export default function ListClusterings() {
               const isSelected = obs.selectedKey === e;
 
               return (
-                // <Tooltip
-                //   title={isDisabled ? "Please select an Embedding" : e}
-                //   enterDelay={2000}
-                //   leaveDelay={0}
-                //   placement="right"
-                // >
                 <Button
                   key={"accordion_" + e}
                   size="small"
@@ -81,26 +76,22 @@ export default function ListClusterings() {
                     fontSize: theme.typography.fontSize,
                   }}
                   onClick={() => {
-                    if (obs.selectedKey !== e) {
-                      setExpanded(true);
-
-                      dispatch(
-                        setAnndataField({
-                          attribute: "obs",
-                          field: "selectedKey",
-                          value: e,
-                        })
-                      );
-
-                      get_file_obs(fileID, e, dispatch);
-                    } else {
-                      setExpanded(!expanded);
-                    }
+                    dispatch(
+                      setAnndataField({
+                        attribute: "obs",
+                        field: "selectedKey",
+                        value: e,
+                      })
+                    );
+                    
+                    getObs({
+                      fileID,
+                      obs: e
+                    });
                   }}
                 >
                   {e}
                 </Button>
-                // </Tooltip>
               );
             })
         ) : (

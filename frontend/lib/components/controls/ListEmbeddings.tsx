@@ -4,18 +4,26 @@ import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { get_file_obsm } from "@/lib/fetch/get_file_obsm";
 import CurrentProgress from "../OverlayCurrentProgress";
 import DialogDimensionalReduction from "../modals/DialogDimensionalReduction";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { theme } from "@/app/layout";
 import ButtonSecondary from "../custom/ButtonSecondary";
+import { useLazyFileObsmQuery } from "@/lib/redux/api/api";
 
 export default function ListEmbeddings() {
   
   const fileID = useAppSelector((state) => state.fileReducer.activeFile);
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
-  const status = useAppSelector((state) => state.plotReducer.status.get_file_hierarchy);
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.HIERARCHY);
 
   const dispatch = useAppDispatch();
+  const [getObsm, { data, isSuccess } ] = useLazyFileObsmQuery();
 
+  // useEffect(() => {
+  //   if (isSuccess) {
+      
+  //   }
+  // }, [data, isSuccess])
+  
   const [isNLDRDialogOpen, setIsNLDRDialogOpen] = useState<boolean>(false);
   
   if (status.inProgress) {
@@ -74,7 +82,11 @@ export default function ListEmbeddings() {
                           value: e,
                         })
                       );
-                      get_file_obsm(fileID, e, dispatch);
+                      
+                      getObsm({
+                        fileID: fileID,
+                        obsm: e
+                      })
                     }}
                   >
                     {e}

@@ -1,5 +1,7 @@
 import { get_celltypist_annotations } from "@/lib/fetch/workflow/get_celltypist_annotations";
+import { useCeleryCelltypistAnnotateMutation, useFileHierarchyQuery, useLazyFileHierarchyQuery } from "@/lib/redux/api/api";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
+import { setAnndataField, setFieldAcrossAnndata } from "@/lib/redux/reducers/plotReducer";
 import { AutocompleteOption } from "@/lib/types";
 import { Autocomplete, Button, createFilterOptions, Dialog, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
@@ -25,6 +27,10 @@ export default function AutoAnnotationDialog(props: {
   const [annotationKey, setAnnotationKey] = useState<string>("");
   
   const filterOptions = createFilterOptions({ limit: 20 });
+  
+  const [getAnnotation] = useCeleryCelltypistAnnotateMutation();
+  const [getHierarchy] = useLazyFileHierarchyQuery();
+  // const [getObs] = useLazyFileHierarchyQuery();
   
   useEffect(() => {
     if (models.length > 0) {
@@ -135,14 +141,45 @@ export default function AutoAnnotationDialog(props: {
             onClick={() => {
               
               if (selectedConnectivity?.label && selectedModel?.label) {
-
-                get_celltypist_annotations(
-                  activeFile,
-                  annotationKey,
-                  uns[selectedConnectivity?.label].connectivities_key,
-                  selectedModel.label,
-                  dispatch
-                );
+                
+                const connectivitiesKey = uns[selectedConnectivity?.label].connectivities_key;
+                
+                getAnnotation({
+                    fileID: activeFile,
+                    annotationKey: annotationKey,
+                    connectivitiesKey: connectivitiesKey,
+                    annotationModel: selectedModel.label,
+                })
+                .then((data) => {
+                  
+                  const conKey = `${connectivitiesKey}_MAJORITY_VOTING`
+                  
+                  dispatch(
+                    setAnndataField({
+                      attribute: "obs",
+                      field: "selectedKey",
+                      value: conKey,
+                    })
+                  );
+                  
+                  // dispatch(incrementRefreshCounter("hierarchy"));
+                  // 
+                  // getHierarchy({
+                  //   fileID: activeFile
+                  // })
+                  // .then((data) => {
+                  //   dispatch(
+                  //     setFieldAcrossAnndata({
+                  //       field: "keys",
+                  //       values: data,
+                  //     })
+                  //   );
+                  // })
+                  
+                  // get_file_obs(fileID, conKey, dispatch);
+                  // get_file_hierarchy(fileID, dispatch);
+                  
+                })
                 
                 props.setIsOpen(false);
               }

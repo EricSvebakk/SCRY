@@ -13,9 +13,7 @@ export function ListCluster() {
   
   const config = useAppSelector((state) => state.plotReducer.plot.cluster);
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
-  const status = useAppSelector(
-    (state) => state.plotReducer.status.get_file_obs
-  );
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.OBS);
   const selectedClusters = useAppSelector(
     (state) => state.plotReducer.filtering.selected.clusters
   );

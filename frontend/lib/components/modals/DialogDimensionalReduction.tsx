@@ -8,10 +8,13 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { get_nldr } from "@/lib/fetch/workflow/get_nldr";
 import { theme } from "@/app/layout";
+import { useCeleryFileNLDRMutation, useCeleryStatusQuery } from "@/lib/redux/api/api";
+import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
+import { setAnndataField } from "@/lib/redux/reducers/plotReducer";
 
 export default function DialogDimensionalReduction(props: {
   isOpen: boolean;
@@ -20,12 +23,37 @@ export default function DialogDimensionalReduction(props: {
   const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
 
   const dispatch = useAppDispatch();
+  const [getNLDR, { data, isSuccess } ] = useCeleryFileNLDRMutation();
+  
   const [adataKey, setAdataKey] = useState<string>("");
   const [numPCs, setNumPCs] = useState<number>(30);
   const [minDist, setMinDist] = useState<number>(0.5);
   const [spread, setSpread] = useState<number>(1.0);
   const [nNeighbors, setNNeighbors] = useState<number>(15);
 
+  useEffect(() => {
+    if (isSuccess) {
+      pollTaskStatus(
+        data.response.id,
+        "OBSM",
+        dispatch,
+        () => {
+          
+          const embeddingKey = `X_umap_${adataKey}`;
+    
+          dispatch(
+            setAnndataField({
+              attribute: "obsm",
+              field: "selectedKey",
+              value: embeddingKey,
+            })
+          );
+          
+        }
+      );
+    }
+  }, [data, isSuccess]);
+  
   return (
     <Dialog
       open={props.isOpen}
@@ -115,15 +143,15 @@ export default function DialogDimensionalReduction(props: {
               variant="outlined"
               size="medium"
               onClick={() => {
-                get_nldr(
-                  activeFile,
+                
+                getNLDR({
+                  fileID: activeFile,
                   adataKey,
                   numPCs,
                   minDist,
                   spread,
                   nNeighbors,
-                  dispatch
-                );
+                });
 
                 props.setIsOpen(false);
               }}

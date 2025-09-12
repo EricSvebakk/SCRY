@@ -19,6 +19,7 @@ export type InitialPlotStateProps = {
       [key in keyof triggerOptions]: triggerOptions[key] | null;
     };
   };
+  statusBackend: statusBackendAPI;
   status: statusAttributes;
 };
 
@@ -200,6 +201,25 @@ export type Reclustering = {
   base: string;
   clusters: Cluster[];
 }
+
+export const tagsBackendAPI = [
+  "HIERARCHY",
+  "OBSM",
+  "OBS",
+  "LEIDEN"
+] as const
+
+export type statusBackendAPI = {
+  [key in (typeof tagsBackendAPI)[number]]: statusOptions;
+};
+
+// export const refreshOptions = [
+//   "hierarchy"
+// ] as const
+
+// export type refreshAttributes = {
+//   [key in (typeof refreshOptions)[number]]: number;
+// };
 
 // ==== Not related to reducer =============================================================
 

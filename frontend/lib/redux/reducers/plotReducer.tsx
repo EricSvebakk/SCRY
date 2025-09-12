@@ -12,8 +12,11 @@ import {
   CelltypistModel,
   PlotConfiguration,
   geneReport,
+  tagsBackendAPI,
+  statusBackendAPI,
 } from "@/lib/types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { backendAPI } from "../api/api";
 
 const initialPlotState: InitialPlotStateProps = {
   anndata: AnndataAttributeKeys.reduce(
@@ -83,6 +86,16 @@ const initialPlotState: InitialPlotStateProps = {
       return acc
     },
     {} as statusAttributes
+  ),
+  statusBackend: tagsBackendAPI.reduce(
+    (acc, key) => {
+      acc[key] = {
+        inProgress: false,
+        message: ""
+      }
+      return acc
+    },
+    {} as statusBackendAPI
   )
 };
 
@@ -199,6 +212,9 @@ export const plotSlice = createSlice({
         type.message = action.payload.message;
       }
     },
+    // incrementRefreshCounter: (state: InitialPlotStateProps, action: PayloadAction<typeof refreshOptions[number]>) => {
+    //   state.statusBackend[action.payload] += 1;
+    // },
     setModelTypes: (
       state: InitialPlotStateProps,
       action: PayloadAction<CelltypistModel[]>
@@ -207,8 +223,106 @@ export const plotSlice = createSlice({
     },
     setGeneReport(state, action: PayloadAction<geneReport>) {
       state.data.geneReport = action.payload;
-    }
+    },
+    
+    
+    setStatusBackend: (
+      state: InitialPlotStateProps,
+      action: PayloadAction<{
+        type: (typeof tagsBackendAPI)[number];
+        value: boolean;
+        message?: string;
+      }>
+    ) => {
+      const type = state.statusBackend[action.payload.type];
+
+      type.inProgress = action.payload.value;
+
+      if (action.payload.message !== undefined) {
+        type.message = action.payload.message;
+      }
+    },
+    
   },
+  extraReducers: (builder) => {
+    builder.addMatcher(
+      backendAPI.endpoints.fileHierarchy.matchPending,
+      (state) => {
+        state.statusBackend.HIERARCHY = {
+          inProgress: true,
+          message: "Loading in Anndata metadata"
+        }
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.fileObsm.matchPending,
+      (state) => {
+        state.statusBackend.OBSM = {
+          inProgress: true,
+          message: "Loading embedding coordinates"
+        }
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.fileObs.matchPending,
+      (state) => {
+        state.statusBackend.OBS = {
+          inProgress: true,
+          message: "Loading observation data"
+        }
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.celeryFileNLDR.matchPending,
+      (state) => {
+        state.statusBackend.OBSM = {
+          inProgress: true,
+          message: "requesting changes"
+        }
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.celeryFileLeiden.matchPending,
+      (state) => {
+        state.statusBackend.LEIDEN = {
+          inProgress: true,
+          message: "requesting changes"
+        }
+      }
+    ),
+    // ===========================================================================
+    builder.addMatcher(
+      backendAPI.endpoints.fileHierarchy.matchFulfilled,
+      (state, action) => {
+        const { response, ok } = action.payload;
+        if (ok) {
+          Object.keys(response).forEach((k: string) => {
+            const key = k as keyof AnndataAttributeData
+            state.anndata[key].keys = response[key];
+          });
+        }
+        state.statusBackend.HIERARCHY.inProgress = false
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.fileObsm.matchFulfilled,
+      (state, action) => {
+        if (action.payload.ok) {
+          state.anndata.obsm.data = action.payload.response.coordinates
+        }
+        state.statusBackend.OBSM.inProgress = false
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.fileObs.matchFulfilled,
+      (state, action) => {
+        if (action.payload.ok) {
+          state.anndata.obs.indices = action.payload.response
+        }
+        state.statusBackend.OBS.inProgress = false
+      }
+    )
+  }
 });
 
 export const {
@@ -222,8 +336,10 @@ export const {
   setSelectedClusters,
   setTrigger,
   setStatus,
+  // incrementRefreshCounter,
   setModelTypes,
   setGeneReport,
+  setStatusBackend
 } = plotSlice.actions;
 
 export default plotSlice.reducer;

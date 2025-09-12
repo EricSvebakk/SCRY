@@ -14,7 +14,7 @@ export function ClusterScatterPlot() {
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
   const config = useAppSelector((state) => state.plotReducer.plot.cluster);
   const imageTrigger = useAppSelector((state) => state.plotReducer.navigation.triggers.saveScatterPlotImage);
-  const status = useAppSelector((state) => state.plotReducer.status.get_embedding);
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.OBSM);
   const selectedCluster = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);
   
   const [counter, setCounter] = useState(0);

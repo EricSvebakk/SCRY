@@ -10,7 +10,7 @@ import DotplotDialog from "../modals/DotplotDialog";
 
 export default function ListTableData() {
   
-  const status = useAppSelector((state) => state.plotReducer.status.get_file_hierarchy);
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.HIERARCHY);
   const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;
   
   const [isDotplotDialogOpen, setIsDotplotDialogOpen] = useState(false);

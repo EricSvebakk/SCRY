@@ -18,6 +18,7 @@ import ScreenManageAnnData from "@/lib/components/navigation/screen/ScreenManage
 import NavbarLeft from "@/lib/components/navigation/NavbarLeft";
 import NavbarRight from "@/lib/components/navigation/NavbarRight";
 import { get_model_types } from "@/lib/fetch/get_model_types";
+import { useFileHierarchyQuery } from "@/lib/redux/api/api";
 
 type Screen = {
   label: string;
@@ -30,7 +31,9 @@ export default function FileIdPage({}) {
   
   const { fileID } = useParams();
 
+  const { data } = useFileHierarchyQuery({ fileID: fileID as string });
   const status = useAppSelector((state) => state.plotReducer.status);
+  // const refreshCounter = useAppSelector((state) => state.plotReducer.refreshCounter.hierarchy);
 
   const dispatch = useAppDispatch();
 
@@ -64,15 +67,12 @@ export default function FileIdPage({}) {
       
       setSelectedScreen(1);
       
-      if (!status.get_file_hierarchy.inProgress) {
-        get_file_hierarchy(fileID, dispatch);
-      }
-      if (!status.get_genes.inProgress) {
-        get_genes(fileID, dispatch);
-      }
-      if (!status.get_model_types.inProgress) {
-        get_model_types(fileID, dispatch);
-      }
+      // if (!status.get_genes.inProgress) {
+      //   get_genes(fileID, dispatch);
+      // }
+      // if (!status.get_model_types.inProgress) {
+      //   get_model_types(fileID, dispatch);
+      // }
     }
   }, []);
 
