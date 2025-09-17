@@ -1,7 +1,9 @@
 
 import { theme } from "@/app/layout";
 import { get_rgg_dotplot } from "@/lib/fetch/workflow/get_rgg_dotplot";
+import { useCeleryCelltypistAnnotateMutation, useCeleryFileRGGMutation } from "@/lib/redux/api/api";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
+import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 import {
   Button,
   Popover,
@@ -9,7 +11,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { MouseEvent } from "react";
+import { MouseEvent, useEffect } from "react";
 
 export function PopoverTableData(props: {
   title: string;
@@ -20,8 +22,20 @@ export function PopoverTableData(props: {
 }) {
   
   const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
+  const userID = useAppSelector((state) => state.fileReducer.userID);
   
   const dispatch = useAppDispatch();
+  const [getRGG, { data, isSuccess } ] = useCeleryFileRGGMutation();
+  
+  useEffect(() => {
+    if (isSuccess) {
+      pollTaskStatus(
+        data.response.id,
+        "RGG",
+        dispatch,
+      );
+    }
+  }, [data, isSuccess]);
   
   const open = Boolean(props.anchorEl);
   const id = open ? "simple-popover-table-data" : undefined;
@@ -95,13 +109,13 @@ export function PopoverTableData(props: {
                 
                 if (("n_top_genes" in props.params) && ("clustering" in props.params)) {
                   
-                  get_rgg_dotplot(
-                    activeFile,
-                    props.params.clustering as string,
-                    props.params.n_top_genes as number,
-                    [],
-                    dispatch
-                  )
+                  getRGG({
+                    fileID: activeFile,
+                    userID: userID,
+                    unsKey: props.params.clustering as string,
+                    nGenes: props.params.n_top_genes as number,
+                    selectedGenes: [],
+                  })
                   
                   props.handleClose();
                 }

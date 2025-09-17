@@ -2,11 +2,10 @@
 import { Button, Grid, Stack, SvgIconProps, SxProps, Typography } from "@mui/material";
 import { ReactElement } from "react";
 import { theme } from "@/app/layout";
-import { tabOptions } from "@/lib/types";
 
 type Screen = {
   label: string;
-  id: tabOptions;
+  id: string;
   component: JSX.Element;
   icon: ReactElement<SvgIconProps>;
 };

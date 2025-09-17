@@ -206,7 +206,9 @@ export const tagsBackendAPI = [
   "HIERARCHY",
   "OBSM",
   "OBS",
-  "LEIDEN"
+  "LEIDEN",
+  "ANNOTATION",
+  "RGG",
 ] as const
 
 export type statusBackendAPI = {
@@ -253,4 +255,5 @@ export type FileState = {
   files: fileType[];
   selectedFiles: string[];
   activeFile: string;
+  userID: string;
 };

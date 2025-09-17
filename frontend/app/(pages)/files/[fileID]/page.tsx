@@ -7,7 +7,7 @@ import {
 import { useParams } from "next/navigation";
 import { ReactElement, useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
-import { setActiveFile } from "@/lib/redux/reducers/fileReducer";
+import { setActiveFile, setActiveUser } from "@/lib/redux/reducers/fileReducer";
 import { get_file_hierarchy } from "@/lib/fetch/get_file_hierarchy";
 import { get_genes } from "@/lib/fetch/get_genes";
 import ScreenDimensionalReduction from "@/lib/components/navigation/screen/ScreenDimensionalReduction";
@@ -31,9 +31,9 @@ export default function FileIdPage({}) {
   
   const { fileID } = useParams();
 
-  const { data } = useFileHierarchyQuery({ fileID: fileID as string });
   const status = useAppSelector((state) => state.plotReducer.status);
-  // const refreshCounter = useAppSelector((state) => state.plotReducer.refreshCounter.hierarchy);
+  const userID = useAppSelector((state) => state.fileReducer.userID);
+  const { data } = useFileHierarchyQuery({ fileID: fileID as string, userID: userID }, { skip: userID === "anonymous" });
 
   const dispatch = useAppDispatch();
 
@@ -64,6 +64,7 @@ export default function FileIdPage({}) {
     
     if (typeof fileID === "string") {
       dispatch(setActiveFile(fileID));
+      dispatch(setActiveUser("Eric"));
       
       setSelectedScreen(1);
       

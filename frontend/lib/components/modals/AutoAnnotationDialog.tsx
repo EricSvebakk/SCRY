@@ -1,8 +1,8 @@
-import { get_celltypist_annotations } from "@/lib/fetch/workflow/get_celltypist_annotations";
-import { useCeleryCelltypistAnnotateMutation, useFileHierarchyQuery, useLazyFileHierarchyQuery } from "@/lib/redux/api/api";
+import { useCeleryCelltypistAnnotateMutation } from "@/lib/redux/api/api";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
-import { setAnndataField, setFieldAcrossAnndata } from "@/lib/redux/reducers/plotReducer";
+import { setAnndataField } from "@/lib/redux/reducers/plotReducer";
 import { AutocompleteOption } from "@/lib/types";
+import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 import { Autocomplete, Button, createFilterOptions, Dialog, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 
@@ -12,6 +12,7 @@ export default function AutoAnnotationDialog(props: {
 }) {
   
   const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
+  const userID = useAppSelector((state) => state.fileReducer.userID);  
   const models = useAppSelector((state) => state.plotReducer.data.annotationModels.models);
   const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;
   const obsp = useAppSelector((state) => state.plotReducer.anndata.obsp.keys);
@@ -28,9 +29,33 @@ export default function AutoAnnotationDialog(props: {
   
   const filterOptions = createFilterOptions({ limit: 20 });
   
-  const [getAnnotation] = useCeleryCelltypistAnnotateMutation();
-  const [getHierarchy] = useLazyFileHierarchyQuery();
-  // const [getObs] = useLazyFileHierarchyQuery();
+  const [getAnnotation, { data, isSuccess } ] = useCeleryCelltypistAnnotateMutation();
+  
+  useEffect(() => {
+    if (isSuccess) {
+      pollTaskStatus(
+        data.response.id,
+        "ANNOTATION",
+        dispatch,
+        () => {
+          
+          const connectivitiesKey = uns[selectedConnectivity?.label!].connectivities_key;
+          
+          const conKey = `${connectivitiesKey}_MAJORITY_VOTING`
+          
+          dispatch(
+            setAnndataField({
+              attribute: "obs",
+              field: "selectedKey",
+              value: conKey,
+            })
+          );
+          
+        }
+      );
+    }
+  }, [data, isSuccess]);
+  
   
   useEffect(() => {
     if (models.length > 0) {
@@ -146,39 +171,10 @@ export default function AutoAnnotationDialog(props: {
                 
                 getAnnotation({
                     fileID: activeFile,
+                    userID: userID,
                     annotationKey: annotationKey,
                     connectivitiesKey: connectivitiesKey,
                     annotationModel: selectedModel.label,
-                })
-                .then((data) => {
-                  
-                  const conKey = `${connectivitiesKey}_MAJORITY_VOTING`
-                  
-                  dispatch(
-                    setAnndataField({
-                      attribute: "obs",
-                      field: "selectedKey",
-                      value: conKey,
-                    })
-                  );
-                  
-                  // dispatch(incrementRefreshCounter("hierarchy"));
-                  // 
-                  // getHierarchy({
-                  //   fileID: activeFile
-                  // })
-                  // .then((data) => {
-                  //   dispatch(
-                  //     setFieldAcrossAnndata({
-                  //       field: "keys",
-                  //       values: data,
-                  //     })
-                  //   );
-                  // })
-                  
-                  // get_file_obs(fileID, conKey, dispatch);
-                  // get_file_hierarchy(fileID, dispatch);
-                  
                 })
                 
                 props.setIsOpen(false);

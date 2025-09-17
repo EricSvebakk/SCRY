@@ -12,6 +12,7 @@ import { useLazyFileObsmQuery } from "@/lib/redux/api/api";
 export default function ListEmbeddings() {
   
   const fileID = useAppSelector((state) => state.fileReducer.activeFile);
+  const userID = useAppSelector((state) => state.fileReducer.userID);  
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
   const status = useAppSelector((state) => state.plotReducer.statusBackend.HIERARCHY);
 
@@ -85,6 +86,7 @@ export default function ListEmbeddings() {
                       
                       getObsm({
                         fileID: fileID,
+                        userID: userID,
                         obsm: e
                       })
                     }}

@@ -15,7 +15,7 @@ import {
   tagsBackendAPI,
   statusBackendAPI,
 } from "@/lib/types";
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, isRejectedWithValue, PayloadAction } from "@reduxjs/toolkit";
 import { backendAPI } from "../api/api";
 
 const initialPlotState: InitialPlotStateProps = {
@@ -308,7 +308,7 @@ export const plotSlice = createSlice({
       backendAPI.endpoints.fileObsm.matchFulfilled,
       (state, action) => {
         if (action.payload.ok) {
-          state.anndata.obsm.data = action.payload.response.coordinates
+          state.anndata.obsm.data = action.payload.response
         }
         state.statusBackend.OBSM.inProgress = false
       }
@@ -320,6 +320,28 @@ export const plotSlice = createSlice({
           state.anndata.obs.indices = action.payload.response
         }
         state.statusBackend.OBS.inProgress = false
+      }
+    ),
+    // ===========================================================================
+    builder.addMatcher(
+      isRejectedWithValue,
+      (state, action) => {
+        console.log(action.type, action.payload);
+        
+        if (action.type.startsWith(backendAPI.reducerPath)) {
+          
+          // const { status, data } = action.payload as any;
+          
+          // if (status === 423) {
+          //   console.error((data as any).detail)
+          // }
+        }
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.fileHierarchy.matchRejected,
+      (state, action) => {
+        state.statusBackend.HIERARCHY.inProgress = false
       }
     )
   }

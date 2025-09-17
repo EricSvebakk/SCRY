@@ -8,11 +8,10 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
-import { get_nldr } from "@/lib/fetch/workflow/get_nldr";
 import { theme } from "@/app/layout";
-import { useCeleryFileNLDRMutation, useCeleryStatusQuery } from "@/lib/redux/api/api";
+import { useCeleryFileNLDRMutation } from "@/lib/redux/api/api";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 import { setAnndataField } from "@/lib/redux/reducers/plotReducer";
 
@@ -21,38 +20,16 @@ export default function DialogDimensionalReduction(props: {
   setIsOpen: Function;
 }) {
   const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
+  const userID = useAppSelector((state) => state.fileReducer.userID);
 
   const dispatch = useAppDispatch();
-  const [getNLDR, { data, isSuccess } ] = useCeleryFileNLDRMutation();
+  const [getNLDR] = useCeleryFileNLDRMutation();
   
   const [adataKey, setAdataKey] = useState<string>("");
   const [numPCs, setNumPCs] = useState<number>(30);
   const [minDist, setMinDist] = useState<number>(0.5);
   const [spread, setSpread] = useState<number>(1.0);
   const [nNeighbors, setNNeighbors] = useState<number>(15);
-
-  useEffect(() => {
-    if (isSuccess) {
-      pollTaskStatus(
-        data.response.id,
-        "OBSM",
-        dispatch,
-        () => {
-          
-          const embeddingKey = `X_umap_${adataKey}`;
-    
-          dispatch(
-            setAnndataField({
-              attribute: "obsm",
-              field: "selectedKey",
-              value: embeddingKey,
-            })
-          );
-          
-        }
-      );
-    }
-  }, [data, isSuccess]);
   
   return (
     <Dialog
@@ -146,12 +123,34 @@ export default function DialogDimensionalReduction(props: {
                 
                 getNLDR({
                   fileID: activeFile,
+                  userID,
                   adataKey,
                   numPCs,
                   minDist,
                   spread,
                   nNeighbors,
-                });
+                })
+                .then((data) => {
+                  
+                  if (data.data?.ok) {
+                    pollTaskStatus(
+                      data.data.response,
+                      "OBSM",
+                      dispatch,
+                      () => {
+                        dispatch(
+                          setAnndataField({
+                            attribute: "obsm",
+                            field: "selectedKey",
+                            value: `X_umap_${adataKey}`,
+                          })
+                        );
+                        
+                      }
+                    )
+                  }
+                  
+                })
 
                 props.setIsOpen(false);
               }}

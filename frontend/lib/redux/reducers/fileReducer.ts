@@ -6,7 +6,8 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 const initialFileState: FileState = {
   files: [],
   selectedFiles: [],
-  activeFile: ""
+  activeFile: "",
+  userID: "anonymous",
 };
 
 export const fileSlice = createSlice({
@@ -41,6 +42,9 @@ export const fileSlice = createSlice({
     setActiveFile: (state, action: PayloadAction<string>) => {
       state.activeFile = action.payload;
     },
+    setActiveUser: (state, action: PayloadAction<string>) => {
+      state.userID = action.payload;
+    },
   },
 });
 
@@ -52,6 +56,7 @@ export const {
   selectFiles,
   deselectFile,
   setActiveFile,
+  setActiveUser
 } = fileSlice.actions;
 
 export default fileSlice.reducer;

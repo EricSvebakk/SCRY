@@ -7,7 +7,7 @@ export function pollTaskStatus(
   taskID: string,
   statusID: typeof tagsBackendAPI[number],
   dispatch: Function,
-  onSuccess: Function,
+  onSuccess: Function = () => {},
 ) {
   
   const request = `${BACKEND_ENDPOINT}/celery/status?task_id=${taskID}`;

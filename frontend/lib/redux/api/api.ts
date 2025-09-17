@@ -12,113 +12,137 @@ export const backendAPI = createApi({
   }),
   tagTypes: tagsBackendAPI,
   endpoints: (builder) => ({
-    fileHierarchy: builder.query<backendResponse, { fileID: string }>({
-      query: ({fileID}) => `file/hierarchy?file_id=${fileID}`,
+    fileHierarchy: builder.query<backendResponse, { fileID: string, userID: string }>({
+      query: ({ fileID, userID }) => `file/hierarchy?file_id=${fileID}&user_id=${userID}`,
       providesTags: ["HIERARCHY"]
     }),
-    fileObs: builder.query<backendResponse, { fileID: string, obs: string }>({
-      query: ({fileID, obs}) => `file/obs?file_id=${fileID}&obs=${obs}`
+    fileObs: builder.query<backendResponse, { fileID: string, userID: string, obs: string }>({
+      query: ({ fileID, userID, obs }) => `file/obs?file_id=${fileID}&user_id=${userID}&obs=${obs}`
     }),
-    fileObsm: builder.query<backendResponse, { fileID: string, obsm: string }>({
-      query: ({fileID, obsm}) => `file/obsm?file_id=${fileID}&obsm=${obsm}`
+    fileObsm: builder.query<backendResponse, { fileID: string, userID: string, obsm: string }>({
+      query: ({ fileID, userID, obsm}) => `file/obsm?file_id=${fileID}&user_id=${userID}&obsm=${obsm}`
     }),
-    fileGenes: builder.query<backendResponse, { fileID: string }>({
-      query: ({fileID}) => `file/obs?file_id=${fileID}`
+    fileGenes: builder.query<backendResponse, { fileID: string, userID: string }>({
+      query: ({ fileID, userID }) => `file/obs?file_id=${fileID}&user_id=${userID}`
     }),
-    fileFeatureCoordinates: builder.query<backendResponse, { fileID: string, featureKey: string }>({
-      query: ({fileID, featureKey}) => `file/obs?file_id=${fileID}&feature_key=${featureKey}`
+    fileFeatureCoordinates: builder.query<backendResponse, { fileID: string, userID: string, featureKey: string }>({
+      query: ({ fileID, userID, featureKey }) => `file/obs?file_id=${fileID}&user_id=${userID}&feature_key=${featureKey}`
     }),
     celltypistModels: builder.query<backendResponse, void>({
       query: () => `celltypist/models`
     }),
+    // CELERY
     celeryFileLDR: builder.mutation<backendResponse, celeryFileLDRSchema>({
-      query: (body) => ({
-        url: `celery/file/ldr`,
-        method: 'POST',
-        body: {
-          file_id: body.fileID,
-          n_pcs: body.numPCs
-        },
-      }),
-      invalidatesTags: ["HIERARCHY"]
+      query: (body) => {
+        const formData = new FormData();
+        formData.append("file_id", body.fileID);
+        formData.append("user_id", body.userID);
+        formData.append("n_pcs", body.numPCs.toString());
+        return {
+          url: `celery/file/ldr`,
+          method: 'POST',
+          body: formData,
+        }
+      },
+      // invalidatesTags: ["HIERARCHY"]
     }),
     celeryFileNLDR: builder.mutation<backendResponse, celeryFileNLDRSchema>({
       query: (body) => {
         const formData = new FormData();
         formData.append("file_id", body.fileID);
+        formData.append("user_id", body.userID);
         formData.append("adata_key", body.adataKey);
         formData.append("n_pcs", body.numPCs.toString());
         formData.append("min_dist", body.minDist.toString());
         formData.append("spread", body.spread.toString());
         formData.append("n_neighbors", body.nNeighbors.toString());
         return {
-          url: `celery/file/nldr`,
+          url: `file/nldr`,
           method: 'POST',
           body: formData
         }
       },
-      invalidatesTags: ["HIERARCHY"]
+      // invalidatesTags: ["HIERARCHY"]
     }),
     celeryFileLeiden: builder.mutation<backendResponse, celeryFileLeidenSchema>({
-      query: (body) => ({
-        url: `celery/file/leiden`,
-        method: 'POST',
-        body: {
-          file_id: body.fileID,
-          adata_key: body.unsKey,
-          resolution: body.resolution
-        },
-      }),
-      invalidatesTags: ["HIERARCHY"]
+      query: (body) => {
+        const formData = new FormData();
+        formData.append("file_id", body.fileID);
+        formData.append("user_id", body.userID);
+        formData.append("uns_key", body.unsKey);
+        formData.append("resolution", body.resolution.toString());
+        return {
+          url: `file/leiden`,
+          method: 'POST',
+          body: formData,
+        }
+      },
+      // invalidatesTags: ["HIERARCHY"]
     }),
     celeryFileRGG: builder.mutation<backendResponse, celeryFileRGGSchema>({
-      query: (body) => ({
-        url: `celery/file/rgg`,
-        method: 'POST',
-        body: {
-          file_id: body.fileID,
-          uns_key: body.unsKey,
-          n_genes: body.nGenes,
-          selected_genes: body.selectedGenes
-        },
-      }),
-      invalidatesTags: ["HIERARCHY"]
+      query: (body) => {
+        const formData = new FormData();
+        formData.append("file_id", body.fileID);
+        formData.append("user_id", body.userID);
+        formData.append("uns_key", body.unsKey);
+        formData.append("n_genes", body.nGenes.toString());
+        body.selectedGenes.forEach((gene) => {
+          formData.append("selected_genes", gene)
+        });
+        return {
+          url: `file/rgg`,
+          method: 'POST',
+          body: formData,
+        }
+      },
+      // invalidatesTags: ["HIERARCHY"]
     }),
     celeryFileCopy: builder.mutation<backendResponse, celeryFileCopySchema>({
-      query: (body) => ({
-        url: `celery/file/copy`,
-        method: 'POST',
-        body: {
-          file_id: body.fileID,
-          new_file_id: body.newFileID,
-          selected_obs: body.selectedObs,
-          selected_obs_clusters: body.selectedObsClusters
-        },
-      })
+      query: (body) => {
+        const formData = new FormData();
+        formData.append("file_id", body.fileID);
+        formData.append("user_id", body.userID);
+        formData.append("new_file_id", body.newFileID);
+        formData.append("selected_obs", body.selectedObs);
+        body.selectedObsClusters.forEach((cluster) => {
+          formData.append("selected_obs_clusters", cluster);
+        });
+        return {
+          url: `file/copy`,
+          method: 'POST',
+          body: formData,  
+        }
+      }
     }),
     celeryFileRecluster: builder.mutation<backendResponse, celeryFileReclusterSchema>({
-      query: (body) => ({
-        url: `celery/file/recluster`,
-        method: 'POST',
-        body: {
-          file_id: body.fileID,
-          observation: body.reclustering
-        },
-      }),
-      invalidatesTags: ["HIERARCHY"]
+      query: (body) => {
+        return {
+          url: `file/recluster`,
+          method: 'POST',
+          body: {
+            file_id: body.fileID,
+            user_id: body.userID,
+            observation: body.reclustering
+          },
+        }
+      },
+      // invalidatesTags: ["HIERARCHY"]
     }),
     celeryCelltypistAnnotate: builder.mutation<backendResponse, celeryCelltypistAnnotateSchema>({
-      query: (body) => ({
-        url: `celery/file/annotate`,
-        method: 'POST',
-        body: {
-          file_id: body.fileID,
-          annotation_key: body.annotationKey,
-          connectivities_key: body.connectivitiesKey,
-          annotation_model: body.annotationModel
-        },
-      }),
-      invalidatesTags: ["HIERARCHY"]
+      query: (body) => {
+        const formData = new FormData();
+        formData.append("file_id", body.fileID);
+        formData.append("user_id", body.userID);
+        formData.append("annotation_key", body.annotationKey);
+        formData.append("connectivities_key", body.connectivitiesKey);
+        formData.append("annotation_model", body.annotationModel);
+        return {
+          url: `celltypist/annotate`,
+          method: 'POST',
+          body: formData,
+        }
+      },
+      // invalidatesTags: ["HIERARCHY"]
     }),
     celeryStatus: builder.query<backendResponse, { taskID: string }>({
       query: ({ taskID }) => `celery/status?task_id=${taskID}`
@@ -131,21 +155,24 @@ export const backendAPI = createApi({
 
 export const { 
   useFileHierarchyQuery,
-  useLazyFileHierarchyQuery, // Lazy
-  useFileObsQuery,
-  useLazyFileObsQuery, // Lazy
-  useFileObsmQuery,
-  useLazyFileObsmQuery, // Lazy
-  useFileGenesQuery,
-  useFileFeatureCoordinatesQuery,
-  useCelltypistModelsQuery,
-  useCeleryFileLDRMutation,
+  // useFileObsQuery,
+  // useFileObsmQuery,
+  // useFileGenesQuery,
+  // useFileFeatureCoordinatesQuery,
+  // useCelltypistModelsQuery,
+  // LAZY
+  // useLazyFileHierarchyQuery,
+  useLazyFileObsQuery,
+  useLazyFileObsmQuery,
+  // CELERY
+  // useCeleryFileLDRMutation,
   useCeleryFileNLDRMutation,
   useCeleryFileLeidenMutation,
   useCeleryFileRGGMutation,
-  useCeleryFileCopyMutation,
-  useCeleryFileReclusterMutation,
+  // useCeleryFileCopyMutation,
+  // useCeleryFileReclusterMutation,
   useCeleryCelltypistAnnotateMutation,
+  // STATUS
   useCeleryStatusQuery,
   useCeleryResultQuery,
 } = backendAPI;
