@@ -1,5 +1,6 @@
 
 from pydantic import BaseModel
+from typing import TypedDict, Any
 
 class newCluster(BaseModel):
   label: str
@@ -10,3 +11,11 @@ class newObservation(BaseModel):
   name: str
   base: str
   clusters: list[newCluster]
+  
+class ValidationResponse(TypedDict):
+  response: str
+  ok: bool
+  
+class ComputationResponse(TypedDict):
+  response: Any
+  ok: bool

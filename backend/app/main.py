@@ -1,27 +1,17 @@
 
+import os
+import logging
+import celltypist as ct
+import worker
+
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Form
 from dotenv import load_dotenv, dotenv_values
 from pathlib import Path
-from math import ceil, log10
-from typing import Optional, TypedDict
-import celltypist as ct
-import scanpy as sc
-from my_types import newObservation
-
+from typing import Optional, TypedDict, Callable
 from celery.result import AsyncResult
-# from worker import compute_rgg_dotplot, compute_nldr, compute_ldr, compute_clustering, compute_celltypist_annotations, compute_save_file_as, compute_new_observation
-import worker
-
-import os
-import logging
-import zarr
-import json
-import time
-
-import zarr_util as zu
-import anndata_util as au
+from my_types import newObservation
 
 
 load_dotenv()
@@ -60,7 +50,7 @@ class ValidationResponse(TypedDict):
   response: str
   ok: bool
 
-def validate(file_id: str, func, *args, transform = lambda x: x) -> ValidationResponse:
+def validate(file_id: str, func: Callable, *args, delay: bool = False) -> ValidationResponse:
   
   file_path = os.path.join(UPLOAD_DIR, file_id)
   file_exists = os.path.exists(file_path)
@@ -69,7 +59,16 @@ def validate(file_id: str, func, *args, transform = lambda x: x) -> ValidationRe
   file_ok = file_exists and file_is_h5ad
   
   if file_ok:
-    response = transform(func(file_path, *args))
+    print(func.__name__)
+    
+    if (delay):
+      response: ValidationResponse = {
+        "response": func.delay(file_path, *args).id,
+        "ok": True
+      }
+    else:
+      response = func(file_path, *args)
+      
   else:
     if not file_exists:
       response = f"File ID '{file_id}' is not valid."
@@ -78,10 +77,7 @@ def validate(file_id: str, func, *args, transform = lambda x: x) -> ValidationRe
     else:
       response = "Problem unknown"
   
-  return {
-    "response": response,
-    "ok": file_ok
-  }
+  return response
 
 # ============================================================================================
 # SYSTEM
@@ -123,30 +119,6 @@ async def system_file_names():
 # ============================================================================================
 # FILE
 
-@app.get("/file/hierarchy", tags=["FILE"])
-async def file_hierarchy(file_id: str):
-  obj = validate(file_id, au.get_anndata_file_hierarchy)
-  return JSONResponse(content=obj)
-
-@app.get("/file/obs", tags=["FILE"])
-async def file_obs(file_id: str, obs: str):
-  obj = validate(file_id, au.get_anndata_file_obs, obs)
-  return JSONResponse(content=obj)
-
-@app.get("/file/obsm", tags=["FILE"])
-async def file_obsm(file_id: str, obsm: str):
-  obj = validate(file_id, au.get_anndata_file_obsm, obsm)
-  return JSONResponse(content=obj)
-
-@app.get("/file/genes", tags=["FILE"])
-async def file_genes(file_id: str):
-  obj = validate(file_id, au.get_genes_h5ad)
-  return JSONResponse(content=obj)
-  
-@app.get("/file/feature/coordinates", tags=["FILE"])
-async def file_feature_coordinates(file_id: str, feature_key: str):
-  obj = validate(file_id, au.get_anndata_feature_indices, feature_key)
-  return JSONResponse(content=obj)
   
 # ============================================================================================
 # CELLTYPIST
@@ -162,77 +134,111 @@ async def celltypist_models():
 # ============================================================================================
 # CELERY
 
-@app.post("/celery/file/ldr/", tags=["CELERY", "FILE"])
-async def celery_file_ldr(
-  file_id: str = Form(...),
-  n_pcs: int = Form(...),
-):
-  obj = validate(file_id, worker.compute_ldr.delay, n_pcs)
+@app.get("/file/hierarchy", tags=["FILE"])
+async def file_hierarchy(file_id: str, user_id: str):
+  obj = validate(file_id, worker.get_hierarchy, user_id)
   return JSONResponse(content=obj)
 
-@app.post("/celery/file/nldr", tags=["CELERY", "FILE"])
+@app.get("/file/obs", tags=["FILE"])
+async def file_obs(file_id: str, user_id: str, obs: str):
+  obj = validate(file_id, worker.get_observation, user_id, obs)
+  return JSONResponse(content=obj)
+
+@app.get("/file/obsm", tags=["FILE"])
+async def file_obsm(file_id: str, user_id: str, obsm: str):
+  obj = validate(file_id, worker.get_obsm, user_id, obsm)
+  return JSONResponse(content=obj)
+
+@app.get("/file/genes", tags=["FILE"])
+async def file_genes(file_id: str, user_id: str):
+  obj = validate(file_id, worker.get_genes, user_id)
+  return JSONResponse(content=obj)
+  
+@app.get("/file/feature/coordinates", tags=["FILE"])
+async def file_feature_coordinates(file_id: str, user_id: str, feature_key: str):
+  obj = validate(file_id, worker.get_feature_indices, user_id, feature_key)
+  return JSONResponse(content=obj)
+
+@app.post("/file/ldr", tags=["FILE"])
+async def celery_file_ldr(
+  file_id: str = Form(...),
+  user_id: str = Form(...),
+  n_pcs: int = Form(...),
+):
+  obj = validate(file_id, worker.compute_ldr, user_id, n_pcs, delay=True)
+  return JSONResponse(content=obj)
+
+@app.post("/file/nldr", tags=["FILE"])
 async def celery_file_nldr(
   file_id: str = Form(...),
+  user_id: str = Form(...),
   adata_key: str = Form(...),
   n_pcs: int = Form(...),
   min_dist: float = Form(...),
   spread: float = Form(...),
   n_neighbors: int = Form(...),
 ):
-  obj = validate(file_id, worker.compute_nldr.delay, adata_key, n_pcs, min_dist, spread, n_neighbors, transform=lambda x: x.id)
+  obj = validate(file_id, worker.compute_nldr, user_id, adata_key, n_pcs, min_dist, spread, n_neighbors, delay=True)
   return JSONResponse(content=obj)
 
-@app.post("/celery/file/leiden/", tags=["CELERY", "FILE"])
+@app.post("/file/leiden", tags=["FILE"])
 async def celery_file_leiden(
   file_id: str = Form(...),
+  user_id: str = Form(...),
   uns_key: str = Form(...),
   resolution: float = Form(...),
 ):
-  obj = validate(file_id, worker.compute_clustering.delay, uns_key, resolution)
+  obj = validate(file_id, worker.compute_leiden, user_id, uns_key, resolution, delay=True)
   return JSONResponse(content=obj)
 
-@app.post("/celery/file/rgg/", tags=["CELERY", "FILE"])
+@app.post("/file/rgg", tags=["FILE"])
 async def celery_file_rgg(
   file_id: str = Form(...),
+  user_id: str = Form(...),
   uns_key: str = Form(...),
   n_genes: int = Form(...),
   selected_genes: Optional[list[str]] = Form(None),
 ):
-  obj = validate(file_id, worker.compute_rgg_dotplot.delay, uns_key, n_genes, selected_genes)
+  obj = validate(file_id, worker.compute_rgg, user_id, uns_key, n_genes, selected_genes, delay=True)
   return JSONResponse(content=obj)
 
-@app.post("/celery/file/copy", tags=["CELERY", "FILE"])
+@app.post("/file/copy", tags=["FILE"])
 async def celery_file_copy(
   file_id: str = Form(...),
+  user_id: str = Form(...),
   new_file_id: str = Form(...),
   selected_obs: str = Form(...),
   selected_obs_clusters: list[str] = Form(...),
 ):
-  obj = validate(file_id, worker.compute_save_file_as.delay, new_file_id, selected_obs, selected_obs_clusters)
+  obj = validate(file_id, worker.compute_save_file_as, user_id, new_file_id, selected_obs, selected_obs_clusters, delay=True)
   return JSONResponse(content=obj)
 
-@app.post("/celery/file/recluster/", tags=["CELERY", "FILE"])
+@app.post("/file/recluster", tags=["FILE"])
 async def celery_file_recluster(
   file_id: str,
+  user_id: str,
   observation: newObservation
 ):
-  obj = validate(file_id, worker.compute_new_observation.delay, observation)
+  obj = validate(file_id, worker.compute_recluster, user_id, observation, delay=True)
   return JSONResponse(content=obj)
 
-@app.post("/celery/celltypist/annotate/", tags=["CELERY", "CELLTYPIST"])
+@app.post("/celltypist/annotate", tags=["CELLTYPIST"])
 async def celery_celltypist_annotate(
   file_id: str = Form(...),
   annotation_key: str = Form(...),
   connectivities_key: str = Form(...),
   annotation_model: Optional[str] = Form(None),
 ):
-  obj = validate(file_id, worker.compute_celltypist_annotations.delay, annotation_key, connectivities_key, annotation_model)
-  return JSONResponse(content=obj)
+  # obj = validate(file_id, worker.compute_celltypist_annotations, annotation_key, connectivities_key, annotation_model, delay=True)
+  # return JSONResponse(content=obj)
+  return JSONResponse(content={
+    "message": "fuuuuuuuuuuck"
+  }, status_code=500)
 
 # ============================================================================================
 # STATUS
 
-@app.get("/celery/status", tags=["CELERY", "STATUS"])
+@app.get("/celery/status", tags=["STATUS"])
 async def celery_status(
   task_id: str
 ):
@@ -244,7 +250,7 @@ async def celery_status(
     "progress": result.info if result.status not in ("SUCCESS") else "See /get_finished_task for results"
   })
 
-@app.get("/celery/result", tags=["CELERY", "STATUS"])
+@app.get("/celery/result", tags=["STATUS"])
 async def celery_result(
   task_id: str
 ):
@@ -264,344 +270,3 @@ async def celery_result(
       "status": result.status,
       "message": "Task not finished yet"
     }
-
-
-
-
-
-
-
-
-
-
-
-
-# # ============================================================================================
-# @app.get("/get_filenames", tags=["SYSTEM"])
-# async def get_filenames():
-#   """
-#   """
-  
-#   files = os.listdir(UPLOAD_DIR)
-#   files_h5ad = list(filter(lambda x: x.endswith("h5ad"), files))
-  
-#   files_h5ad_sizes = []
-  
-#   for file_id in files_h5ad:
-#     files_h5ad_sizes.append(os.path.getsize(os.path.join(UPLOAD_DIR, file_id)))
-  
-#   return JSONResponse(
-#     content={
-#       "files": files,
-#       "h5ad": files_h5ad,
-#       "h5ad_sizes": files_h5ad_sizes,
-#       "zarr": list(filter(lambda x: x.endswith("zarr"), files)),
-#     }
-#   )
-
-# # @app.get("/get_file_size", tags=["SYSTEM"])
-# # async def get_file_size(file_id: str):
-# #   """
-# #   """
-  
-# #   file_size = os.path.getsize(f"{UPLOAD_DIR}/{file_id}")
-  
-# #   return JSONResponse(
-# #     content={
-# #       "file_size": file_size,
-# #       "chunk_total": ceil(file_size / UPLOAD_CHUNK_SIZE),
-# #     }
-# #   )
-
-# @app.get("/get_file_hierarchy", tags=["SYSTEM"])
-# async def get_file_hierarchy(file_id: str):
-#   """
-#   """
-
-#   file_path = os.path.join(UPLOAD_DIR, file_id)
-#   obj = "Please provide a valid file-type (h5ad, zarr)"
-  
-#   if (file_path.endswith(".zarr")):
-#     obj = zu.get_zarr_file_hierarchy(file_path)
-#   elif (file_path.endswith(".h5ad")):
-#     obj = au.get_anndata_file_hierarchy(file_path)
-  
-#   return JSONResponse(content=obj)
-
-# # ============================================================================================
-# @app.get("/get_file_obs", tags=["ANNDATA"])
-# async def get_file_obs(file_id: str, obs: str):
-  
-#   file_path = os.path.join(UPLOAD_DIR, file_id)
-#   obj = "Something went wrong while fetching obs"
-  
-#   if (not os.path.exists(file_path)):
-#     return JSONResponse(content=f"File ID '{file_id}' does not exist.")
-  
-#   if (file_path.endswith(".zarr")):
-#     obj = zu.get_zarr_file_obs(file_path, obs)
-  
-#   elif (file_path.endswith(".h5ad")):
-#     obj = au.get_anndata_file_obs(file_path, obs)
-    
-#   if (obj is None):
-#     return JSONResponse(content="Something went wrong.")
-
-#   return JSONResponse(content=json.dumps(obj))
-
-# @app.get("/get_file_obsm", tags=["ANNDATA"])
-# async def get_file_obsm(file_id: str, obsm: str):
-  
-#   file_path = os.path.join(UPLOAD_DIR, file_id)
-#   obj = "Something went wrong while fetching obs"
-  
-#   if (not os.path.exists(file_path)):
-#     return JSONResponse(content=f"File ID '{file_id}' does not exist.")
-  
-#   if (file_path.endswith(".zarr")):
-#     obj = zu.get_zarr_file_obsm(file_path, obsm)
-  
-#   elif (file_path.endswith(".h5ad")):
-#     obj = au.get_anndata_file_obsm(file_path, obsm)
-  
-#   if (obj is None):
-#     return JSONResponse(content="Something went wrong.")
-  
-#   return JSONResponse(content=json.dumps(obj))
-
-# @app.get("/get_genes", tags=["ANNDATA"])
-# async def get_genes(
-#   file_id: str
-# ):
-  
-#   file_path = os.path.join(UPLOAD_DIR, file_id)
-#   obj = "Something went wrong while generating leiden"
-  
-#   if (not os.path.exists(file_path)):
-#     return JSONResponse(content=f"File ID '{file_id}' does not exist.")
-  
-#   if (file_path.endswith(".h5ad")):
-#     obj = au.get_genes_h5ad(file_path)
-  
-#   return JSONResponse(content=obj)
-
-# @app.get("/get_feature_coordinates", tags=["ANNDATA"])
-# async def get_feature_coordinates(
-#   file_id: str,
-#   feature_key: str,
-# ):
-  
-#   file_path = os.path.join(UPLOAD_DIR, file_id)
-#   obj = "Something went wrong while generating leiden"
-  
-#   if (not os.path.exists(file_path)):
-#     return JSONResponse(content=f"File ID '{file_id}' does not exist.")
-  
-#   if (not file_path.endswith(".h5ad")):
-#     return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
-  
-#   obj = au.get_anndata_feature_indices(file_path, feature_key)
-  
-#   return JSONResponse(content=obj)
-  
-
-# # ============================================================================================
-# @app.get("/get_model_types", tags=["CELLTYPIST"])
-# async def get_model_types():
-  
-#   models = ct.models.models_description().to_dict(orient="records")
-  
-#   return JSONResponse(content={
-#     "models": models
-#   })
-
-# # ============================================================================================
-# @app.post("/start_task_compute_ldr/", tags=["WORKFLOW"])
-# async def start_task_compute_ldr(
-#   file_id: str = Form(...),
-#   n_pcs: int = Form(...),
-# ):
-    
-#   file_path = os.path.join(UPLOAD_DIR, file_id)
-  
-#   if (not os.path.exists(file_path)):
-#     return JSONResponse(content=f"File ID '{file_id}' is not valid.")
-  
-#   if (not file_path.endswith(".h5ad")):
-#     return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
-  
-#   task = compute_ldr.delay(file_path, n_pcs)
-  
-#   return JSONResponse(content={
-#     "task_id": task.id
-#   })
-
-# @app.post("/start_task_compute_nldr/", tags=["WORKFLOW"])
-# async def start_task_compute_nldr(
-#   file_id: str = Form(...),
-#   adata_key: str = Form(...),
-#   n_pcs: int = Form(...),
-#   min_dist: float = Form(...),
-#   spread: float = Form(...),
-#   n_neighbors: int = Form(...),
-# ):
-    
-#   file_path = os.path.join(UPLOAD_DIR, file_id)
-  
-#   if (not os.path.exists(file_path)):
-#     return JSONResponse(content=f"File ID '{file_id}' is not valid.")
-  
-#   if (not file_path.endswith(".h5ad")):
-#     return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
-  
-#   task = compute_nldr.delay(file_path, adata_key, n_pcs, min_dist, spread, n_neighbors)
-  
-#   return JSONResponse(content={
-#     "task_id": task.id
-#   })
-
-# @app.post("/start_task_compute_clustering/", tags=["WORKFLOW"])
-# async def start_task_compute_clustering(
-#   file_id: str = Form(...),
-#   uns_key: str = Form(...),
-#   resolution: float = Form(...),
-# ):
-  
-#   file_path = os.path.join(UPLOAD_DIR, file_id)
-  
-#   if (not os.path.exists(file_path)):
-#     return JSONResponse(content=f"File ID '{file_id}' is not valid.")
-  
-#   if (not file_path.endswith(".h5ad")):
-#     return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
-  
-#   task = compute_clustering.delay(file_path, uns_key, resolution)
-  
-#   return JSONResponse(content={
-#     "task_id": task.id
-#   })
-
-# @app.post("/start_task_compute_rgg_dotplot/", tags=["WORKFLOW"])
-# async def start_task_compute_rgg_dotplot(
-#   file_id: str = Form(...),
-#   uns_key: str = Form(...),
-#   n_genes: int = Form(...),
-#   selected_genes: Optional[list[str]] = Form(None),
-# ):
-  
-#   file_path = os.path.join(UPLOAD_DIR, file_id)
-  
-#   if (not os.path.exists(file_path)):
-#     return JSONResponse(content=f"File ID '{file_id}' is not valid.")
-  
-#   if (not file_path.endswith(".h5ad")):
-#     return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
-  
-#   print(uns_key, n_genes, selected_genes)
-  
-#   task = compute_rgg_dotplot.delay(file_path, uns_key, n_genes, selected_genes)
-  
-#   return JSONResponse(content={
-#     "task_id": task.id
-#   })
-
-# @app.post("/start_task_compute_celltypist_annotations/", tags=["WORKFLOW"])
-# async def start_task_compute_celltypist_annotations(
-#   file_id: str = Form(...),
-#   annotation_key: str = Form(...),
-#   connectivities_key: str = Form(...),
-#   annotation_model: Optional[str] = Form(None),
-# ):
-  
-#   file_path = os.path.join(UPLOAD_DIR, file_id)
-  
-#   if (not os.path.exists(file_path)):
-#     return JSONResponse(content=f"File ID '{file_id}' is not valid.")
-  
-#   if (not file_path.endswith(".h5ad")):
-#     return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
-  
-#   task = compute_celltypist_annotations.delay(file_path, annotation_key, connectivities_key, annotation_model)
-  
-#   return JSONResponse(content={
-#     "task_id": task.id
-#   })
-  
-# @app.post("/start_task_compute_save_file_as/", tags=["WORKFLOW"])
-# async def start_task_compute_save_file_as(
-#   file_id: str = Form(...),
-#   new_file_id: str = Form(...),
-#   selected_obs: str = Form(...),
-#   selected_obs_clusters: list[str] = Form(...),
-# ):
-  
-#   file_path = os.path.join(UPLOAD_DIR, file_id)
-#   new_file_path = os.path.join(UPLOAD_DIR, new_file_id)
-  
-#   if (not os.path.exists(file_path)):
-#     return JSONResponse(content=f"File ID '{file_id}' is not valid.")
-  
-#   if (not file_path.endswith(".h5ad")):
-#     return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
-  
-#   task = compute_save_file_as.delay(file_path, new_file_path, selected_obs, selected_obs_clusters)
-  
-#   return JSONResponse(content={
-#     "task_id": task.id
-#   })
-  
-  
-# @app.post("/start_task_create_observation/", tags=["SYSTEM"])
-# async def start_task_create_observation(
-#   observation: newObservation
-# ):
-  
-#   file_id = observation.file
-#   file_path = os.path.join(UPLOAD_DIR, file_id)
-  
-#   if (not os.path.exists(file_path)):
-#     return JSONResponse(content=f"File ID '{file_id}' is not valid.")
-  
-#   if (not file_path.endswith(".h5ad")):
-#     return JSONResponse(content=f"File ID '{file_id}' is not an h5ad-file.")
-  
-#   task = compute_new_observation.delay(file_path, observation.model_dump())
-  
-#   return JSONResponse(content={
-#     "task_id": task.id
-#   })
-  
-
-# # ============================================================================================
-# @app.get("/get_status_task", tags=["STATUS"])
-# async def get_status_task(
-#   task_id: str
-# ):
-#   result = AsyncResult(task_id)
-  
-#   return JSONResponse(content={
-#     "task_id": task_id,
-#     "status": result.status,
-#     "progress": result.info if result.status not in ("SUCCESS") else "See /get_finished_task for results"
-#   })
-
-# @app.get("/get_finished_task", tags=["STATUS"])
-# async def get_finished_task(
-#   task_id: str
-# ):
-#   result = AsyncResult(task_id)
-
-#   if result.successful():
-#     return result.result
-#   elif result.failed():
-#     return {
-#       "error": {
-#         "type": type(result.result).__name__,
-#         "message": str(result.result)
-#       }
-#     }
-#   else:
-#     return {
-#       "status": result.status,
-#       "message": "Task not finished yet"
-#     }
