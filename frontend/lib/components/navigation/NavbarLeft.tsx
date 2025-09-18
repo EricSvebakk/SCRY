@@ -2,6 +2,7 @@
 import { Button, Grid, Stack, SvgIconProps, SxProps, Typography } from "@mui/material";
 import { ReactElement } from "react";
 import { theme } from "@/app/layout";
+import { NotificationPopover } from "../modals/popover/NotificationPopover";
 
 type Screen = {
   label: string;
@@ -87,6 +88,14 @@ export default function NavbarLeft(props: {
           backgroundColor: theme.palette.secondary.main,
         }}
       />
+      
+      <Grid
+        item
+        height={70}
+      >
+        <NotificationPopover sx={navItemProps(false, 0)}/>
+      </Grid>
+      
     </Grid>
   );
   
