@@ -8,7 +8,7 @@ import { theme } from "@/app/layout";
 
 export default function ListSelectedObservations() {
   
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.HIERARCHY);
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.fileHierarchy);
   const cats = useAppSelector((state) => state.plotReducer.anndata.obs.indices?.categories)
   const codes = useAppSelector((state) => state.plotReducer.anndata.obs.indices?.codes)
   const selectedClusters = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);

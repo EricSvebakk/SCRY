@@ -7,7 +7,7 @@ import ListRanking from "../../controls/ListRanking";
 
 export default function ScreenDifferentialGeneExpression() {
   
-  const statusHierarchy = useAppSelector((state) => state.plotReducer.statusBackend.HIERARCHY);  
+  const statusHierarchy = useAppSelector((state) => state.plotReducer.statusBackend.fileHierarchy);  
   
   if (statusHierarchy.inProgress) {
     return <CurrentProgress status={statusHierarchy} />;

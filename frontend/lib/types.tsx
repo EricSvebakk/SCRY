@@ -1,3 +1,5 @@
+import { backendAPI } from "./redux/api/api";
+
 // ==== Related to reducer =================================================================
 export type InitialPlotStateProps = {
   anndata: AnndataAttributes;
@@ -21,6 +23,7 @@ export type InitialPlotStateProps = {
   };
   statusBackend: statusBackendAPI;
   status: statusAttributes;
+  error: errorAttributes;
 };
 
 export type AnndataAttributeData = {
@@ -165,6 +168,7 @@ export type statusAttributes = {
   [key in (typeof fetchOptions)[number]]: statusOptions;
 };
 
+
 export type triggerOptions = {
   saveScatterPlotImage: string;
   saveFeaturePlotImage: string;
@@ -206,13 +210,49 @@ export const tagsBackendAPI = [
   "HIERARCHY",
   "OBSM",
   "OBS",
+  "GENES",
+  "FEATURE",
   "LEIDEN",
   "ANNOTATION",
+  "LDR",
+  "NLDR",
+  
   "RGG",
+  "RECLUSTER",
+  "CELLTYPIST"
 ] as const
 
+// export const backendTagMap: { [K in keyof typeof backendAPI.endpoints]: typeof tagsBackendAPI[number] } = {
+//   "fileHierarchy": "HIERARCHY",
+//   "fileObs": "OBS",
+//   "fileObsm": "OBSM",
+//   "fileGenes": "GENES",
+//   "fileFeatureCoordinates": "FEATURE",
+//   "celltypistModels": "",
+//   "celeryFileLDR": "",
+//   "celeryFileNLDR": "",
+//   "celeryFileLeiden": "",
+//   "celeryFileRGG": "",
+//   "celeryFileCopy": "",
+//   "celeryFileRecluster": "RECLUSTER",
+//   "celeryCelltypistAnnotate": "CELLTYPIST",
+//   // "celeryStatus": "",
+//   // "celeryResult": "",
+// }
+
+export const backendEndpoints: string[] = Object.keys(backendAPI.endpoints); // as readonly string[];
+
 export type statusBackendAPI = {
-  [key in (typeof tagsBackendAPI)[number]]: statusOptions;
+  [key in typeof backendEndpoints[number]]: statusOptions;
+};
+
+export type errorOptions = {
+  message: string;
+  time?: string;
+}
+
+export type errorAttributes = {
+  [key in typeof backendEndpoints[number]]: errorOptions;
 };
 
 // export const refreshOptions = [

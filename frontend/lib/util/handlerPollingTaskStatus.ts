@@ -1,11 +1,11 @@
 import { setStatus, setStatusBackend } from "../redux/reducers/plotReducer";
-import { fetchOptions, tagsBackendAPI } from "../types";
+import { backendEndpoints, fetchOptions, tagsBackendAPI } from "../types";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
 export function pollTaskStatus(
   taskID: string,
-  statusID: typeof tagsBackendAPI[number],
+  statusID: typeof backendEndpoints[number],
   dispatch: Function,
   onSuccess: Function = () => {},
 ) {
@@ -31,6 +31,13 @@ export function pollTaskStatus(
         if (data.status === "SUCCESS" || data.status === "FAILURE") {
           clearInterval(interval);
           onSuccess();
+          dispatch(
+            setStatusBackend({
+              type: statusID,
+              value: false,
+              message: "",
+            })
+          );
         } else if (data.status === "PROGRESS") {
           dispatch(
             setStatusBackend({

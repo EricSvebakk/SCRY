@@ -89,13 +89,13 @@ export default function DialogFileSaver(props: {
                 
                 if (obsSelected && clustersSelected && fileDoesNotExist) {
                   
-                  save_file_as(
-                    activeFile,
-                    newFilename,
-                    selectedObs,
-                    selectedObsClusters,
-                    dispatch
-                  )
+                  // save_file_as(
+                  //   activeFile,
+                  //   newFilename,
+                  //   selectedObs,
+                  //   selectedObsClusters,
+                  //   dispatch
+                  // )
                   
                   props.setIsOpen(false);
                 }

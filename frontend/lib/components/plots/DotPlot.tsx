@@ -11,7 +11,7 @@ import { DotPlotConfigurationPopover } from "../modals/popover/DotPlotConfigurat
 export function DotPlot() {
 
   const gde = useAppSelector((state) => state.plotReducer.data.GDE);
-  const status = useAppSelector((state) => state.plotReducer.status.get_rgg_dotplot);
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileRGG);
   const dispatch = useAppDispatch();
   
   const [counter, setCounter] = useState(0);

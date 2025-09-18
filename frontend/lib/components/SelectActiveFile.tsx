@@ -176,6 +176,9 @@ export default function SelectActiveFile() {
         <Button
           variant="contained"
           color="secondary"
+          onClick={() => {
+            // TODO: Update fileCopy to allow exact copy, not just slice
+          }}
         >
           Copy file
         </Button>

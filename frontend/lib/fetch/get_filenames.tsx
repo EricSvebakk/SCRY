@@ -8,7 +8,7 @@ const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
 export function get_filenames(dispatch: AppDispatch) {
   
-  const request = `${BACKEND_ENDPOINT}/get_filenames`;
+  const request = `${BACKEND_ENDPOINT}/system/files`;
   
   console.log("get_filenames() query:", request);
 
@@ -18,7 +18,7 @@ export function get_filenames(dispatch: AppDispatch) {
     message: "Fetching filenames"
   }));
   
-  fetch(`${BACKEND_ENDPOINT}/get_filenames`, {
+  fetch(request, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -33,16 +33,19 @@ export function get_filenames(dispatch: AppDispatch) {
   .then((data) => {
     console.log("get_filenames() result:", data)
     
-    const fileRows = data.h5ad
-      .map((e: string, i: number) => ({
-        id: e,
-        name: e,
-        fileSize: data.h5ad_sizes[i],
-        fileType: e.split(".")[1],
-      }))
-      .sort((a: fileType, b: fileType) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
+    if (data.ok) {
+      const fileRows = data.response.files
+        .map((e: string, i: number) => ({
+          id: e,
+          name: e,
+          fileSize: data.response.h5ad_sizes[i],
+          fileType: e.split(".")[1],
+        }))
+        .sort((a: fileType, b: fileType) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
+      
+      dispatch(addFiles(fileRows))
+    }
     
-    dispatch(addFiles(fileRows))
     
     dispatch(setStatus({
       type: "get_filenames",

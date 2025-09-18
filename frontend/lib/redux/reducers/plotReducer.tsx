@@ -14,8 +14,10 @@ import {
   geneReport,
   tagsBackendAPI,
   statusBackendAPI,
+  errorAttributes,
+  backendEndpoints,
 } from "@/lib/types";
-import { createSlice, isRejectedWithValue, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, isFulfilled, isPending, isRejectedWithValue, PayloadAction } from "@reduxjs/toolkit";
 import { backendAPI } from "../api/api";
 
 const initialPlotState: InitialPlotStateProps = {
@@ -87,7 +89,7 @@ const initialPlotState: InitialPlotStateProps = {
     },
     {} as statusAttributes
   ),
-  statusBackend: tagsBackendAPI.reduce(
+  statusBackend: backendEndpoints.reduce(
     (acc, key) => {
       acc[key] = {
         inProgress: false,
@@ -96,7 +98,16 @@ const initialPlotState: InitialPlotStateProps = {
       return acc
     },
     {} as statusBackendAPI
-  )
+  ),
+  error: backendEndpoints.reduce(
+    (acc, key) => {
+      acc[key] = {
+        message: ""
+      }
+      return acc
+    },
+    {} as errorAttributes
+  ),
 };
 
 export const plotSlice = createSlice({
@@ -224,12 +235,10 @@ export const plotSlice = createSlice({
     setGeneReport(state, action: PayloadAction<geneReport>) {
       state.data.geneReport = action.payload;
     },
-    
-    
     setStatusBackend: (
       state: InitialPlotStateProps,
       action: PayloadAction<{
-        type: (typeof tagsBackendAPI)[number];
+        type: (typeof backendEndpoints)[number];
         value: boolean;
         message?: string;
       }>
@@ -242,55 +251,59 @@ export const plotSlice = createSlice({
         type.message = action.payload.message;
       }
     },
-    
+    setError: (
+      state: InitialPlotStateProps,
+      action: PayloadAction<{
+        type: (typeof tagsBackendAPI)[number];
+        message: string;
+        time: string;
+      }>
+    ) => {
+      const type = state.error[action.payload.type];
+
+      type.message = action.payload.message;
+      
+      if (action.payload.time !== undefined) {
+        type.time = action.payload.message;
+      } else {
+        type.time = undefined;
+      }
+    },
   },
   extraReducers: (builder) => {
+    // Handles status messages
     builder.addMatcher(
       backendAPI.endpoints.fileHierarchy.matchPending,
       (state) => {
-        state.statusBackend.HIERARCHY = {
-          inProgress: true,
-          message: "Loading in Anndata metadata"
-        }
+        state.statusBackend.fileHierarchy.message = "Loading in Anndata metadata"
       }
     ),
     builder.addMatcher(
       backendAPI.endpoints.fileObsm.matchPending,
       (state) => {
-        state.statusBackend.OBSM = {
-          inProgress: true,
-          message: "Loading embedding coordinates"
-        }
+        state.statusBackend.fileObsm.message = "Loading embedding coordinates"
       }
     ),
     builder.addMatcher(
       backendAPI.endpoints.fileObs.matchPending,
       (state) => {
-        state.statusBackend.OBS = {
-          inProgress: true,
-          message: "Loading observation data"
-        }
+        state.statusBackend.fileObs.message = "Loading observation data"
       }
     ),
     builder.addMatcher(
       backendAPI.endpoints.celeryFileNLDR.matchPending,
       (state) => {
-        state.statusBackend.OBSM = {
-          inProgress: true,
-          message: "requesting changes"
-        }
+        state.statusBackend.celeryFileNLDR.message = "requesting changes"
       }
     ),
     builder.addMatcher(
       backendAPI.endpoints.celeryFileLeiden.matchPending,
       (state) => {
-        state.statusBackend.LEIDEN = {
-          inProgress: true,
-          message: "requesting changes"
-        }
+        state.statusBackend.celeryFileLeiden.message = "requesting changes"
       }
     ),
     // ===========================================================================
+    // Handles setting data correctly
     builder.addMatcher(
       backendAPI.endpoints.fileHierarchy.matchFulfilled,
       (state, action) => {
@@ -301,7 +314,6 @@ export const plotSlice = createSlice({
             state.anndata[key].keys = response[key];
           });
         }
-        state.statusBackend.HIERARCHY.inProgress = false
       }
     ),
     builder.addMatcher(
@@ -310,7 +322,6 @@ export const plotSlice = createSlice({
         if (action.payload.ok) {
           state.anndata.obsm.data = action.payload.response
         }
-        state.statusBackend.OBSM.inProgress = false
       }
     ),
     builder.addMatcher(
@@ -319,29 +330,67 @@ export const plotSlice = createSlice({
         if (action.payload.ok) {
           state.anndata.obs.indices = action.payload.response
         }
-        state.statusBackend.OBS.inProgress = false
       }
     ),
-    // ===========================================================================
     builder.addMatcher(
-      isRejectedWithValue,
+      backendAPI.endpoints.fileGenes.matchFulfilled,
       (state, action) => {
-        console.log(action.type, action.payload);
-        
-        if (action.type.startsWith(backendAPI.reducerPath)) {
-          
-          // const { status, data } = action.payload as any;
-          
-          // if (status === 423) {
-          //   console.error((data as any).detail)
-          // }
+        if (action.payload.ok) {
+          state.data.genes = action.payload.response
         }
       }
     ),
     builder.addMatcher(
-      backendAPI.endpoints.fileHierarchy.matchRejected,
+      backendAPI.endpoints.fileFeatureCoordinates.matchFulfilled,
       (state, action) => {
-        state.statusBackend.HIERARCHY.inProgress = false
+        if (action.payload.ok) {
+          state.anndata.var.indices = action.payload.response
+        }
+      }
+    ),
+    // ===========================================================================
+    // Handles status and error
+    builder.addMatcher(
+      isFulfilled,
+      (state, action) => {
+        console.log(action);
+        if (action.type.startsWith(backendAPI.reducerPath) && !isRejectedWithValue(action)) {
+          const endpoint = (action.meta.arg as any).endpointName
+          state.statusBackend[endpoint] = {
+            inProgress: false,
+            message: ""
+          }
+        }
+      }
+    ),
+    builder.addMatcher(
+      isPending,
+      (state, action) => {
+        console.log(action);
+        if (action.type.startsWith(backendAPI.reducerPath)) {
+          const endpoint = (action.meta.arg as any).endpointName
+          state.statusBackend[endpoint].inProgress = true;
+          if (state.statusBackend[endpoint].message === "") {
+            state.statusBackend[endpoint].message = "pending"
+          }
+        }
+      }
+    ),
+    builder.addMatcher(
+      isRejectedWithValue,
+      (state, action) => {
+        console.log(action);
+        if (action.type.startsWith(backendAPI.reducerPath)) {
+          const endpoint = (action.meta.arg as any).endpointName
+          state.statusBackend[endpoint] = {
+            inProgress: false,
+            message: ""
+          }
+          state.error[endpoint] = {
+            message: JSON.stringify(action.payload),
+            time: new Date().toISOString()
+          }
+        }
       }
     )
   }

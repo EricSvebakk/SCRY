@@ -1,10 +1,9 @@
 import { Button, Stack } from "@mui/material";
 import { setAnndataField } from "../../redux/reducers/plotReducer";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
-import { get_file_obsm } from "@/lib/fetch/get_file_obsm";
 import CurrentProgress from "../OverlayCurrentProgress";
 import DialogDimensionalReduction from "../modals/DialogDimensionalReduction";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { theme } from "@/app/layout";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import { useLazyFileObsmQuery } from "@/lib/redux/api/api";
@@ -14,16 +13,11 @@ export default function ListEmbeddings() {
   const fileID = useAppSelector((state) => state.fileReducer.activeFile);
   const userID = useAppSelector((state) => state.fileReducer.userID);  
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.HIERARCHY);
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.fileHierarchy);
 
   const dispatch = useAppDispatch();
-  const [getObsm, { data, isSuccess } ] = useLazyFileObsmQuery();
+  const [getObsm] = useLazyFileObsmQuery();
 
-  // useEffect(() => {
-  //   if (isSuccess) {
-      
-  //   }
-  // }, [data, isSuccess])
   
   const [isNLDRDialogOpen, setIsNLDRDialogOpen] = useState<boolean>(false);
   

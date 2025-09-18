@@ -2,7 +2,6 @@
 import { Button, Stack } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { useState } from "react";
-import { get_file_obs } from "../../fetch/get_file_obs";
 import { setAnndataField } from "@/lib/redux/reducers/plotReducer";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { theme } from "@/app/layout";
@@ -17,11 +16,10 @@ export default function ListClusterings() {
   const userID = useAppSelector((state) => state.fileReducer.userID);
   
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
-  const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.HIERARCHY)
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.fileHierarchy)
   
   const dispatch = useAppDispatch();
-  const [getObs, { data, isSuccess } ] = useLazyFileObsQuery();
+  const [getObs] = useLazyFileObsQuery();
   
   const [isClusteringDialogOpen, setIsClusteringDialogOpen] = useState<boolean>(false);
   const [isAutoAnnotDialogOpen, setIsAutoAnnotDialogOpen] = useState<boolean>(false);

@@ -6,18 +6,20 @@ import { theme } from "@/app/layout";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { AutocompleteOption, Cluster, Reclustering } from "@/lib/types";
 import { Close } from "@mui/icons-material";
-import { post_new_observation } from "@/lib/fetch/post_new_observation";
 import { LoadingButton } from "@mui/lab";
+import { useCeleryFileReclusterMutation, useLazyFileHierarchyQuery } from "@/lib/redux/api/api";
+import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 
 export default function PanelReclustering(props: {
   open: boolean;
   setOpen: Function;
 }) {
   
-  const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
   const fileID = useAppSelector((state) => state.fileReducer.activeFile);
-  const statusObs = useAppSelector((state) => state.plotReducer.status.get_file_obs);
-  const statusNewObs = useAppSelector((state) => state.plotReducer.status.post_new_observation);
+  const userID = useAppSelector((state) => state.fileReducer.userID);
+  const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
+  const statusObs = useAppSelector((state) => state.plotReducer.statusBackend.fileObs);
+  const statusNewObs = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileRecluster);
   
   const [observationName, setObservationName] = useState<string>("");
   const [catOptions, setCatOptions] = useState<AutocompleteOption[]>([]);
@@ -26,6 +28,8 @@ export default function PanelReclustering(props: {
   
   const ref = useRef();
   const dispatch = useAppDispatch();
+  const [getReclustering] = useCeleryFileReclusterMutation();
+  const [getHierarchy] = useLazyFileHierarchyQuery();
   
   useEffect(() => {
     if (obs.selectedKey && obs.indices) {
@@ -163,7 +167,25 @@ export default function PanelReclustering(props: {
                   }) as Cluster)
                 };
                 
-                post_new_observation(fileID, newObservation, dispatch);
+                getReclustering({
+                  fileID: fileID,
+                  userID: userID,
+                  reclustering: newObservation,
+                }).then((data) => {
+                  if (data.data?.ok) {
+                    pollTaskStatus(
+                      data.data.response,
+                      "celeryFileRecluster",
+                      dispatch,
+                      () => {
+                        getHierarchy({
+                          fileID: fileID,
+                          userID: userID,
+                        });
+                      }
+                    )
+                  }
+                })
               }
               
             }}

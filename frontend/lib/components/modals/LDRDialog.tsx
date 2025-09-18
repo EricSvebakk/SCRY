@@ -8,7 +8,6 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
-import { get_ldr } from "@/lib/fetch/workflow/get_ldr";
 
 export default function LDRDialog(props: {
   isOpen: boolean;
@@ -39,7 +38,6 @@ export default function LDRDialog(props: {
             variant="outlined"
             size="medium"
             onClick={() => {
-              get_ldr(activeFile, numPCs, dispatch);
 
               props.setIsOpen(false);
             }}

@@ -20,6 +20,7 @@ import redis
 from scipy.cluster.hierarchy import to_tree
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+UPLOAD_DIR = "/persistent01"
 
 celery_app = Celery(
   "worker",
@@ -821,7 +822,7 @@ def compute_save_file_as(
       
       simple_update_progress(self, "Saving slice as new file")
       
-      sc.write(new_file_path, adata_subset)
+      sc.write(os.path.join(UPLOAD_DIR, new_file_path), adata_subset)
       
       result["response"] = "Slicing successful"
       result["ok"] = True

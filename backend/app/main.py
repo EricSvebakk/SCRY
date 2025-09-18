@@ -219,7 +219,7 @@ async def celery_file_recluster(
   user_id: str,
   observation: newObservation
 ):
-  obj = validate(file_id, worker.compute_recluster, user_id, observation, delay=True)
+  obj = validate(file_id, worker.compute_recluster, user_id, observation.model_dump(), delay=True)
   return JSONResponse(content=obj)
 
 @app.post("/celltypist/annotate", tags=["CELLTYPIST"])

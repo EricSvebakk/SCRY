@@ -10,11 +10,11 @@ export const backendAPI = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: BACKEND_ENDPOINT
   }),
-  tagTypes: tagsBackendAPI,
+  // tagTypes: tagsBackendAPI,
   endpoints: (builder) => ({
     fileHierarchy: builder.query<backendResponse, { fileID: string, userID: string }>({
       query: ({ fileID, userID }) => `file/hierarchy?file_id=${fileID}&user_id=${userID}`,
-      providesTags: ["HIERARCHY"]
+      // providesTags: ["HIERARCHY"]
     }),
     fileObs: builder.query<backendResponse, { fileID: string, userID: string, obs: string }>({
       query: ({ fileID, userID, obs }) => `file/obs?file_id=${fileID}&user_id=${userID}&obs=${obs}`
@@ -23,10 +23,10 @@ export const backendAPI = createApi({
       query: ({ fileID, userID, obsm}) => `file/obsm?file_id=${fileID}&user_id=${userID}&obsm=${obsm}`
     }),
     fileGenes: builder.query<backendResponse, { fileID: string, userID: string }>({
-      query: ({ fileID, userID }) => `file/obs?file_id=${fileID}&user_id=${userID}`
+      query: ({ fileID, userID }) => `file/genes?file_id=${fileID}&user_id=${userID}`
     }),
     fileFeatureCoordinates: builder.query<backendResponse, { fileID: string, userID: string, featureKey: string }>({
-      query: ({ fileID, userID, featureKey }) => `file/obs?file_id=${fileID}&user_id=${userID}&feature_key=${featureKey}`
+      query: ({ fileID, userID, featureKey }) => `file/feature/coordinates?file_id=${fileID}&user_id=${userID}&feature_key=${featureKey}`
     }),
     celltypistModels: builder.query<backendResponse, void>({
       query: () => `celltypist/models`
@@ -117,13 +117,9 @@ export const backendAPI = createApi({
     celeryFileRecluster: builder.mutation<backendResponse, celeryFileReclusterSchema>({
       query: (body) => {
         return {
-          url: `file/recluster`,
+          url: `file/recluster?file_id=${body.fileID}&user_id=${body.userID}`,
           method: 'POST',
-          body: {
-            file_id: body.fileID,
-            user_id: body.userID,
-            observation: body.reclustering
-          },
+          body: body.reclustering,
         }
       },
       // invalidatesTags: ["HIERARCHY"]
@@ -157,20 +153,21 @@ export const {
   useFileHierarchyQuery,
   // useFileObsQuery,
   // useFileObsmQuery,
-  // useFileGenesQuery,
+  useFileGenesQuery,
   // useFileFeatureCoordinatesQuery,
   // useCelltypistModelsQuery,
   // LAZY
-  // useLazyFileHierarchyQuery,
+  useLazyFileHierarchyQuery,
   useLazyFileObsQuery,
   useLazyFileObsmQuery,
+  useLazyFileFeatureCoordinatesQuery,
   // CELERY
   // useCeleryFileLDRMutation,
   useCeleryFileNLDRMutation,
   useCeleryFileLeidenMutation,
   useCeleryFileRGGMutation,
-  // useCeleryFileCopyMutation,
-  // useCeleryFileReclusterMutation,
+  useCeleryFileCopyMutation,
+  useCeleryFileReclusterMutation,
   useCeleryCelltypistAnnotateMutation,
   // STATUS
   useCeleryStatusQuery,

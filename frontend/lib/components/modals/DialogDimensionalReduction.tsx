@@ -135,7 +135,7 @@ export default function DialogDimensionalReduction(props: {
                   if (data.data?.ok) {
                     pollTaskStatus(
                       data.data.response,
-                      "OBSM",
+                      "celeryFileLDR",
                       dispatch,
                       () => {
                         dispatch(

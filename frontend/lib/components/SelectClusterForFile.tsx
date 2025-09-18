@@ -4,17 +4,22 @@ import { useAppDispatch, useAppSelector } from "../redux/hooks/hooks";
 import { theme } from "@/app/layout";
 import { setAnndataField } from "../redux/reducers/plotReducer";
 import { useState } from "react";
-import { get_file_obs } from "../fetch/get_file_obs";
 import CurrentProgress from "./OverlayCurrentProgress";
+import { useCeleryFileCopyMutation, useLazyFileObsQuery } from "../redux/api/api";
+import { pollTaskStatus } from "../util/handlerPollingTaskStatus";
+import { get_filenames } from "../fetch/get_filenames";
 
 export default function SelectClusterForFile() {
   
-  const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
   const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
-  const statusHierarchy = useAppSelector((state) => state.plotReducer.statusBackend.HIERARCHY);
-  const statusObs = useAppSelector((state) => state.plotReducer.status.get_file_obs);
+  const userID = useAppSelector((state) => state.fileReducer.userID);
+  const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
+  const statusHierarchy = useAppSelector((state) => state.plotReducer.statusBackend.fileHierarchy);
+  const statusObs = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileCopy);
   
   const dispatch = useAppDispatch();
+  const [getObs] = useLazyFileObsQuery();
+  const [getFileCopy] = useCeleryFileCopyMutation();
   
   const [selectedLeft, setSelectedLeft] = useState<string[]>([]);
   const [selectedRight, setSelectedRight] = useState<string[]>([]);
@@ -87,8 +92,14 @@ export default function SelectClusterForFile() {
                           value: e,
                         })
                       );
+                      
+                      getObs({
+                        fileID: activeFile,
+                        userID: userID,
+                        obs: e
+                      });
 
-                      get_file_obs(activeFile, e, dispatch);
+                      // get_file_obs(activeFile, e, dispatch);
                     }}
                   >
                     <Stack
@@ -387,6 +398,36 @@ export default function SelectClusterForFile() {
         <Button
           variant="contained"
           color="secondary"
+          disabled={obs.selectedKey === undefined}
+          onClick={() => {
+            
+            console.log(activeObs);
+            
+            if (obs.selectedKey) {
+              getFileCopy({
+                fileID: activeFile,
+                userID: userID,
+                newFileID: activeFile.split(".")[0] + "_copy.h5ad",
+                selectedObs: obs.selectedKey!,
+                selectedObsClusters: activeObs
+              })
+              .then((data) => {
+                if (data.data?.ok) {
+                  pollTaskStatus(
+                    data.data.response,
+                    "celeryFileCopy",
+                    dispatch,
+                    () => {
+                      get_filenames(dispatch);
+                    }
+                  )
+                }
+              })
+            }
+            
+            
+            
+          }}
         >
           Save selected as file
         </Button>

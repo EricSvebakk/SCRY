@@ -8,8 +8,6 @@ import { useParams } from "next/navigation";
 import { ReactElement, useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { setActiveFile, setActiveUser } from "@/lib/redux/reducers/fileReducer";
-import { get_file_hierarchy } from "@/lib/fetch/get_file_hierarchy";
-import { get_genes } from "@/lib/fetch/get_genes";
 import ScreenDimensionalReduction from "@/lib/components/navigation/screen/ScreenDimensionalReduction";
 import ScreenDifferentialGeneExpression from "@/lib/components/navigation/screen/ScreenDifferentialGeneExpression";
 import { theme } from "@/app/layout";
@@ -17,8 +15,7 @@ import { ScatterPlot, Tune, ViewCompact } from "@mui/icons-material";
 import ScreenManageAnnData from "@/lib/components/navigation/screen/ScreenManageAnnData";
 import NavbarLeft from "@/lib/components/navigation/NavbarLeft";
 import NavbarRight from "@/lib/components/navigation/NavbarRight";
-import { get_model_types } from "@/lib/fetch/get_model_types";
-import { useFileHierarchyQuery } from "@/lib/redux/api/api";
+import { useFileGenesQuery, useFileHierarchyQuery } from "@/lib/redux/api/api";
 
 type Screen = {
   label: string;
@@ -33,10 +30,11 @@ export default function FileIdPage({}) {
 
   const status = useAppSelector((state) => state.plotReducer.status);
   const userID = useAppSelector((state) => state.fileReducer.userID);
-  const { data } = useFileHierarchyQuery({ fileID: fileID as string, userID: userID }, { skip: userID === "anonymous" });
-
+  const { } = useFileHierarchyQuery({ fileID: fileID as string, userID: userID }, { skip: userID === "anonymous" });
+  const { } = useFileGenesQuery({ fileID: fileID as string, userID: userID }, { skip: userID === "anonymous" });
+  
   const dispatch = useAppDispatch();
-
+  
   const [selectedScreen, setSelectedScreen] = useState<number>(1);
   
   const screens: Screen[] = [
@@ -67,10 +65,7 @@ export default function FileIdPage({}) {
       dispatch(setActiveUser("Eric"));
       
       setSelectedScreen(1);
-      
-      // if (!status.get_genes.inProgress) {
-      //   get_genes(fileID, dispatch);
-      // }
+
       // if (!status.get_model_types.inProgress) {
       //   get_model_types(fileID, dispatch);
       // }
@@ -79,7 +74,7 @@ export default function FileIdPage({}) {
 
   return (
     <Grid container direction="row" xs>
-      <Grid item height="100%" width={85}>
+      <Grid item height="100%" width={90}>
         <NavbarLeft
           screens={screens}
           selectedScreen={selectedScreen}

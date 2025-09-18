@@ -5,10 +5,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { theme } from "@/app/layout";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { AutocompleteOption } from "@/lib/types";
-import { get_feature_coordinates } from "@/lib/fetch/get_feature_coordinates";
 import { LoadingButton } from "@mui/lab";
 import get_ncbi_gene_summary from "@/lib/fetch/get_ncbi_gene_summary";
 import { FeatureScatterPlot } from "../../plots/FeatureScatterPlot";
+import { useLazyFileFeatureCoordinatesQuery } from "@/lib/redux/api/api";
 
 export default function PanelGenes(props: {
   open: boolean;
@@ -16,20 +16,20 @@ export default function PanelGenes(props: {
 }) {
   
   const fileID = useAppSelector((state) => state.fileReducer.activeFile);  
+  const userID = useAppSelector((state) => state.fileReducer.userID);  
   const genes = useAppSelector((state) => state.plotReducer.data.genes);
-  const status = useAppSelector((state) => state.plotReducer.status.get_feature_coordinates);
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.fileFeatureCoordinates);
   const report = useAppSelector((state) => state.plotReducer.data.geneReport);
   
   const ref = useRef();
   
-  // const [open, setOpen] = useState(false);
   const [selectedGene, setSelectedGene] = useState<AutocompleteOption | null>(null);  
   const [geneOptionsFiltered, setGeneOptionsFiltered] = useState<AutocompleteOption[]>([]);
     
   const unsFilterOptions = createFilterOptions({ limit: 20 });
   
   const dispatch = useAppDispatch();  
-  
+  const [getFeatureCoordinates] = useLazyFileFeatureCoordinatesQuery();
   
   useEffect(() => {
     if (genes) {
@@ -125,11 +125,12 @@ export default function PanelGenes(props: {
               loading={status.inProgress}
               onClick={() => {
                 if (selectedGene) {
-                  get_feature_coordinates(
-                    fileID as string,
-                    selectedGene.label,
-                    dispatch
-                  );
+                  
+                  getFeatureCoordinates({
+                    fileID: fileID,
+                    userID: userID,
+                    featureKey: selectedGene.label
+                  })
 
                   get_ncbi_gene_summary(selectedGene.label, dispatch);
                 }
