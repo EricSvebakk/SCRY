@@ -216,29 +216,10 @@ export const tagsBackendAPI = [
   "ANNOTATION",
   "LDR",
   "NLDR",
-  
   "RGG",
   "RECLUSTER",
   "CELLTYPIST"
 ] as const
-
-// export const backendTagMap: { [K in keyof typeof backendAPI.endpoints]: typeof tagsBackendAPI[number] } = {
-//   "fileHierarchy": "HIERARCHY",
-//   "fileObs": "OBS",
-//   "fileObsm": "OBSM",
-//   "fileGenes": "GENES",
-//   "fileFeatureCoordinates": "FEATURE",
-//   "celltypistModels": "",
-//   "celeryFileLDR": "",
-//   "celeryFileNLDR": "",
-//   "celeryFileLeiden": "",
-//   "celeryFileRGG": "",
-//   "celeryFileCopy": "",
-//   "celeryFileRecluster": "RECLUSTER",
-//   "celeryCelltypistAnnotate": "CELLTYPIST",
-//   // "celeryStatus": "",
-//   // "celeryResult": "",
-// }
 
 export const backendEndpoints: string[] = Object.keys(backendAPI.endpoints); // as readonly string[];
 
@@ -254,14 +235,6 @@ export type errorOptions = {
 export type errorAttributes = {
   [key in typeof backendEndpoints[number]]: errorOptions;
 };
-
-// export const refreshOptions = [
-//   "hierarchy"
-// ] as const
-
-// export type refreshAttributes = {
-//   [key in (typeof refreshOptions)[number]]: number;
-// };
 
 // ==== Not related to reducer =============================================================
 
