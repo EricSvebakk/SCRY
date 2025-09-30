@@ -25,6 +25,7 @@ export default function ScreenDifferentialGeneExpression() {
       <Grid
         item
         container
+        direction="column"
         width={250}
         rowGap={1}
         sx={{

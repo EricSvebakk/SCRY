@@ -26,8 +26,6 @@ export default function ListConnectivities() {
     
     if (uns) {
       
-      // console.log(uns);
-      
       const newConnectivities = Object.keys(uns)
         .filter((e: string) => uns[e] && Object.keys(uns[e]).includes("connectivities_key"));
       
@@ -58,7 +56,7 @@ export default function ListConnectivities() {
         direction="column"
         sx={{
           width: "100%",
-          height: "10vh",
+          height: "20vh",
           overflowY: "auto",
         }}
       >

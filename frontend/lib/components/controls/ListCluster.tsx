@@ -3,13 +3,15 @@ import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { AnndataIndices } from "../../types";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { setSelectedClusters } from "@/lib/redux/reducers/plotReducer";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { theme } from "@/app/layout";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import { Square } from "@mui/icons-material";
 import { sequentialScaleColorOptions } from "@/lib/design";
 
-export function ListCluster() {
+export function ListCluster(props: {
+  canvasID: string
+}) {
   
   const config = useAppSelector((state) => state.plotReducer.plot.cluster);
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
@@ -17,11 +19,12 @@ export function ListCluster() {
   const selectedClusters = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);
 
   const dispatch = useAppDispatch();
+  const [isInverted, setIsInverted] = useState<boolean>(false);
 
   useEffect(() => {
     if (obs.indices) {
       (obs.indices.categories as string[]).forEach((label_temp: string, index_other) => {
-        const otherCanvas = document.getElementById("points_" + label_temp);
+        const otherCanvas = document.getElementById(`canvas_${props.canvasID}_${label_temp}`);
 
         if (otherCanvas === null) {
           return;
@@ -34,7 +37,7 @@ export function ListCluster() {
         }
       });
     }
-  }, [obs.indices, selectedClusters]);
+  }, [obs.indices, selectedClusters, isInverted]);
 
   useEffect(() => {
     if (obs.indices && selectedClusters.length === 0) {
@@ -64,19 +67,21 @@ export function ListCluster() {
         }}
       >
         <ButtonSecondary
-          title="Show all"
+          title={ isInverted ? "Inverted" : "Normal"}
           onClick={() => {
-            if (obs.indices) {
-              dispatch(setSelectedClusters(obs.indices?.categories as string[]));
-            }
+            setIsInverted(!isInverted);
           }}
         />
 
         <ButtonSecondary
-          title="Hide all"
+          title={ selectedClusters.length > 0 ? "Hide all" : "Show all" }
           onClick={() => {
             if (obs.indices) {
-              dispatch(setSelectedClusters([]));
+              if (selectedClusters.length > 0) {
+                dispatch(setSelectedClusters([]));
+              } else {
+                dispatch(setSelectedClusters(obs.indices?.categories as string[]));
+              }
             }
           }}
         />
@@ -90,6 +95,7 @@ export function ListCluster() {
           sx={{
             height: "100%",
             overflowY: "auto",
+            p: 1
           }}
         >
           {(obs.indices?.categories as string[])?.map((label, i) => {
@@ -113,8 +119,8 @@ export function ListCluster() {
 
                   dispatch(setSelectedClusters(newSelectedClusters));
                 }}
-                onMouseEnter={() => labelOnMouseEnter(label, obs.indices!, isSelected)}
-                onMouseLeave={() => labelOnMouseLeave(label, obs.indices!, isSelected)}
+                onMouseEnter={() => labelOnMouseEnter(label, obs.indices!, props.canvasID, isInverted)}
+                onMouseLeave={() => labelOnMouseLeave(label, obs.indices!, props.canvasID, isInverted, selectedClusters)}
               >
                 <Grid
                   container
@@ -188,35 +194,44 @@ export function ListCluster() {
   );
 }
 
-function labelOnMouseEnter(label: string, indicies: AnndataIndices, isSelected: boolean) {
-  const canvas = document.getElementById("points_" + label);
+function labelOnMouseEnter(label: string, indicies: AnndataIndices, canvasID: string, isInverted: boolean) {
+  const canvas = document.getElementById(`canvas_${canvasID}_${label}`);
 
   if (canvas === null) {
     return;
   }
   
   canvas!.style.zIndex = "8";
+  
+  if (isInverted) {
+    canvas!.style.opacity = "100%";
+  }
 
-  indicies.categories.forEach((label_temp, index_other) => {
-    if (label !== label_temp) {
-      const otherCanvas = document.getElementById("points_" + label_temp);
+  indicies.categories.forEach((tempLabel, tempIndex) => {
+    if (label !== tempLabel) {
+      const otherCanvas = document.getElementById(`canvas_${canvasID}_${tempLabel}`);
       otherCanvas!.style.filter = "grayscale(1)";
+      
     }
   });
 }
 
-function labelOnMouseLeave(label: string, indices: AnndataIndices, isSelected: boolean) {
-  const canvas = document.getElementById("points_" + label);
+function labelOnMouseLeave(label: string, indices: AnndataIndices, canvasID: string, isInverted: boolean, selected: string[]) {
+  const canvas = document.getElementById(`canvas_${canvasID}_${label}`);
 
   if (canvas === null) {
     return;
   }
   
   canvas!.style.zIndex = "5";
+  
+  if (isInverted && !selected.includes(label)) {
+    canvas!.style.opacity = "0%";
+  }
 
-  indices.categories.forEach((label_temp, index_other) => {
-    if (label !== label_temp) {
-      const otherCanvas = document.getElementById("points_" + label_temp);
+  indices.categories.forEach((tempLabel, tempIndex) => {
+    if (label !== tempLabel) {
+      const otherCanvas = document.getElementById(`canvas_${canvasID}_${tempLabel}`);
       otherCanvas!.style.filter = "grayscale(0)";
     }
   });

@@ -11,21 +11,19 @@ export const linearScaleColorOptions: { [key: string]: linearScaleColorType } = 
   magma: d3.interpolateMagma,
 };
 
-
 export const sequentialScaleColorOptions: { [key: string]: sequentialScaleColorType } = {
-  // custom: [
-  //   "#1f77b4",
-  //   "#ff7f0e",
-  //   "#2ca02c",
-  //   "#d62728",
-  //   "#9467bd",
-  //   "#8c564b",
-  //   "#e377c2",
-  //   "#bcbd22",
-  //   "#17becf",
-  // ],
+  obs9: [
+    "#4269d0", 
+    "#efb118", 
+    "#ff725c", 
+    "#6cc5b0", 
+    "#3ca951", 
+    "#ff8ab7", 
+    "#a463f2", 
+    "#97bbf5", 
+    "#9c6b4e", 
+  ],
   cat10: d3.schemeCategory10 as [],
-  obs10: d3.schemeObservable10 as [],
   pastel: d3.schemePastel1 as [],
   paired: d3.schemePaired as [],
 };

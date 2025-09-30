@@ -9,7 +9,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useState } from "react";
-import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
+import { useAppDispatch } from "../../redux/hooks/hooks";
 import { theme } from "@/app/layout";
 import { useCeleryFileNLDRMutation } from "@/lib/redux/api/api";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
@@ -19,8 +19,6 @@ export default function DialogDimensionalReduction(props: {
   isOpen: boolean;
   setIsOpen: Function;
 }) {
-  const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
-  const userID = useAppSelector((state) => state.fileReducer.userID);
 
   const dispatch = useAppDispatch();
   const [getNLDR] = useCeleryFileNLDRMutation();
@@ -122,8 +120,6 @@ export default function DialogDimensionalReduction(props: {
               onClick={() => {
                 
                 getNLDR({
-                  fileID: activeFile,
-                  userID,
                   adataKey,
                   numPCs,
                   minDist,

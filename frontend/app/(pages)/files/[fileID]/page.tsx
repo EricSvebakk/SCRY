@@ -4,18 +4,17 @@ import {
   Grid,
   SvgIconProps,
 } from "@mui/material";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ReactElement, useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
-import { setActiveFile, setActiveUser } from "@/lib/redux/reducers/fileReducer";
+import { setActiveFile, setActiveUser, setPassKey } from "@/lib/redux/reducers/fileReducer";
 import ScreenDimensionalReduction from "@/lib/components/navigation/screen/ScreenDimensionalReduction";
 import ScreenDifferentialGeneExpression from "@/lib/components/navigation/screen/ScreenDifferentialGeneExpression";
 import { theme } from "@/app/layout";
-import { ScatterPlot, Tune, ViewCompact } from "@mui/icons-material";
-import ScreenManageAnnData from "@/lib/components/navigation/screen/ScreenManageAnnData";
+import { ScatterPlot, ViewCompact } from "@mui/icons-material";
 import NavbarLeft from "@/lib/components/navigation/NavbarLeft";
 import NavbarRight from "@/lib/components/navigation/NavbarRight";
-import { useFileGenesQuery, useFileHierarchyQuery } from "@/lib/redux/api/api";
+import { useCelltypistModelsQuery, useFileGenesQuery, useFileHierarchyQuery, useSystemFilesQuery } from "@/lib/redux/api/api";
 
 type Screen = {
   label: string;
@@ -27,23 +26,25 @@ type Screen = {
 export default function FileIdPage({}) {
   
   const { fileID } = useParams();
-
-  const status = useAppSelector((state) => state.plotReducer.status);
+ 
   const userID = useAppSelector((state) => state.fileReducer.userID);
-  const { } = useFileHierarchyQuery({ fileID: fileID as string, userID: userID }, { skip: userID === "anonymous" });
-  const { } = useFileGenesQuery({ fileID: fileID as string, userID: userID }, { skip: userID === "anonymous" });
+  const passKey = useAppSelector((state) => state.fileReducer.passKey);
   
+  const params = {
+    skip: (userID === "") || (passKey === "")
+  }
+  
+  const { } = useSystemFilesQuery(undefined, params);
+  const { } = useFileHierarchyQuery(undefined, params);
+  const { } = useFileGenesQuery(undefined, params);
+  const { } = useCelltypistModelsQuery(undefined, params);
+  
+  const router = useRouter();
   const dispatch = useAppDispatch();
   
-  const [selectedScreen, setSelectedScreen] = useState<number>(1);
+  const [selectedScreen, setSelectedScreen] = useState<number>(0);
   
   const screens: Screen[] = [
-    {
-      label: "Manage AnnData",
-      id: "table",
-      component: <ScreenManageAnnData />,
-      icon: <Tune />,
-    },
     {
       label: "Dimensional Reduction",
       id: "scatterplot",
@@ -60,15 +61,16 @@ export default function FileIdPage({}) {
 
   useEffect(() => {
     
-    if (typeof fileID === "string") {
+    if (typeof fileID === "string" && fileID !== "") {
       dispatch(setActiveFile(fileID));
-      dispatch(setActiveUser("Eric"));
+      dispatch(setActiveUser(localStorage.getItem("user_id") ?? ""));
+      dispatch(setPassKey(localStorage.getItem("passkey_hash") ?? ""));
       
-      setSelectedScreen(1);
+      setSelectedScreen(0);
 
-      // if (!status.get_model_types.inProgress) {
-      //   get_model_types(fileID, dispatch);
-      // }
+    } else {
+      router.push("/");
+      router.refresh();      
     }
   }, []);
 

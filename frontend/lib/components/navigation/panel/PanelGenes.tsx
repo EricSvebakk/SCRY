@@ -14,9 +14,7 @@ export default function PanelGenes(props: {
   open: boolean;
   setOpen: Function;
 }) {
-  
-  const fileID = useAppSelector((state) => state.fileReducer.activeFile);  
-  const userID = useAppSelector((state) => state.fileReducer.userID);  
+
   const genes = useAppSelector((state) => state.plotReducer.data.genes);
   const status = useAppSelector((state) => state.plotReducer.statusBackend.fileFeatureCoordinates);
   const report = useAppSelector((state) => state.plotReducer.data.geneReport);
@@ -127,8 +125,6 @@ export default function PanelGenes(props: {
                 if (selectedGene) {
                   
                   getFeatureCoordinates({
-                    fileID: fileID,
-                    userID: userID,
                     featureKey: selectedGene.label
                   })
 

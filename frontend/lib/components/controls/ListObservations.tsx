@@ -12,9 +12,6 @@ import { useLazyFileObsQuery } from "@/lib/redux/api/api";
 
 export default function ListClusterings() {
   
-  const fileID = useAppSelector((state) => state.fileReducer.activeFile);
-  const userID = useAppSelector((state) => state.fileReducer.userID);
-  
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
   const status = useAppSelector((state) => state.plotReducer.statusBackend.fileHierarchy)
   
@@ -46,7 +43,7 @@ export default function ListClusterings() {
       <Stack
         direction="column"
         sx={{
-          height: "50vh",
+          height: "54vh",
           width: "100%",
           overflowY: "auto",
           overflowX: "hidden",
@@ -84,8 +81,6 @@ export default function ListClusterings() {
                     );
                     
                     getObs({
-                      fileID,
-                      userID: userID,
                       obs: e
                     });
                   }}

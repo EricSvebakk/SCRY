@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { theme } from "@/app/layout";
 import { BlurCircular, FileOpen, GroupWork, ScatterPlot } from "@mui/icons-material";
 import PanelGenes from "./panel/PanelGenes";
-import PanelFiles from "./panel/PanelFiles";
 import PanelReclustering from "./panel/PanelReclustering";
 import { useAppSelector } from "@/lib/redux/hooks/hooks";
 
@@ -38,7 +37,6 @@ export default function NavbarRight() {
     <Box height="100%">
       <PanelGenes open={openPanelGenes} setOpen={setOpenPanelGenes}/>
       <PanelReclustering open={openPanelRecluster} setOpen={setOpenPanelRecluster}/>
-      {/* <PanelFiles open={openPanelFiles} setOpen={setOpenPanelFiles}/> */}
 
       <Grid
         item
@@ -50,28 +48,6 @@ export default function NavbarRight() {
           zIndex: 1200,
         }}
       >
-        {/* <Grid item height={70}>
-          <Button
-            fullWidth
-            sx={navItemProps(openPanelFiles)}
-            onClick={() => {
-              setOpenPanelFiles(!openPanelFiles);
-            }}
-          >
-            <Stack
-              direction="column"
-              sx={{
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {<FileOpen />}
-              <Typography fontSize={theme.typography.subtitle1.fontSize}>
-                Select file
-              </Typography>
-            </Stack>
-          </Button>
-        </Grid> */}
         
         <Grid item height={70}>
           <Button

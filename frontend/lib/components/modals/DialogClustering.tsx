@@ -19,8 +19,7 @@ export default function DialogClustering(props: {
   isOpen: boolean;
   setIsOpen: Function;
 }) {
-  const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
-  const userID = useAppSelector((state) => state.fileReducer.userID);
+
   const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;
   const obsp = useAppSelector((state) => state.plotReducer.anndata.obsp.keys);
 
@@ -32,30 +31,6 @@ export default function DialogClustering(props: {
   const [resolution, setResolution] = useState<number>(1);
 
   const filterOptions = createFilterOptions({ limit: 20 });
-
-  // useEffect(() => {
-  //   if (isSuccess) {
-  //     pollTaskStatus(
-  //       data.response.id,
-  //       "LEIDEN",
-  //       dispatch,
-  //       () => {
-          
-  //         const resToString = `${resolution}`.replace(".", "_");
-  //         const resKey = `leiden_${resToString}_${selectedUns?.label}`;
-
-  //         dispatch(
-  //           setAnndataField({
-  //             attribute: "obs",
-  //             field: "selectedKey",
-  //             value: resKey,
-  //           })
-  //         );
-          
-  //       }
-  //     );
-  //   }
-  // }, [data, isSuccess]);
   
   useEffect(() => {
     if (uns && obsp) {
@@ -124,8 +99,6 @@ export default function DialogClustering(props: {
               if (selectedUns) {
                 
                 getLeiden({
-                  fileID: activeFile,
-                  userID: userID,
                   unsKey: selectedUns?.label,
                   resolution: resolution,
                 })
@@ -134,7 +107,7 @@ export default function DialogClustering(props: {
                   if (data.data?.ok) {
                     pollTaskStatus(
                       data.data.response,
-                      "LEIDEN",
+                      "celeryFileLeiden",
                       dispatch,
                       () => {
                         const resToString = `${resolution}`.replace(".", "_");

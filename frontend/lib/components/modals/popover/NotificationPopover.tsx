@@ -3,8 +3,8 @@ import { theme } from "@/app/layout";
 import { useAppSelector } from "@/lib/redux/hooks/hooks";
 import { errorAttributes, statusBackendAPI } from "@/lib/types";
 import { Notifications } from "@mui/icons-material";
-import { Badge, Button, Popover, Stack, SxProps, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from "@mui/material";
-import { MouseEvent, useState } from "react";
+import { Badge, Button, Dialog, DialogContent, DialogTitle, Stack, SxProps, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from "@mui/material";
+import { useState } from "react";
 
 export function NotificationPopover(props: {
   sx?: SxProps
@@ -16,18 +16,7 @@ export function NotificationPopover(props: {
   const statusActive = Object.keys(status).filter((e) => status[e as keyof statusBackendAPI].inProgress);
   const errorActive = Object.keys(error).filter((e) => error[e as keyof errorAttributes].time !== undefined);
   
-  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-  
-  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-  
-  const open = Boolean(anchorEl);
-  const id = open ? "simple-popover-savedotplot" : undefined;
+  const [open, setOpen] = useState<boolean>(false);
   
   const cellProps: SxProps = {
     p: 1
@@ -41,8 +30,10 @@ export function NotificationPopover(props: {
           ...props.sx,
           // border: "1px solid grey",
         }}
-        onClick={handleClick}
-        aria-describedby={id}
+        onClick={() => {
+          setOpen(!open)
+        }}
+        // aria-describedby={id}
       >
         <Stack
           direction="column"
@@ -57,123 +48,135 @@ export function NotificationPopover(props: {
           <Typography
             fontSize={theme.typography.subtitle1.fontSize}
           >
-            Tasks
+            View tasks
           </Typography>
         </Stack>
       </Button>
 
-      <Popover
-        id={id}
-        open={open}
-        anchorEl={anchorEl}
-        onClose={handleClose}
-        anchorOrigin={{
-          vertical: "top",
-          horizontal: "right",
-        }}
-      >
-        <Stack
-          direction="column"
-          width={400}
-          height={200}
-          p={1}
-          gap={1.5}
+      <Dialog open={open} onClose={() => setOpen(false)}>
+        <DialogTitle>
+          <Typography
+            // variant="h6"
+            // fontSize={theme.typography.subtitle1.fontSize}
           >
-
+            View tasks
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ p: 1 }}>
           
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell
-                  sx={{
-                    ...cellProps,
-                    fontWeight: "bold"
-                  }}
-                >
-                  Task
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...cellProps,
-                    fontWeight: "bold"
-                  }}
-                  
-                >
-                  Message
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {errorActive.map((e, i) => {
-                return (
-                  <TableRow
-                    key={`error_table_body_row_${i}`}
+          <Stack
+            direction="column"
+            width={400}
+            height={200}
+            p={1}
+            gap={1.5}
+            >
+
+            
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell
+                    sx={{
+                      ...cellProps,
+                      fontWeight: "bold"
+                    }}
                   >
-                    <TableCell
-                      key={`error_table_body_row_${i}_task`}
-                      sx={cellProps}
-                      >
-                      <Typography
-                        key={`error_table_body_row_${i}_task_text`}
-                        sx={{
-                          color: "red"
-                        }}
-                      >
-                        {e}
-                      </Typography>
-                    </TableCell>
-                    <Tooltip enterDelay={0} placement="right" title={error[e as keyof errorAttributes].message}>
+                    Task
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      ...cellProps,
+                      fontWeight: "bold"
+                    }}
+                    
+                  >
+                    Message
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {errorActive.map((e, i) => {
+                  return (
+                    <TableRow
+                      key={`error_table_body_row_${i}`}
+                    >
                       <TableCell
-                        key={`error_table_body_row_${i}_message`}
+                        key={`error_table_body_row_${i}_task`}
                         sx={cellProps}
                         >
                         <Typography
-                          key={`error_table_body_row_${i}_message_text`}
-                          noWrap
-                          textOverflow="ellipsis"
-                          overflow="clip"
+                          key={`error_table_body_row_${i}_task_text`}
+                          sx={{
+                            color: "red"
+                          }}
                         >
-                          {error[e as keyof errorAttributes].message}
+                          {e}
                         </Typography>
                       </TableCell>
-                    </Tooltip>
-                  </TableRow>
-                )
-              })}
-              {statusActive.map((e, i) => {
-                return (
-                  <TableRow
-                    key={`notification_table_body_row_${i}`}
-                  >
-                    <TableCell
-                      key={`notification_table_body_row_${i}_task`}
-                      sx={cellProps}
+                      <TableCell
+                        key={`error_table_body_row_${i}_message`}
+                        sx={{
+                          ...cellProps,
+                          maxWidth: 250,
+                        }}
                       >
-                      <Typography
-                        key={`notification_table_body_row_${i}_task_text`}
-                      >
-                        {e}
-                      </Typography>
-                    </TableCell>
-                    <TableCell
-                      key={`notification_table_body_row_${i}_message`}
-                      sx={cellProps}
-                      >
-                      <Typography
-                        key={`notification_table_body_row_${i}_message_text`}
-                      >
-                        {status[e as keyof statusBackendAPI].message}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-              
-          </Table>
+                        <Tooltip
+                          enterDelay={0}
+                          placement="right"
+                          title={error[e as keyof errorAttributes].message}
+                        >
+                          <Typography
+                            key={`error_table_body_row_${i}_message_text`}
+                            // noWrap
+                            sx={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              display: "block"
+                            }}
+                          >
+                            {error[e as keyof errorAttributes].message}
+                          </Typography>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+                {statusActive.map((e, i) => {
+                  return (
+                    <TableRow
+                      key={`notification_table_body_row_${i}`}
+                    >
+                      <TableCell
+                        key={`notification_table_body_row_${i}_task`}
+                        sx={cellProps}
+                        >
+                        <Typography
+                          key={`notification_table_body_row_${i}_task_text`}
+                        >
+                          {e}
+                        </Typography>
+                      </TableCell>
+                      <TableCell
+                        key={`notification_table_body_row_${i}_message`}
+                        sx={cellProps}
+                        >
+                        <Typography
+                          key={`notification_table_body_row_${i}_message_text`}
+                        >
+                          {status[e as keyof statusBackendAPI].message}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+                
+            </Table>
 
-        </Stack>
-      </Popover>
+          </Stack>
+        </DialogContent>
+      </Dialog>
     </>
   );
   

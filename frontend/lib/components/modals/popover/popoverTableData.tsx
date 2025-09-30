@@ -1,8 +1,9 @@
 
 import { theme } from "@/app/layout";
-import { get_rgg_dotplot } from "@/lib/fetch/workflow/get_rgg_dotplot";
-import { useCeleryCelltypistAnnotateMutation, useCeleryFileRGGMutation } from "@/lib/redux/api/api";
-import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
+import { useCeleryFileRGGMutation } from "@/lib/redux/api/api";
+import { useAppDispatch } from "@/lib/redux/hooks/hooks";
+import { setGDEField } from "@/lib/redux/reducers/plotReducer";
+import { geneExpressionData } from "@/lib/types";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 import {
   Button,
@@ -11,7 +12,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { MouseEvent, useEffect } from "react";
+import { MouseEvent } from "react";
 
 export function PopoverTableData(props: {
   title: string;
@@ -21,21 +22,8 @@ export function PopoverTableData(props: {
   handleClose: () => void;
 }) {
   
-  const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
-  const userID = useAppSelector((state) => state.fileReducer.userID);
-  
   const dispatch = useAppDispatch();
-  const [getRGG, { data, isSuccess } ] = useCeleryFileRGGMutation();
-  
-  useEffect(() => {
-    if (isSuccess) {
-      pollTaskStatus(
-        data.response.id,
-        "RGG",
-        dispatch,
-      );
-    }
-  }, [data, isSuccess]);
+  const [getRGG] = useCeleryFileRGGMutation();
   
   const open = Boolean(props.anchorEl);
   const id = open ? "simple-popover-table-data" : undefined;
@@ -109,13 +97,58 @@ export function PopoverTableData(props: {
                 
                 if (("n_top_genes" in props.params) && ("clustering" in props.params)) {
                   
+                  type parsedDataType = {
+                    table: geneExpressionData[];
+                    dendro: string;
+                    n_genes: number;
+                    n_clusters: number;
+                  };
+                  
                   getRGG({
-                    fileID: activeFile,
-                    userID: userID,
                     unsKey: props.params.clustering as string,
                     nGenes: props.params.n_top_genes as number,
                     selectedGenes: [],
                   })
+                    .then((data) => {
+                      
+                      if (data.data?.ok) {
+                        
+                        pollTaskStatus(
+                          data.data.response,
+                          "celeryFileRGG",
+                          dispatch,
+                          (result: parsedDataType) => {
+                            dispatch(
+                              setGDEField({
+                                field: "expression",
+                                value: result.table
+                              })
+                            );
+                            dispatch(
+                              setGDEField({
+                                field: "nGenes",
+                                value: result.n_genes,
+                              })
+                            );
+                            dispatch(
+                              setGDEField({
+                                field: "nClusters",
+                                value: result.n_clusters,
+                              })
+                            );
+                            dispatch(
+                              setGDEField({
+                                field: "dendrogram",
+                                value: JSON.parse(result.dendro),
+                              })
+                            );
+                            
+                          }
+                        )
+                      }
+                      
+                    })
+                  
                   
                   props.handleClose();
                 }

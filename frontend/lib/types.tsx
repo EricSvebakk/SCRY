@@ -269,4 +269,5 @@ export type FileState = {
   selectedFiles: string[];
   activeFile: string;
   userID: string;
+  passKey: string;
 };

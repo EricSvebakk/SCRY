@@ -55,7 +55,7 @@ def file_lock(file_path: str, user_id: str, timeout: int = 600, blocking: bool =
     current_user = r.hget(meta_key, "user_id")
     raise HTTPException(
       status_code=423,
-      detail=f"File {file_path} is already locked by {current_user.decode() if current_user else 'unknown'}",
+      detail=f"File '{os.path.basename(file_path)}' is already locked by {current_user.decode() if current_user else 'unknown'}",
     )
 
   r.hset(meta_key, mapping={"user_id": user_id, "started_at": str(time.time())})
@@ -178,10 +178,6 @@ def handle_pipeline_steps(task, pipeline_steps: list[PipelineStep]):
     
     print(step.description)
     
-    # # If it is the last step but no changes are made, ignore the last step
-    # if (step_current == len(pipeline_steps) - 1) and not changes_made:
-    #   break
-    
     update_progress(task, step_current, pipeline_description_steps)
     changes_made = step.func() or changes_made
     
@@ -270,6 +266,29 @@ def handle_rank_genes_groups(adata: AnnData, key_cluster: str, key_rgg: str) -> 
       key_added=key_rgg
     )
     
+  return changes_made
+
+def handle_load_model(adata: AnnData):
+  
+  changes_made = False
+  
+  if (False):
+    pass
+  
+  return changes_made
+
+def handle_predict_annotation(adata: AnnData, annotation_model: str):
+  
+  changes_made = False
+  
+  if (len(annotation_model) > 0):
+    
+    model = ct.models.Model.load(model = annotation_model)
+      
+    predictions = ct.annotate(adata, model = model, majority_voting = True)
+    
+    changes_made = True
+  
   return changes_made
 
 def build_dendrogram_tree(linkage_matrix, labels: list[str]):
@@ -839,76 +858,61 @@ def compute_save_file_as(
 def compute_celltypist_annotations(
   self,
   file_path: str,
+  user_id: str,
   key: str,
   connectivities_key: str,
   annotation_model: str = "Immune_All_Low.pkl",
 ):
   
-  # TODO: FINISH REFACTORING OF FUNCTION TO USR PIPELINE-STRUCTURE
-  # TODO: RETURN ComputationResponse
-  
-  # TODO: IMPLEMENT FILE LOCK
-  
-  # start_progress(self)
-  
-  # adata = sc.read_h5ad(file_path)
-
-  # key_prefix = f"{key}_"
-
-  
-  # changes_made = handle_pipeline_steps(self, [
-  #   PipelineStep("Predicting annotations", partial(handle_annotation, adata, annotation_model, key_prefix))
-  #   # PipelineStep(f"Computing gene-rankings from the clustering '{uns_key}'", partial(handle_rank_genes_groups, adata, key_cluster, key_rgg)),
-  #   # PipelineStep(f"Computing dendrogram", partial(handle_dendrogram, adata, key_cluster, key_dendrogram)),
-  #   # PipelineStep(f"Computing dotplot table", partial(handle_rgg_data_table, adata, key_dotplot, key_rgg, n_genes))
-  # ])
-  
-  # end_progress(self)
-  
-  # if changes_made:
-  #   sc.write(file_path, adata)
-  
-  step_current = 0
-  function_steps = [
-    "Loading anndata object",
-    "Loading in specified model",
-    "Predicting annotations",
-    "Converting to anndata format"
-    "Writing predictions to anndata object"
-  ]
-  
-  update_progress(self, step_current, function_steps)
-  
-  adata = sc.read_h5ad(file_path)
-  
   # TODO: Use connectivities_key to avoid having to recompute neigbours/connectivities for celltypist
-  # adata.obsp["connectivities"] = adata.obsp[connectivities_key]
   
-  update_progress(self, step_current, function_steps)
+  start_progress(self)
   
-  model = ct.models.Model.load(model = annotation_model)
-  
-  update_progress(self, step_current, function_steps)
-  
-  predictions = ct.annotate(adata, model = model, majority_voting = True)
-  
-  adata.file.close()
-  
-  update_progress(self, step_current, function_steps)
-  
-  adata_with_preds = predictions.to_adata(prefix=key + "_")
-  
-  labels = predictions.predicted_labels.to_dict(orient="records")
-  
-  update_progress(self, step_current, function_steps)
-  
-  sc.write(file_path, adata_with_preds)
-  
-  adata_with_preds.file.close()
-  
-  return {
-    "labels": labels
+  result: ComputationResponse = {
+    "response": "Something went VERY wrong",
+    "ok": False,
   }
+  
+  with open_h5ad_write(file_path, user_id) as adata:
+    
+    try:
+      
+      step_current = 0
+      function_steps = [
+        "Loading in specified model",
+        "Predicting annotations",
+        "Converting to anndata format"
+        "Writing predictions to anndata object"
+      ]
+    
+      update_progress(self, step_current, function_steps)
+      model = ct.models.Model.load(model = annotation_model)
+      
+      step_current += 1
+      update_progress(self, step_current, function_steps)
+      predictions = ct.annotate(adata, model = model, majority_voting = True)
+      
+      step_current += 1
+      update_progress(self, step_current, function_steps)
+      adata_with_preds = predictions.to_adata(prefix=key + "_")
+  
+      labels = predictions.predicted_labels.to_dict(orient="records")
+      
+      step_current += 1
+      update_progress(self, step_current, function_steps)
+      sc.write(file_path, adata_with_preds)
+      
+      result["response"] = {
+        "labels": labels
+      }
+      result["ok"] = True
+    
+    except Exception as e:
+      errorMessage = f"Something unexpected happened: {e}"
+      result["response"] = errorMessage
+      result["ok"] = False
+      
+  return result
   
 # ============================================================================================
 @celery_app.task(bind=True)

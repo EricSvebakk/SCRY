@@ -6,17 +6,22 @@ import worker
 
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, Form
+from fastapi import FastAPI, Form, Header
 from dotenv import load_dotenv, dotenv_values
 from pathlib import Path
 from typing import Optional, TypedDict, Callable
 from celery.result import AsyncResult
 from my_types import newObservation
-
+import hashlib
 
 load_dotenv()
 FRONTEND_ENDPOINT = os.environ.get("FRONTEND_ENDPOINT")
 BACKEND_PATH = os.environ.get("BACKEND_PATH")
+PASSKEY_SECRET = hashlib.sha256(os.environ.get("PASSKEY").encode("utf-8")).hexdigest()
+
+FILEID = "file_id"
+USERID = "user_id"
+PASSKEY = "pass_key"
 
 ORIGINS = [
     FRONTEND_ENDPOINT,
@@ -50,8 +55,15 @@ class ValidationResponse(TypedDict):
   response: str
   ok: bool
 
-def validate(file_id: str, func: Callable, *args, delay: bool = False) -> ValidationResponse:
+def validate(user_id: str, pass_key: str, file_id: str, func: Callable, *args, delay: bool = False) -> ValidationResponse:
   
+  if ((len(user_id) == 0) or (pass_key != PASSKEY_SECRET)):
+    response: ValidationResponse = {
+      "response": "Missing parameter",
+      "ok": False
+    }
+    return response
+    
   file_path = os.path.join(UPLOAD_DIR, file_id)
   file_exists = os.path.exists(file_path)
   file_is_h5ad = file_path.endswith(".h5ad")
@@ -63,11 +75,11 @@ def validate(file_id: str, func: Callable, *args, delay: bool = False) -> Valida
     
     if (delay):
       response: ValidationResponse = {
-        "response": func.delay(file_path, *args).id,
+        "response": func.delay(file_path, user_id, *args).id,
         "ok": True
       }
     else:
-      response = func(file_path, *args)
+      response = func(file_path, user_id, *args)
       
   else:
     if not file_exists:
@@ -89,9 +101,22 @@ async def root():
   return JSONResponse(content={ "message": "Thesis API" })
 
 @app.get("/system/files", tags=["SYSTEM"])
-async def system_file_names():
+async def system_file_names(
+ user_id: str = Header(alias=USERID),
+ pass_key: str = Header(alias=PASSKEY),
+):
   """
   """
+  
+  if ((len(user_id) == 0) or (pass_key != PASSKEY_SECRET)):
+    return JSONResponse(
+      content={
+        "response": "Missing parameter",
+        "ok": False
+      },
+      status_code=401
+    )
+  
   files = os.listdir(UPLOAD_DIR)
   files_h5ad = list(filter(lambda x: x.endswith("h5ad"), files))
   
@@ -135,113 +160,151 @@ async def celltypist_models():
 # CELERY
 
 @app.get("/file/hierarchy", tags=["FILE"])
-async def file_hierarchy(file_id: str, user_id: str):
-  obj = validate(file_id, worker.get_hierarchy, user_id)
+async def file_hierarchy(
+ file_id: str = Header(alias=FILEID),
+ user_id: str = Header(alias=USERID),
+ pass_key: str = Header(alias=PASSKEY),
+):
+  obj = validate(user_id, pass_key, file_id, worker.get_hierarchy)
   return JSONResponse(content=obj)
 
 @app.get("/file/obs", tags=["FILE"])
-async def file_obs(file_id: str, user_id: str, obs: str):
-  obj = validate(file_id, worker.get_observation, user_id, obs)
+async def file_obs(
+  obs: str,
+  file_id: str = Header(alias=FILEID),
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
+):
+  obj = validate(user_id, pass_key, file_id, worker.get_observation, obs)
   return JSONResponse(content=obj)
 
 @app.get("/file/obsm", tags=["FILE"])
-async def file_obsm(file_id: str, user_id: str, obsm: str):
-  obj = validate(file_id, worker.get_obsm, user_id, obsm)
+async def file_obsm(
+  obsm: str,
+  file_id: str = Header(alias=FILEID),
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
+):
+  obj = validate(user_id, pass_key, file_id, worker.get_obsm, obsm)
   return JSONResponse(content=obj)
 
 @app.get("/file/genes", tags=["FILE"])
-async def file_genes(file_id: str, user_id: str):
-  obj = validate(file_id, worker.get_genes, user_id)
+async def file_genes(
+  file_id: str = Header(alias=FILEID),
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
+):
+  obj = validate(user_id, pass_key, file_id, worker.get_genes)
   return JSONResponse(content=obj)
   
 @app.get("/file/feature/coordinates", tags=["FILE"])
-async def file_feature_coordinates(file_id: str, user_id: str, feature_key: str):
-  obj = validate(file_id, worker.get_feature_indices, user_id, feature_key)
+async def file_feature_coordinates(
+  feature_key: str,
+  file_id: str = Header(alias=FILEID),
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
+):
+  obj = validate(user_id, pass_key, file_id, worker.get_feature_indices, feature_key)
   return JSONResponse(content=obj)
 
 @app.post("/file/ldr", tags=["FILE"])
 async def celery_file_ldr(
-  file_id: str = Form(...),
-  user_id: str = Form(...),
   n_pcs: int = Form(...),
+  file_id: str = Header(alias=FILEID),
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
 ):
-  obj = validate(file_id, worker.compute_ldr, user_id, n_pcs, delay=True)
+  obj = validate(user_id, pass_key, file_id, worker.compute_ldr, n_pcs, delay=True)
   return JSONResponse(content=obj)
 
 @app.post("/file/nldr", tags=["FILE"])
 async def celery_file_nldr(
-  file_id: str = Form(...),
-  user_id: str = Form(...),
+  file_id: str = Header(alias=FILEID),
   adata_key: str = Form(...),
   n_pcs: int = Form(...),
   min_dist: float = Form(...),
   spread: float = Form(...),
   n_neighbors: int = Form(...),
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
 ):
-  obj = validate(file_id, worker.compute_nldr, user_id, adata_key, n_pcs, min_dist, spread, n_neighbors, delay=True)
+  obj = validate(user_id, pass_key, file_id, worker.compute_nldr, adata_key, n_pcs, min_dist, spread, n_neighbors, delay=True)
   return JSONResponse(content=obj)
 
 @app.post("/file/leiden", tags=["FILE"])
 async def celery_file_leiden(
-  file_id: str = Form(...),
-  user_id: str = Form(...),
   uns_key: str = Form(...),
   resolution: float = Form(...),
+  file_id: str = Header(alias=FILEID),
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
 ):
-  obj = validate(file_id, worker.compute_leiden, user_id, uns_key, resolution, delay=True)
+  obj = validate(user_id, pass_key, file_id, worker.compute_leiden, uns_key, resolution, delay=True)
   return JSONResponse(content=obj)
 
 @app.post("/file/rgg", tags=["FILE"])
 async def celery_file_rgg(
-  file_id: str = Form(...),
-  user_id: str = Form(...),
   uns_key: str = Form(...),
   n_genes: int = Form(...),
   selected_genes: Optional[list[str]] = Form(None),
+  file_id: str = Header(alias=FILEID),
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
 ):
-  obj = validate(file_id, worker.compute_rgg, user_id, uns_key, n_genes, selected_genes, delay=True)
+  obj = validate(user_id, pass_key, file_id, worker.compute_rgg, uns_key, n_genes, selected_genes, delay=True)
   return JSONResponse(content=obj)
 
 @app.post("/file/copy", tags=["FILE"])
 async def celery_file_copy(
-  file_id: str = Form(...),
-  user_id: str = Form(...),
   new_file_id: str = Form(...),
   selected_obs: str = Form(...),
   selected_obs_clusters: list[str] = Form(...),
+  file_id: str = Header(alias=FILEID),
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
 ):
-  obj = validate(file_id, worker.compute_save_file_as, user_id, new_file_id, selected_obs, selected_obs_clusters, delay=True)
+  obj = validate(user_id, pass_key, file_id, worker.compute_save_file_as, new_file_id, selected_obs, selected_obs_clusters, delay=True)
   return JSONResponse(content=obj)
 
 @app.post("/file/recluster", tags=["FILE"])
 async def celery_file_recluster(
-  file_id: str,
-  user_id: str,
-  observation: newObservation
+  observation: newObservation,
+  file_id: str = Header(alias=FILEID),
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
 ):
-  obj = validate(file_id, worker.compute_recluster, user_id, observation.model_dump(), delay=True)
+  obj = validate(user_id, pass_key, file_id, worker.compute_recluster, observation.model_dump(), delay=True)
   return JSONResponse(content=obj)
 
 @app.post("/celltypist/annotate", tags=["CELLTYPIST"])
 async def celery_celltypist_annotate(
-  file_id: str = Form(...),
   annotation_key: str = Form(...),
   connectivities_key: str = Form(...),
   annotation_model: Optional[str] = Form(None),
+  file_id: str = Header(alias=FILEID),
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
 ):
-  # obj = validate(file_id, worker.compute_celltypist_annotations, annotation_key, connectivities_key, annotation_model, delay=True)
-  # return JSONResponse(content=obj)
-  return JSONResponse(content={
-    "message": "fuuuuuuuuuuck"
-  }, status_code=500)
+  obj = validate(user_id, pass_key, file_id, worker.compute_celltypist_annotations, annotation_key, connectivities_key, annotation_model, delay=True)
+  return JSONResponse(content=obj)
 
 # ============================================================================================
 # STATUS
 
 @app.get("/celery/status", tags=["STATUS"])
 async def celery_status(
-  task_id: str
+  task_id: str,
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
 ):
+  
+  if ((len(user_id) == 0) or (pass_key != PASSKEY_SECRET)):
+    response: ValidationResponse = {
+      "response": "Missing parameter",
+      "ok": False
+    }
+    return response
+  
   result = AsyncResult(task_id)
   
   return JSONResponse(content={
@@ -252,8 +315,18 @@ async def celery_status(
 
 @app.get("/celery/result", tags=["STATUS"])
 async def celery_result(
-  task_id: str
+  task_id: str,
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
 ):
+  
+  if ((len(user_id) == 0) or (pass_key != PASSKEY_SECRET)):
+    response: ValidationResponse = {
+      "response": "Missing parameter",
+      "ok": False
+    }
+    return response
+  
   result = AsyncResult(task_id)
 
   if result.successful():

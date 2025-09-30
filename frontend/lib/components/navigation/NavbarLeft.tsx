@@ -1,8 +1,9 @@
 
 import { Button, Grid, Stack, SvgIconProps, SxProps, Typography } from "@mui/material";
-import { ReactElement } from "react";
+import { ReactElement, useState } from "react";
 import { theme } from "@/app/layout";
 import { NotificationPopover } from "../modals/popover/NotificationPopover";
+import PanelFiles from "./panel/PanelFiles";
 
 type Screen = {
   label: string;
@@ -17,6 +18,8 @@ export default function NavbarLeft(props: {
   setSelectedScreen: Function;
 }) {
   
+  const [openPanelFiles, setOpenPanelFiles] = useState(false); 
+  
   const navItemProps = (isOpen: boolean, index: number | null = null) => {
     return {
       color: theme.palette.text.secondary,
@@ -29,7 +32,7 @@ export default function NavbarLeft(props: {
       "&:hover": {
         backgroundColor: "#aaa",
       },
-      borderTop: isOpen && index && index !== 0 ? "1px solid grey" : "none",
+      borderTop: isOpen ? "1px solid grey" : "none",
       borderBottom: isOpen ? "1px solid grey" : "none",
       borderRight: isOpen ? "none" : "1px solid grey",
     } as SxProps;
@@ -43,7 +46,14 @@ export default function NavbarLeft(props: {
       height="100%"
       width="100%"
       overflow="clip"
-    >
+    > 
+      <Grid
+        item
+        height={70}
+      >
+        <PanelFiles sx={navItemProps(false, 0)}/>
+      </Grid>
+      
       {props.screens.map((e, i) => {
         const isOpen = props.selectedScreen === i;
 
@@ -77,7 +87,7 @@ export default function NavbarLeft(props: {
           </Grid>
         );
       })}
-
+      
       <Grid
         item
         xs
@@ -95,6 +105,8 @@ export default function NavbarLeft(props: {
       >
         <NotificationPopover sx={navItemProps(false, 0)}/>
       </Grid>
+
+      
       
     </Grid>
   );

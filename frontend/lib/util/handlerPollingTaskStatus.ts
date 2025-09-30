@@ -1,5 +1,6 @@
-import { setStatus, setStatusBackend } from "../redux/reducers/plotReducer";
-import { backendEndpoints, fetchOptions, tagsBackendAPI } from "../types";
+import { setStatusBackend } from "../redux/reducers/plotReducer";
+import { RootState, store } from "../redux/stores/store";
+import { backendEndpoints } from "../types";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
@@ -10,10 +11,20 @@ export function pollTaskStatus(
   onSuccess: Function = () => {},
 ) {
   
+  const state = store.getState() as RootState;
+  
   const request = `${BACKEND_ENDPOINT}/celery/status?task_id=${taskID}`;
 
   const interval = setInterval(async () => {
-    fetch(request)
+    fetch(request, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "file_id": state.fileReducer.activeFile,
+        "pass_key": state.fileReducer.passKey,
+        "user_id": state.fileReducer.userID,
+      }
+    })
       .then((response) => {
         if (!response.ok) {
           console.error(`Something went wrong with ${pollTaskStatus.name}()`);
@@ -30,7 +41,6 @@ export function pollTaskStatus(
       .then((data) => {
         if (data.status === "SUCCESS" || data.status === "FAILURE") {
           clearInterval(interval);
-          onSuccess();
           dispatch(
             setStatusBackend({
               type: statusID,
@@ -38,6 +48,32 @@ export function pollTaskStatus(
               message: "",
             })
           );
+          
+          if (data.status === "SUCCESS") {
+            fetch(`${BACKEND_ENDPOINT}/celery/result?task_id=${taskID}`, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                "file_id": state.fileReducer.activeFile,
+                "pass_key": state.fileReducer.passKey,
+                "user_id": state.fileReducer.userID,
+              }
+            })
+            .then((data) => {
+              if (!data.ok) {
+                console.error("Something went wrong while fetching polling results")
+                return;
+              }
+              return data.json();
+            })
+            .then((data: any) => {
+              onSuccess(data.response);
+            })
+            .catch((error) => {
+              console.error(error);
+            });
+          }
+          
         } else if (data.status === "PROGRESS") {
           dispatch(
             setStatusBackend({

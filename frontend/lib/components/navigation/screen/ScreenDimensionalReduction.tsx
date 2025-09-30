@@ -4,9 +4,12 @@ import ListClusterings from "../../controls/ListObservations";
 import { ClusterScatterPlot } from "@/lib/components/plots/ClusterScatterPlot";
 import { ListCluster } from "../../controls/ListCluster";
 import ListConnectivities from "../../controls/ListConnectivities";
+import { useAppSelector } from "@/lib/redux/hooks/hooks";
 
 export default function ScreenDimensionalReduction() {
 
+  const selectedCluster = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);  
+  
   return (
     <Grid
       container
@@ -24,7 +27,7 @@ export default function ScreenDimensionalReduction() {
         height="100%"
         width={250}
       >
-        <Grid
+        {/* <Grid
           item
           xs
           width="100%"
@@ -33,7 +36,7 @@ export default function ScreenDimensionalReduction() {
           }}
         >
           <ListConnectivities />
-        </Grid>
+        </Grid> */}
         
         <Grid
           item
@@ -68,14 +71,19 @@ export default function ScreenDimensionalReduction() {
           item
           xs
         >
-          <ClusterScatterPlot />
+          <ClusterScatterPlot
+            canvasID="reduction"
+            selectedClusters={selectedCluster}
+          />
         </Grid>
 
         <Grid
           item
           width={250}
         >
-          <ListCluster />
+          <ListCluster
+            canvasID="reduction"
+          />
         </Grid>
       </Grid>
     </Grid>

@@ -7,8 +7,15 @@ import CurrentProgress from "../OverlayCurrentProgress";
 import { theme } from "@/app/layout";
 import { ImageSavingPopover } from "../modals/popover/ImageSavingPopover";
 import { PopoverScatterplotSettings } from "../modals/popover/popoverScatterplotSettings";
+import { PopoverSubset } from "../modals/popover/popoverSubset";
 
-export function ClusterScatterPlot() {
+export function ClusterScatterPlot(props: {
+  selectedClusters: string[];
+  canvasID: string;
+} = {
+  selectedClusters: [],
+  canvasID: ""
+}) {
   
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
@@ -72,7 +79,7 @@ export function ClusterScatterPlot() {
           ? config.background
           : theme.palette.background.paper,
         border: "1px solid grey",
-        borderRight: "none",
+        // borderRight: "none",
       }}
     >
       <Stack
@@ -86,8 +93,9 @@ export function ClusterScatterPlot() {
           borderBottom: "1px solid grey",
         }}
       >
-        <ImageSavingPopover plot="cluster" trigger="saveScatterPlotImage" />
         <PopoverScatterplotSettings />
+        <ImageSavingPopover plot="cluster" trigger="saveScatterPlotImage" />
+        <PopoverSubset />
       </Stack>
 
       <Stack width="100%" height="100%" direction="row" columnGap={1}>
@@ -101,8 +109,8 @@ export function ClusterScatterPlot() {
                   return (
                     <Box
                       component="canvas"
-                      key={"points_" + e}
-                      id={"points_" + e}
+                      key={`canvas_${props.canvasID}_${e}`}
+                      id={`canvas_${props.canvasID}_${e}`}
                       height="100%"
                       width="100%"
                       style={{

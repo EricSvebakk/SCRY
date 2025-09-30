@@ -1,4 +1,4 @@
-import { useCeleryCelltypistAnnotateMutation } from "@/lib/redux/api/api";
+import { useCeleryCelltypistAnnotateMutation, useLazyFileHierarchyQuery } from "@/lib/redux/api/api";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { setAnndataField } from "@/lib/redux/reducers/plotReducer";
 import { AutocompleteOption } from "@/lib/types";
@@ -11,8 +11,6 @@ export default function AutoAnnotationDialog(props: {
   setIsOpen: Function;
 }) {
   
-  const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
-  const userID = useAppSelector((state) => state.fileReducer.userID);  
   const models = useAppSelector((state) => state.plotReducer.data.annotationModels.models);
   const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;
   const obsp = useAppSelector((state) => state.plotReducer.anndata.obsp.keys);
@@ -29,33 +27,8 @@ export default function AutoAnnotationDialog(props: {
   
   const filterOptions = createFilterOptions({ limit: 20 });
   
-  const [getAnnotation, { data, isSuccess } ] = useCeleryCelltypistAnnotateMutation();
-  
-  useEffect(() => {
-    if (isSuccess) {
-      pollTaskStatus(
-        data.response.id,
-        "ANNOTATION",
-        dispatch,
-        () => {
-          
-          const connectivitiesKey = uns[selectedConnectivity?.label!].connectivities_key;
-          
-          const conKey = `${connectivitiesKey}_MAJORITY_VOTING`
-          
-          dispatch(
-            setAnndataField({
-              attribute: "obs",
-              field: "selectedKey",
-              value: conKey,
-            })
-          );
-          
-        }
-      );
-    }
-  }, [data, isSuccess]);
-  
+  const [getAnnotation] = useCeleryCelltypistAnnotateMutation();
+  const [getHierarchy] = useLazyFileHierarchyQuery();  
   
   useEffect(() => {
     if (models.length > 0) {
@@ -170,12 +143,24 @@ export default function AutoAnnotationDialog(props: {
                 const connectivitiesKey = uns[selectedConnectivity?.label].connectivities_key;
                 
                 getAnnotation({
-                    fileID: activeFile,
-                    userID: userID,
                     annotationKey: annotationKey,
                     connectivitiesKey: connectivitiesKey,
                     annotationModel: selectedModel.label,
                 })
+                  .then((data) => {
+                    
+                    if (data.data?.ok) {
+                      pollTaskStatus(
+                        data.data.response,
+                        "celeryCelltypistAnnotate",
+                        dispatch,
+                        () => {
+                          getHierarchy();
+                        }
+                      );
+                    }
+                    
+                  })
                 
                 props.setIsOpen(false);
               }

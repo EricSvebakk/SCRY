@@ -2,31 +2,43 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { backendResponse, celeryCelltypistAnnotateSchema, celeryFileCopySchema, celeryFileLDRSchema, celeryFileLeidenSchema, celeryFileNLDRSchema, celeryFileReclusterSchema, celeryFileRGGSchema, celeryResultSchema, celeryStatusSchema } from "./schema";
 import { tagsBackendAPI } from "@/lib/types";
+import { RootState } from "../stores/store";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
 
 export const backendAPI = createApi({
   reducerPath: "backendAPI",
   baseQuery: fetchBaseQuery({
-    baseUrl: BACKEND_ENDPOINT
+    baseUrl: BACKEND_ENDPOINT,
+    prepareHeaders: (headers, { getState }) => {
+      const state = getState() as RootState;
+      headers.set("file_id", state.fileReducer.activeFile);
+      headers.set("pass_key", state.fileReducer.passKey);
+      headers.set("user_id", state.fileReducer.userID);
+      return headers;
+    }
   }),
   // tagTypes: tagsBackendAPI,
   endpoints: (builder) => ({
-    fileHierarchy: builder.query<backendResponse, { fileID: string, userID: string }>({
-      query: ({ fileID, userID }) => `file/hierarchy?file_id=${fileID}&user_id=${userID}`,
+    systemFiles: builder.query<backendResponse, void>({
+      query: () => `system/files`,
       // providesTags: ["HIERARCHY"]
     }),
-    fileObs: builder.query<backendResponse, { fileID: string, userID: string, obs: string }>({
-      query: ({ fileID, userID, obs }) => `file/obs?file_id=${fileID}&user_id=${userID}&obs=${obs}`
+    fileHierarchy: builder.query<backendResponse, void>({
+      query: () => `file/hierarchy`,
+      // providesTags: ["HIERARCHY"]
     }),
-    fileObsm: builder.query<backendResponse, { fileID: string, userID: string, obsm: string }>({
-      query: ({ fileID, userID, obsm}) => `file/obsm?file_id=${fileID}&user_id=${userID}&obsm=${obsm}`
+    fileObs: builder.query<backendResponse, { obs: string }>({
+      query: ({ obs }) => `file/obs?obs=${obs}`
     }),
-    fileGenes: builder.query<backendResponse, { fileID: string, userID: string }>({
-      query: ({ fileID, userID }) => `file/genes?file_id=${fileID}&user_id=${userID}`
+    fileObsm: builder.query<backendResponse, { obsm: string }>({
+      query: ({ obsm}) => `file/obsm?obsm=${obsm}`
     }),
-    fileFeatureCoordinates: builder.query<backendResponse, { fileID: string, userID: string, featureKey: string }>({
-      query: ({ fileID, userID, featureKey }) => `file/feature/coordinates?file_id=${fileID}&user_id=${userID}&feature_key=${featureKey}`
+    fileGenes: builder.query<backendResponse, void>({
+      query: () => `file/genes`
+    }),
+    fileFeatureCoordinates: builder.query<backendResponse, { featureKey: string }>({
+      query: ({ featureKey }) => `file/feature/coordinates?feature_key=${featureKey}`
     }),
     celltypistModels: builder.query<backendResponse, void>({
       query: () => `celltypist/models`
@@ -35,8 +47,6 @@ export const backendAPI = createApi({
     celeryFileLDR: builder.mutation<backendResponse, celeryFileLDRSchema>({
       query: (body) => {
         const formData = new FormData();
-        formData.append("file_id", body.fileID);
-        formData.append("user_id", body.userID);
         formData.append("n_pcs", body.numPCs.toString());
         return {
           url: `celery/file/ldr`,
@@ -49,8 +59,6 @@ export const backendAPI = createApi({
     celeryFileNLDR: builder.mutation<backendResponse, celeryFileNLDRSchema>({
       query: (body) => {
         const formData = new FormData();
-        formData.append("file_id", body.fileID);
-        formData.append("user_id", body.userID);
         formData.append("adata_key", body.adataKey);
         formData.append("n_pcs", body.numPCs.toString());
         formData.append("min_dist", body.minDist.toString());
@@ -67,8 +75,6 @@ export const backendAPI = createApi({
     celeryFileLeiden: builder.mutation<backendResponse, celeryFileLeidenSchema>({
       query: (body) => {
         const formData = new FormData();
-        formData.append("file_id", body.fileID);
-        formData.append("user_id", body.userID);
         formData.append("uns_key", body.unsKey);
         formData.append("resolution", body.resolution.toString());
         return {
@@ -82,8 +88,6 @@ export const backendAPI = createApi({
     celeryFileRGG: builder.mutation<backendResponse, celeryFileRGGSchema>({
       query: (body) => {
         const formData = new FormData();
-        formData.append("file_id", body.fileID);
-        formData.append("user_id", body.userID);
         formData.append("uns_key", body.unsKey);
         formData.append("n_genes", body.nGenes.toString());
         body.selectedGenes.forEach((gene) => {
@@ -100,8 +104,6 @@ export const backendAPI = createApi({
     celeryFileCopy: builder.mutation<backendResponse, celeryFileCopySchema>({
       query: (body) => {
         const formData = new FormData();
-        formData.append("file_id", body.fileID);
-        formData.append("user_id", body.userID);
         formData.append("new_file_id", body.newFileID);
         formData.append("selected_obs", body.selectedObs);
         body.selectedObsClusters.forEach((cluster) => {
@@ -117,7 +119,7 @@ export const backendAPI = createApi({
     celeryFileRecluster: builder.mutation<backendResponse, celeryFileReclusterSchema>({
       query: (body) => {
         return {
-          url: `file/recluster?file_id=${body.fileID}&user_id=${body.userID}`,
+          url: `file/recluster`,
           method: 'POST',
           body: body.reclustering,
         }
@@ -127,8 +129,6 @@ export const backendAPI = createApi({
     celeryCelltypistAnnotate: builder.mutation<backendResponse, celeryCelltypistAnnotateSchema>({
       query: (body) => {
         const formData = new FormData();
-        formData.append("file_id", body.fileID);
-        formData.append("user_id", body.userID);
         formData.append("annotation_key", body.annotationKey);
         formData.append("connectivities_key", body.connectivitiesKey);
         formData.append("annotation_model", body.annotationModel);
@@ -150,17 +150,20 @@ export const backendAPI = createApi({
 });
 
 export const { 
+  useSystemFilesQuery,
   useFileHierarchyQuery,
   // useFileObsQuery,
   // useFileObsmQuery,
   useFileGenesQuery,
   // useFileFeatureCoordinatesQuery,
-  // useCelltypistModelsQuery,
+  useCelltypistModelsQuery,
   // LAZY
+  useLazySystemFilesQuery,
   useLazyFileHierarchyQuery,
   useLazyFileObsQuery,
   useLazyFileObsmQuery,
   useLazyFileFeatureCoordinatesQuery,
+  useLazyCelltypistModelsQuery,
   // CELERY
   // useCeleryFileLDRMutation,
   useCeleryFileNLDRMutation,

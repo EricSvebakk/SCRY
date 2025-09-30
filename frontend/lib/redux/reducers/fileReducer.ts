@@ -2,12 +2,14 @@
 import { FileState, fileType } from "@/lib/types";
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
+import { backendAPI } from "../api/api";
 
 const initialFileState: FileState = {
   files: [],
   selectedFiles: [],
   activeFile: "",
-  userID: "anonymous",
+  userID: "",
+  passKey: "",
 };
 
 export const fileSlice = createSlice({
@@ -45,7 +47,38 @@ export const fileSlice = createSlice({
     setActiveUser: (state, action: PayloadAction<string>) => {
       state.userID = action.payload;
     },
+    setPassKey: (state, action: PayloadAction<string>) => {
+      state.passKey = action.payload;
+    },
   },
+  extraReducers: (builder) => {
+    builder.addMatcher(
+      backendAPI.endpoints.systemFiles.matchFulfilled,
+      (state, action) => {
+        const { response, ok } = action.payload;
+        if (ok) {
+          
+          const fileRows = response.files
+            .map((e: string, i: number) => ({
+              id: e,
+              name: e,
+              fileSize: response.h5ad_sizes[i],
+              fileType: e.split(".")[1],
+            }));
+          
+          const updatesFiles = state.files.map((file) => {
+            const newFile = fileRows.find((f: any) => f.id === file.id)
+            return newFile ? newFile : file
+          });
+          
+          const newFiles = fileRows.filter((f: any) => !state.files.some((file) => f.id === file.id))
+          
+          state.files = [...updatesFiles, ...newFiles]
+          
+        }
+      }
+    )
+  }
 });
 
 export const {
@@ -56,7 +89,8 @@ export const {
   selectFiles,
   deselectFile,
   setActiveFile,
-  setActiveUser
+  setActiveUser,
+  setPassKey
 } = fileSlice.actions;
 
 export default fileSlice.reducer;

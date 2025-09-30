@@ -12,20 +12,23 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
-import { get_rgg_dotplot } from "@/lib/fetch/workflow/get_rgg_dotplot";
 import { AutocompleteOption } from "@/lib/types";
+import { useCeleryFileRGGMutation } from "@/lib/redux/api/api";
+import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
+import { setGDEField } from "@/lib/redux/reducers/plotReducer";
 
 export default function DotplotDialog(props: {
   isOpen: boolean;
   setIsOpen: Function;
 }) {
   
-  const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
   const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs.keys);
   const genes = useAppSelector((state) => state.plotReducer.data.genes);
 
   const dispatch = useAppDispatch();
+  const [getRGG] = useCeleryFileRGGMutation();
+  
   const [selectedUns, setSelectedUns] = useState<AutocompleteOption | null>(null);
   const [selectedGenes, setSelectedGenes] = useState<AutocompleteOption[]>([]);
   const [nGenes, setNGenes] = useState<number>(2);
@@ -164,13 +167,51 @@ export default function DotplotDialog(props: {
               
               if (selectedUns) {
 
-                get_rgg_dotplot(
-                  activeFile,
-                  selectedUns.label,
-                  nGenes,
-                  selectedGenes.map((e) => e.label),
-                  dispatch
-                );
+                getRGG({
+                  unsKey: selectedUns.label,
+                  nGenes: nGenes,
+                  selectedGenes: selectedGenes.map((e) => e.label),
+                })
+                  .then((data) => {
+                    
+                    if (data.data?.ok) {
+                      
+                      pollTaskStatus(
+                        data.data.response,
+                        "celeryFileRGG",
+                        dispatch,
+                        (result: any) => {
+                          dispatch(
+                            setGDEField({
+                              field: "expression",
+                              value: result.data.table
+                            })
+                          );
+                          dispatch(
+                            setGDEField({
+                              field: "nGenes",
+                              value: result.data.n_genes,
+                            })
+                          );
+                          dispatch(
+                            setGDEField({
+                              field: "nClusters",
+                              value: result.data.n_clusters,
+                            })
+                          );
+                          dispatch(
+                            setGDEField({
+                              field: "dendrogram",
+                              value: JSON.parse(result.data.dendro),
+                            })
+                          );
+                          
+                        }
+                      )
+                    }
+                    
+                  })
+                
                 props.setIsOpen(false);
               }
             }}

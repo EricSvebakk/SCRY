@@ -168,8 +168,6 @@ export default function PanelReclustering(props: {
                 };
                 
                 getReclustering({
-                  fileID: fileID,
-                  userID: userID,
                   reclustering: newObservation,
                 }).then((data) => {
                   if (data.data?.ok) {
@@ -178,10 +176,7 @@ export default function PanelReclustering(props: {
                       "celeryFileRecluster",
                       dispatch,
                       () => {
-                        getHierarchy({
-                          fileID: fileID,
-                          userID: userID,
-                        });
+                        getHierarchy();
                       }
                     )
                   }
