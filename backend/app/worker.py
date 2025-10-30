@@ -30,6 +30,12 @@ celery_app = Celery(
 
 r = redis.Redis(host="thesis_redis", port=6379, db=0)
 
+sc.settings.n_jobs = -1
+sc.settings.max_memory = 256
+
+print("n_jobs", sc.settings.n_jobs)
+print("max_m", sc.settings.max_memory)
+
 print("Redis", r.ping())
 
 print("URL", CELERY_BROKER_URL)
@@ -83,6 +89,7 @@ def open_h5ad_read(file_path: str, user_id: str, timeout: int = 600):
       
     except Exception as e:
       print(f"Something unexpected happened while opening the file: {e}")
+      raise
     
     finally:
       if adata is not None and getattr(adata, "file", None) is not None:
@@ -101,7 +108,8 @@ def open_h5ad_write(file_path: str, user_id: str, timeout: int = 600):
       
     except Exception as e:
       print(f"Something unexpected happened while opening the file: {e}")
-    
+      raise
+      
     finally:
       pass
 
