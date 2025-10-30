@@ -14,7 +14,9 @@ import { theme } from "@/app/layout";
 import { ScatterPlot, ViewCompact } from "@mui/icons-material";
 import NavbarLeft from "@/lib/components/navigation/NavbarLeft";
 import NavbarRight from "@/lib/components/navigation/NavbarRight";
-import { useCelltypistModelsQuery, useFileGenesQuery, useFileHierarchyQuery, useSystemFilesQuery } from "@/lib/redux/api/api";
+import { useCelltypistModelsQuery, useFileGenesQuery, useLazyFileHierarchyQuery, useSystemFilesQuery } from "@/lib/redux/api/api";
+import { setAnndataField } from "@/lib/redux/reducers/plotReducer";
+import { AnndataAttributeKeys } from "@/lib/types";
 
 type Screen = {
   label: string;
@@ -35,9 +37,9 @@ export default function FileIdPage({}) {
   }
   
   const { } = useSystemFilesQuery(undefined, params);
-  const { } = useFileHierarchyQuery(undefined, params);
   const { } = useFileGenesQuery(undefined, params);
   const { } = useCelltypistModelsQuery(undefined, params);
+  const [getFileHierarchy] = useLazyFileHierarchyQuery();
   
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -58,13 +60,28 @@ export default function FileIdPage({}) {
       icon: <ViewCompact />,
     },
   ];
-
+  
   useEffect(() => {
     
     if (typeof fileID === "string" && fileID !== "") {
       dispatch(setActiveFile(fileID));
       dispatch(setActiveUser(localStorage.getItem("user_id") ?? ""));
       dispatch(setPassKey(localStorage.getItem("passkey_hash") ?? ""));
+      
+      if (localStorage.getItem("file_id") === fileID) {
+        AnndataAttributeKeys.forEach((key) => {
+          dispatch(
+            setAnndataField({
+              attribute: key,
+              field: "keys",
+              value: JSON.parse(localStorage.getItem(key)!),
+            })
+          );
+        });
+      } else {
+        getFileHierarchy();
+        localStorage.setItem("file_id", fileID)
+      }
       
       setSelectedScreen(0);
 
