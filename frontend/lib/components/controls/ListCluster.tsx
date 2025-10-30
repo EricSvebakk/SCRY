@@ -1,9 +1,8 @@
 import { Box, Button, Checkbox, Grid, Stack, Typography } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
-import { AnndataIndices } from "../../types";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { setSelectedClusters } from "@/lib/redux/reducers/plotReducer";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { theme } from "@/app/layout";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import { Square } from "@mui/icons-material";
@@ -17,32 +16,14 @@ export function ListCluster(props: {
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
   const status = useAppSelector((state) => state.plotReducer.statusBackend.fileObs);
   const selectedClusters = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);
-
+  
+  const allClusters = obs.indices ? obs.indices.categories as string[] : [];
+  
   const dispatch = useAppDispatch();
-  const [isInverted, setIsInverted] = useState<boolean>(false);
 
+  // Resets selected clusters when new data loads in
   useEffect(() => {
-    if (obs.indices) {
-      (obs.indices.categories as string[]).forEach((label_temp: string, index_other) => {
-        const otherCanvas = document.getElementById(`canvas_${props.canvasID}_${label_temp}`);
-
-        if (otherCanvas === null) {
-          return;
-        }
-        
-        if (selectedClusters.includes(label_temp)) {
-          otherCanvas!.style.opacity = "100%";
-        } else {
-          otherCanvas!.style.opacity = "0%";
-        }
-      });
-    }
-  }, [obs.indices, selectedClusters, isInverted]);
-
-  useEffect(() => {
-    if (obs.indices && selectedClusters.length === 0) {
-      dispatch(setSelectedClusters(obs.indices.categories as string[]));
-    }
+    dispatch(setSelectedClusters(allClusters));
   }, [obs.indices]);
   
   const palette =  sequentialScaleColorOptions[config.palette]
@@ -50,39 +31,58 @@ export function ListCluster(props: {
   return (
     <Stack
       direction="column"
+      className="test_class"
       sx={{
         height: "98vh",
         width: "100%",
-        backgroundColor: config.background ? config.background : theme.palette.background.paper,
-        border: "1px solid grey",
-        borderLeft: "none",
+        backgroundColor: config.background
+          ? config.background
+          : theme.palette.background.paper,
       }}
     >
       <Stack
         direction="row"
         sx={{
+          backgroundColor: theme.palette.secondary.main,
           height: 32,
+          minHeight: 32,
+          maxHeight: 32,
           borderBottom: "1px solid grey",
-          borderLeft: "1px solid grey"
+          borderLeft: "1px solid grey",
         }}
       >
         <ButtonSecondary
-          title={ isInverted ? "Inverted" : "Normal"}
+          title="Show all"
           onClick={() => {
-            setIsInverted(!isInverted);
+            if (!obs.indices) {
+              return;
+            }
+
+            const allClusters = obs.indices.categories as string[];
+            dispatch(setSelectedClusters(allClusters));
+            
+            allClusters.forEach((label_temp: string) => {
+              const otherCanvas = document.getElementById(`canvas_${props.canvasID}_${label_temp}`);
+              if (otherCanvas === null) {
+                return;
+              }
+              otherCanvas!.style.opacity = "100%";
+            });
           }}
         />
 
         <ButtonSecondary
-          title={ selectedClusters.length > 0 ? "Hide all" : "Show all" }
+          title="Hide all"
           onClick={() => {
-            if (obs.indices) {
-              if (selectedClusters.length > 0) {
-                dispatch(setSelectedClusters([]));
-              } else {
-                dispatch(setSelectedClusters(obs.indices?.categories as string[]));
+            dispatch(setSelectedClusters([]));
+
+            allClusters.forEach((label_temp: string) => {
+              const otherCanvas = document.getElementById(`canvas_${props.canvasID}_${label_temp}`);
+              if (otherCanvas === null) {
+                return;
               }
-            }
+              otherCanvas!.style.opacity = "0%";
+            });
           }}
         />
       </Stack>
@@ -95,83 +95,22 @@ export function ListCluster(props: {
           sx={{
             height: "100%",
             overflowY: "auto",
-            p: 1
+            p: 1,
           }}
         >
-          {(obs.indices?.categories as string[])?.map((label, i) => {
-            let label_color = palette[i % palette.length];
-            const isSelected = selectedClusters.includes(label);
-
-            return (
-              <Button
-                key={"button_" + label}
-                disableRipple
-                sx={{
-                  all: "initial",
-                  cursor: "pointer",
-                }}
-                size="small"
-                fullWidth
-                onClick={() => {
-                  const newSelectedClusters = isSelected
-                    ? selectedClusters.filter((e) => e !== label)
-                    : [...selectedClusters, label];
-
-                  dispatch(setSelectedClusters(newSelectedClusters));
-                }}
-                onMouseEnter={() => labelOnMouseEnter(label, obs.indices!, props.canvasID, isInverted)}
-                onMouseLeave={() => labelOnMouseLeave(label, obs.indices!, props.canvasID, isInverted, selectedClusters)}
-              >
-                <Grid
-                  container
-                  direction="row"
-                  width="100%"
-                  sx={{
-                    alignItems: "center",
-                  }}
-                >
-                  <Grid item width="100%" xs>
-                    <Stack direction="row" justifyContent="space-between">
-                      <Stack
-                        key={"label_stack_" + label}
-                        direction="row"
-                        alignItems="center"
-                        justifyContent="left"
-                      >
-                        <Square
-                          key={"label_square_" + label}
-                          sx={{
-                            width: 22,
-                            height: 22,
-                            marginRight: 1,
-                            color: label_color,
-                          }}
-                        />
-                        <Typography
-                          key={"label_typography_" + label}
-                          color={label_color}
-                          fontSize={theme.typography.fontSize}
-                        >
-                          {label}
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                  </Grid>
-                  <Grid item>
-                    <Checkbox
-                      checked={selectedClusters.includes(label)}
-                      size="small"
-                      sx={{
-                        p: 0,
-                      }}
-                    />
-                  </Grid>
-                </Grid>
-              </Button>
-            );
-          })}
-
-          {!obs.indices ? (
+          {obs.indices ? (
+            (obs.indices.categories as string[])?.map((label, i) => (
+              <ButtonToggleCluster
+                key={`button_toggle_cluster_${i}`}
+                label={label}
+                index={i}
+                selectedClusters={selectedClusters}
+                allClusters={obs.indices!.categories as string[]}
+                canvasID={props.canvasID}
+                palette={palette}
+              />
+            ))
+          ) : (
             <Box
               sx={{
                 position: "relative",
@@ -185,8 +124,6 @@ export function ListCluster(props: {
                 No clustering selected
               </Typography>
             </Box>
-          ) : (
-            <></>
           )}
         </Stack>
       )}
@@ -194,7 +131,139 @@ export function ListCluster(props: {
   );
 }
 
-function labelOnMouseEnter(label: string, indicies: AnndataIndices, canvasID: string, isInverted: boolean) {
+function ButtonToggleCluster(props: {
+  label: string;
+  index: number;
+  selectedClusters: string[];
+  allClusters: string[];
+  canvasID: string;
+  palette: any[];
+}) {
+  
+  const dispatch = useAppDispatch();
+  
+  let colorLabel = props.palette[props.index % props.palette.length];  
+  const isSelected = props.selectedClusters.includes(props.label);
+  
+  return (
+    <Button
+      key={"button_" + props.label}
+      disableRipple
+      sx={{
+        all: "initial",
+        cursor: "pointer",
+        "&:hover": {
+          backgroundColor: (theme) => theme.palette.action.hover,
+        },
+        "&:focus": {
+          backgroundColor: (theme) => theme.palette.action.selected,
+        },
+      }}
+      size="small"
+      fullWidth
+      tabIndex={500 + props.index}
+      onClick={() => {
+        const newSelectedClusters = isSelected
+          ? props.selectedClusters.filter((e) => e !== props.label)
+          : [...props.selectedClusters, props.label];
+
+        dispatch(setSelectedClusters(newSelectedClusters));
+
+        const canvas = document.getElementById(
+          `canvas_${props.canvasID}_${props.label}`
+        );
+
+        if (canvas === null) {
+          return;
+        }
+
+        canvas!.style.opacity = isSelected ? "0%" : "100%";
+      }}
+      onFocus={() =>
+        labelOnMouseEnter(
+          props.label,
+          props.allClusters,
+          props.selectedClusters,
+          props.canvasID
+        )
+      }
+      onBlur={() =>
+        labelOnMouseLeave(
+          props.label,
+          props.allClusters,
+          props.selectedClusters,
+          props.canvasID
+        )
+      }
+      onMouseEnter={() =>
+        labelOnMouseEnter(
+          props.label,
+          props.allClusters,
+          props.selectedClusters,
+          props.canvasID
+        )
+      }
+      onMouseLeave={() =>
+        labelOnMouseLeave(
+          props.label,
+          props.allClusters,
+          props.selectedClusters,
+          props.canvasID
+        )
+      }
+    >
+      <Grid
+        container
+        direction="row"
+        width="100%"
+        sx={{
+          alignItems: "center",
+        }}
+      >
+        <Grid item width="100%" xs>
+          <Stack direction="row" justifyContent="space-between">
+            <Stack
+              key={"label_stack_" + props.label}
+              direction="row"
+              alignItems="center"
+              justifyContent="left"
+            >
+              <Square
+                key={"label_square_" + props.label}
+                sx={{
+                  width: 22,
+                  height: 22,
+                  marginRight: 1,
+                  color: colorLabel,
+                }}
+              />
+              <Typography
+                key={"label_typography_" + props.label}
+                color={colorLabel}
+                fontSize={theme.typography.fontSize}
+              >
+                {props.label}
+              </Typography>
+            </Stack>
+          </Stack>
+        </Grid>
+        <Grid item>
+          <Checkbox
+            checked={props.selectedClusters.includes(props.label)}
+            tabIndex={-1}
+            size="small"
+            sx={{
+              p: 0,
+            }}
+          />
+        </Grid>
+      </Grid>
+    </Button>
+  );
+  
+}
+
+function labelOnMouseEnter(label: string, allClusters: string[], selected: string[], canvasID: string) {
   const canvas = document.getElementById(`canvas_${canvasID}_${label}`);
 
   if (canvas === null) {
@@ -202,21 +271,17 @@ function labelOnMouseEnter(label: string, indicies: AnndataIndices, canvasID: st
   }
   
   canvas!.style.zIndex = "8";
-  
-  if (isInverted) {
-    canvas!.style.opacity = "100%";
-  }
-
-  indicies.categories.forEach((tempLabel, tempIndex) => {
+  canvas!.style.opacity = "100%";
+    
+  allClusters.forEach((tempLabel) => {
     if (label !== tempLabel) {
       const otherCanvas = document.getElementById(`canvas_${canvasID}_${tempLabel}`);
       otherCanvas!.style.filter = "grayscale(1)";
-      
     }
   });
 }
 
-function labelOnMouseLeave(label: string, indices: AnndataIndices, canvasID: string, isInverted: boolean, selected: string[]) {
+function labelOnMouseLeave(label: string, allClusters: string[], selected: string[], canvasID: string) {
   const canvas = document.getElementById(`canvas_${canvasID}_${label}`);
 
   if (canvas === null) {
@@ -225,11 +290,11 @@ function labelOnMouseLeave(label: string, indices: AnndataIndices, canvasID: str
   
   canvas!.style.zIndex = "5";
   
-  if (isInverted && !selected.includes(label)) {
+  if (!selected.includes(label)) {
     canvas!.style.opacity = "0%";
   }
 
-  indices.categories.forEach((tempLabel, tempIndex) => {
+  allClusters.forEach((tempLabel) => {
     if (label !== tempLabel) {
       const otherCanvas = document.getElementById(`canvas_${canvasID}_${tempLabel}`);
       otherCanvas!.style.filter = "grayscale(0)";
