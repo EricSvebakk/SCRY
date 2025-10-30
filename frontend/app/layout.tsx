@@ -17,11 +17,16 @@ export const theme = createTheme({
     //   // disabledBackground:"rgb(147, 187, 227)",
     // },
     // back
+    text: {
+      // primary: "#000",
+      primary: "#424242",
+      secondary: "#424242",
+    },
     primary: {
       main: "#aaaaff",
     },
     secondary: {
-      main: "#d9d9feff"
+      main: "#d9d9feff",
     },
     // text: {
     //   secondary: "#ffffff"
@@ -31,15 +36,15 @@ export const theme = createTheme({
     background: {
       // paper: "#afa",
       paper: "#ffffff",
-      default: "#aaaaff"
-    }
+      default: "#aaaaff",
+    },
   },
   typography: {
     fontSize: 12,
     subtitle1: {
-      fontSize: 9
-    }
-  }
+      fontSize: 9,
+    },
+  },
   // spacing: 8
 });
 
