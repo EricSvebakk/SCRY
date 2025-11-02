@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { theme } from "@/app/layout";
-import { ImageSavingPopover } from "../modals/popover/ImageSavingPopover";
+import { PopoverImageSaving } from "../modals/popover/PopoverImageSaving";
 import FeatureScatterPlotGenerator from "./FeatureScatterPlotGenerator";
 
 export function FeatureScatterPlot() {
@@ -79,7 +79,7 @@ export function FeatureScatterPlot() {
           borderBottom: "1px solid grey",
         }}
       >
-        <ImageSavingPopover plot="feature" trigger="saveFeaturePlotImage" />
+        <PopoverImageSaving plot="feature" trigger="saveFeaturePlotImage" />
       </Stack>
 
       {status.inProgress ? (

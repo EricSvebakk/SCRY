@@ -121,21 +121,30 @@ const ClusterScatterPlotGenerator = (props: {
   if (!!props.imageTrigger) {
     const scale = props.config.scale ?? 1;
 
-    const plotWidth = 1000 * scale;
-    const legendWidth = props.selectedClusters.length !== 0 ? (500 * scale) : 0;
-    const imageWidth = (plotWidth + legendWidth);
-    const imageHeight = plotWidth;
+    const plotWidth = props.config.width ?? 1000;
+    const imageHeight = props.config.height ?? 1000;
     const imagePadding = plotWidth / 24;
-    
+
     const fontSize = plotWidth / 50;
     const legendSquareSize = plotWidth / 40;
-    // const legendPadding = canvasWidth / 50;
+
+    const step = legendSquareSize + legendSquareSize / 2;
+    const legendItemCount = props.selectedClusters.length;
+    const maxItemsPerCol = Math.floor((imageHeight - 2 * imagePadding) / step);
+    const numCols = Math.ceil(legendItemCount / maxItemsPerCol);
+    
+    console.log(numCols, maxItemsPerCol, legendItemCount)
 
     const finalCanvas = document.createElement("canvas");
+    const finalCtx = finalCanvas.getContext("2d")!;
+    
+    const colWidth = getLegendColWidth(finalCtx, props.selectedClusters, fontSize, legendSquareSize);
+    const legendWidth = numCols > 0 ? numCols * colWidth : 0;
+    const imageWidth = (props.config.showLegend ?? true) ? plotWidth + legendWidth : plotWidth;
+
     finalCanvas.width = imageWidth;
     finalCanvas.height = imageHeight;
 
-    const finalCtx = finalCanvas.getContext("2d")!;
     finalCtx.imageSmoothingEnabled = true;
 
     finalCtx.fillStyle = props.config.background ? props.config.background : "white";
@@ -144,45 +153,40 @@ const ClusterScatterPlotGenerator = (props: {
     const scaledxScale = d3
       .scaleLinear()
       .domain(d3.extent(coordinates, (d: number[]) => d[0]) as [number, number])
-      .range([imagePadding, imageWidth - (legendWidth + imagePadding)]);
+      .range([imagePadding, plotWidth - imagePadding]);
 
     const scaledyScale = d3
       .scaleLinear()
       .domain(d3.extent(coordinates, (d: number[]) => d[1]) as [number, number])
       .range([imageHeight - imagePadding, imagePadding]);
-
-    // const legendScale = d3
-    //   .scaleBand(labels, [imagePadding, imageHeight - imagePadding])
-      
-    // console.log(labels, props.selectedClusters)
-
-    coordinates.forEach((e, i) => {
-      finalCtx.beginPath();
-      finalCtx.arc(
-        scaledxScale(e[0]),
-        scaledyScale(e[1]),
-        pointSize * scale,
-        0,
-        2 * Math.PI
-      );
-
-      finalCtx.fillStyle = "#888";
-      finalCtx.fill();
-      finalCtx.closePath();
-    });
     
+    if (props.config.showHiddenPoints) {
+      coordinates.forEach((e, i) => {
+        finalCtx.beginPath();
+        finalCtx.arc(
+          scaledxScale(e[0]),
+          scaledyScale(e[1]),
+          pointSize * scale,
+          0,
+          2 * Math.PI
+        );
+        finalCtx.fillStyle = "#888";
+        finalCtx.fill();
+        finalCtx.closePath();
+      });
+    }
+
+    // --- Draw colored clusters + legend ---
     let step_index = 0;
 
     labels.forEach((label, labelIndex) => {
-      if (!props.selectedClusters.includes(label)) {
-        return;
-      }
+      if (!props.selectedClusters.includes(label)) return;
 
-      labelMap.map((labelPosition, positionIndex) => {
+      // Color the cluster points
+      labelMap.forEach((labelPosition, positionIndex) => {
         if (labelPosition !== labelIndex) return;
 
         const point = coordinates[positionIndex];
-
         finalCtx.beginPath();
         finalCtx.arc(
           scaledxScale(point[0]),
@@ -201,26 +205,19 @@ const ClusterScatterPlotGenerator = (props: {
         finalCtx.closePath();
       });
       
-      const legendX = plotWidth + imagePadding;
-      const step = legendSquareSize + legendSquareSize / 2;
+      if (props.config.showLegend) {
+        const col = Math.floor(step_index / maxItemsPerCol);
+        const row = step_index % maxItemsPerCol;
+  
+        const entryX = plotWidth + col * colWidth;
+        const entryY = imagePadding + row * step;
+  
+        legendEntry(finalCtx, label, entryX, entryY, legendSquareSize, fontSize);
+      }
       
-      finalCtx.fillRect(
-        legendX,
-        imagePadding + (step_index * step) - legendSquareSize / 2,
-        legendSquareSize,
-        legendSquareSize
-      );
-      
-      finalCtx.textBaseline = "middle";
-      finalCtx.font = `${fontSize}px serif`;
-      finalCtx.fillText(
-        label,
-        legendX + legendSquareSize + fontSize / 2,
-        imagePadding + (step_index * step)
-      );
-            
-      step_index += 1;
+      step_index++;
     });
+
 
     // Export the final canvas as an image
     const a = document.createElement("a");
@@ -235,5 +232,37 @@ const ClusterScatterPlotGenerator = (props: {
     // svgContext.remove();
   };
 };
+
+function getLegendColWidth(
+  ctx: CanvasRenderingContext2D,
+  labels: string[],
+  fontSize: number,
+  squareSize: number
+) {
+  ctx.font = `${fontSize}px sans-serif`;
+
+  const maxTextWidth = labels.reduce((max, label) => Math.max(max, ctx.measureText(label).width), 0);
+  
+  return squareSize * 2 + maxTextWidth
+}
+
+function legendEntry(ctx: CanvasRenderingContext2D, label: string, x: number, y: number, sW: number, fontSize: number) {
+  
+  ctx.fillRect(
+    x,
+    y - (sW / 2),
+    sW,
+    sW
+  );
+
+  ctx.textBaseline = "middle";
+  ctx.font = `${fontSize}px serif`;
+  ctx.fillText(
+    label,
+    x + sW + fontSize / 2,
+    y
+  );
+  
+}
 
 export default ClusterScatterPlotGenerator;

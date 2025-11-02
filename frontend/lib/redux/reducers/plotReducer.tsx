@@ -25,6 +25,7 @@ import {
   PayloadAction,
 } from "@reduxjs/toolkit";
 import { backendAPI } from "../api/api";
+import { stringify } from "querystring";
 
 const initialPlotState: InitialPlotStateProps = {
   anndata: AnndataAttributeKeys.reduce((acc, key) => {
@@ -34,16 +35,32 @@ const initialPlotState: InitialPlotStateProps = {
   plot: {
     feature: {
       pointSize: 1,
+      showLegend: true,
+      showHiddenPoints: true,
       palette: "orange",
       background: "white",
     },
     cluster: {
       pointSize: 1,
+      showLegend: true,
+      showHiddenPoints: true,
       palette: "obs9",
       background: "white",
     },
     expression: {
       palette: "",
+      selected: [],
+      layer: "mean_expr",
+      highlight: "rgg_order",
+      sortClustersBy: "dendrogram",
+      sortClustersByDirection: "ascending",
+      sortGenesBy: "rgg_order",
+      sortGenesByDirection: "ascending",
+      expressionMin: 0,
+      expressionMax: 0,
+      expressionMinDefault: 0,
+      expressionMaxDefault: 0,
+      expressionIsDefault: true,
     },
   },
   data: {
@@ -55,15 +72,8 @@ const initialPlotState: InitialPlotStateProps = {
       clusters: [],
       nGenes: 0,
       nClusters: 0,
-      plotOptions: {
-        coloring: "mean_expr",
-        highlight: "rgg_order",
-        expressionMin: 0,
-        expressionMax: 0,
-        expressionMinDefault: 0,
-        expressionMaxDefault: 0,
-        expressionIsDefault: true,
-      },
+      // plotOptions: {
+      // },
     },
     annotationModels: {
       models: [],
@@ -225,144 +235,149 @@ export const plotSlice = createSlice({
   },
   extraReducers: (builder) => {
     // Handles status messages
+    builder.addMatcher(backendAPI.endpoints.systemFiles.matchPending, (state) => {
+      state.statusBackend.systemFiles.message = "Loading in available files";
+    }),
+    builder.addMatcher(backendAPI.endpoints.fileHierarchy.matchPending, (state) => {
+      state.statusBackend.fileHierarchy.message = "Loading in Anndata metadata";
+    }),
+    builder.addMatcher(backendAPI.endpoints.fileObsm.matchPending, (state) => {
+      state.statusBackend.fileObsm.message = "Loading embedding coordinates";
+    }),
+    builder.addMatcher(backendAPI.endpoints.fileObs.matchPending, (state) => {
+      state.statusBackend.fileObs.message = "Loading observation data";
+    }),
+    builder.addMatcher(backendAPI.endpoints.fileGenes.matchPending, (state) => {
+      state.statusBackend.fileGenes.message = "Loading gene labels";
+    }),
+    builder.addMatcher(backendAPI.endpoints.celltypistModels.matchPending, (state) => {
+      state.statusBackend.celltypistModels.message = "Loading CellTypist models";
+    }),
     builder.addMatcher(
-      backendAPI.endpoints.fileHierarchy.matchPending,
+      backendAPI.endpoints.celeryFileNLDR.matchPending,
       (state) => {
-        state.statusBackend.fileHierarchy.message =
-          "Loading in Anndata metadata";
+        state.statusBackend.celeryFileNLDR.message = "requesting changes";
       }
     ),
-      builder.addMatcher(
-        backendAPI.endpoints.fileObsm.matchPending,
-        (state) => {
-          state.statusBackend.fileObsm.message =
-            "Loading embedding coordinates";
+    builder.addMatcher(
+      backendAPI.endpoints.celeryFileLeiden.matchPending,
+      (state) => {
+        state.statusBackend.celeryFileLeiden.message = "requesting changes";
+      }
+    ),
+    // ===========================================================================
+    // Handles setting data correctly
+    builder.addMatcher(
+      backendAPI.endpoints.fileHierarchy.matchFulfilled,
+      (state, action) => {
+        const { response, ok } = action.payload;
+        if (ok) {
+          Object.keys(response).forEach((k: string) => {
+            const key = k as keyof AnndataAttributeData;
+            state.anndata[key].keys = response[key];
+            
+            localStorage.setItem(key, JSON.stringify(response[key]));
+            
+          });
         }
-      ),
-      builder.addMatcher(backendAPI.endpoints.fileObs.matchPending, (state) => {
-        state.statusBackend.fileObs.message = "Loading observation data";
-      }),
-      builder.addMatcher(
-        backendAPI.endpoints.celeryFileNLDR.matchPending,
-        (state) => {
-          state.statusBackend.celeryFileNLDR.message = "requesting changes";
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.fileObsm.matchFulfilled,
+      (state, action) => {
+        console.log(action)
+        if (action.payload.ok) {
+          state.anndata.obsm.data = action.payload.response;
         }
-      ),
-      builder.addMatcher(
-        backendAPI.endpoints.celeryFileLeiden.matchPending,
-        (state) => {
-          state.statusBackend.celeryFileLeiden.message = "requesting changes";
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.fileObs.matchFulfilled,
+      (state, action) => {
+        if (action.payload.ok) {
+          state.anndata.obs.indices = action.payload.response;
         }
-      ),
-      // ===========================================================================
-      // Handles setting data correctly
-      builder.addMatcher(
-        backendAPI.endpoints.fileHierarchy.matchFulfilled,
-        (state, action) => {
-          const { response, ok } = action.payload;
-          if (ok) {
-            Object.keys(response).forEach((k: string) => {
-              const key = k as keyof AnndataAttributeData;
-              state.anndata[key].keys = response[key];
-            });
-          }
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.fileGenes.matchFulfilled,
+      (state, action) => {
+        if (action.payload.ok) {
+          state.data.genes = action.payload.response;
         }
-      ),
-      builder.addMatcher(
-        backendAPI.endpoints.fileObsm.matchFulfilled,
-        (state, action) => {
-          if (action.payload.ok) {
-            state.anndata.obsm.data = action.payload.response;
-          }
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.fileFeatureCoordinates.matchFulfilled,
+      (state, action) => {
+        if (action.payload.ok) {
+          state.anndata.var.indices = action.payload.response;
         }
-      ),
-      builder.addMatcher(
-        backendAPI.endpoints.fileObs.matchFulfilled,
-        (state, action) => {
-          if (action.payload.ok) {
-            state.anndata.obs.indices = action.payload.response;
-          }
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.celltypistModels.matchFulfilled,
+      (state, action) => {
+        if (action.payload.ok) {
+          state.data.annotationModels.models = action.payload.response;
         }
-      ),
-      builder.addMatcher(
-        backendAPI.endpoints.fileGenes.matchFulfilled,
-        (state, action) => {
-          if (action.payload.ok) {
-            state.data.genes = action.payload.response;
-          }
+      }
+    ),
+    // ===========================================================================
+    // Handles status and error
+    builder.addMatcher(isFulfilled, (state, action) => {
+      console.log((action.meta.arg as any).endpointName, action);
+      if (
+        action.type.startsWith(backendAPI.reducerPath) &&
+        !isRejectedWithValue(action)
+      ) {
+        const endpoint = (action.meta.arg as any).endpointName;
+        state.statusBackend[endpoint] = {
+          inProgress: false,
+          message: "",
+        };
+      }
+    }),
+    builder.addMatcher(isPending, (state, action) => {
+      // console.log(action);
+      if (action.type.startsWith(backendAPI.reducerPath)) {
+        const endpoint = (action.meta.arg as any).endpointName;
+        state.statusBackend[endpoint].inProgress = true;
+        if (state.statusBackend[endpoint].message === "") {
+          state.statusBackend[endpoint].message = "pending";
         }
-      ),
-      builder.addMatcher(
-        backendAPI.endpoints.fileFeatureCoordinates.matchFulfilled,
-        (state, action) => {
-          if (action.payload.ok) {
-            state.anndata.var.indices = action.payload.response;
-          }
-        }
-      ),
-      builder.addMatcher(
-        backendAPI.endpoints.celltypistModels.matchFulfilled,
-        (state, action) => {
-          if (action.payload.ok) {
-            state.data.annotationModels.models = action.payload.response;
-          }
-        }
-      ),
-      // ===========================================================================
-      // Handles status and error
-      builder.addMatcher(isFulfilled, (state, action) => {
-        console.log(action);
-        if (
-          action.type.startsWith(backendAPI.reducerPath) &&
-          !isRejectedWithValue(action)
-        ) {
-          const endpoint = (action.meta.arg as any).endpointName;
-          state.statusBackend[endpoint] = {
-            inProgress: false,
-            message: "",
+      }
+    }),
+    builder.addMatcher(isRejectedWithValue, (state, action) => {
+      console.log(action);
+      if (action.type.startsWith(backendAPI.reducerPath)) {
+        const endpoint = (action.meta.arg as any).endpointName;
+        state.statusBackend[endpoint] = {
+          inProgress: false,
+          message: "",
+        };
+
+        const payload = action.payload as {
+          status?: number;
+          data?: { detail?: string };
+        };
+
+        if (payload?.status === 423 && payload.data?.detail) {
+          state.error[endpoint] = {
+            message: payload.data.detail,
+            time: new Date().toISOString(),
           };
         }
-      }),
-      builder.addMatcher(isPending, (state, action) => {
-        console.log(action);
-        if (action.type.startsWith(backendAPI.reducerPath)) {
-          const endpoint = (action.meta.arg as any).endpointName;
-          state.statusBackend[endpoint].inProgress = true;
-          if (state.statusBackend[endpoint].message === "") {
-            state.statusBackend[endpoint].message = "pending";
-          }
-        }
-      }),
-      builder.addMatcher(isRejectedWithValue, (state, action) => {
-        console.log(action);
-        if (action.type.startsWith(backendAPI.reducerPath)) {
-          const endpoint = (action.meta.arg as any).endpointName;
-          state.statusBackend[endpoint] = {
-            inProgress: false,
-            message: "",
+
+        // fallback
+        else {
+          state.error[endpoint] = {
+            message: JSON.stringify(payload),
+            time: new Date().toISOString(),
           };
-
-          const payload = action.payload as {
-            status?: number;
-            data?: { detail?: string };
-          };
-
-          if (payload?.status === 423 && payload.data?.detail) {
-            state.error[endpoint] = {
-              message: payload.data.detail,
-              time: new Date().toISOString(),
-            };
-          }
-
-          // fallback
-          else {
-            state.error[endpoint] = {
-              message: JSON.stringify(payload),
-              time: new Date().toISOString(),
-            };
-          }
         }
-      });
+      }
+    });
   },
 });
 

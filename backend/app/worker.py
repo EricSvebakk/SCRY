@@ -321,6 +321,7 @@ def sort_by_dendro_rgg_rbb_order(df: pd.DataFrame, dendro_order: list[str], n_ge
   sorted_df = (
     df
     .assign(dendro_order=pd.Categorical(df["cluster"], categories=dendro_order, ordered=True))
+    .assign(dendro_order=lambda x: x["dendro_order"].cat.codes)
     .sort_values(by=["dendro_order", "rgg_order"])
   )
 

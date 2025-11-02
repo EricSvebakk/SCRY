@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { theme } from "@/app/layout";
-import { ImageSavingPopover } from "../modals/popover/ImageSavingPopover";
+import { PopoverImageSaving } from "../modals/popover/PopoverImageSaving";
 import { PopoverScatterplotSettings } from "../modals/popover/popoverScatterplotSettings";
 import { PopoverSubset } from "../modals/popover/popoverSubset";
 
@@ -78,8 +78,6 @@ export function ClusterScatterPlot(props: {
         backgroundColor: config.background
           ? config.background
           : theme.palette.background.paper,
-        border: "1px solid grey",
-        // borderRight: "none",
       }}
     >
       <Stack
@@ -87,14 +85,16 @@ export function ClusterScatterPlot(props: {
         justifyItems="center"
         gap={1}
         sx={{
+          backgroundColor: theme.palette.secondary.main,
           px: 0.5,
           height: 32,
-          backgroundColor: theme.palette.secondary.main,
+          minHeight: 32,
+          maxHeight: 32,
           borderBottom: "1px solid grey",
         }}
       >
         <PopoverScatterplotSettings />
-        <ImageSavingPopover plot="cluster" trigger="saveScatterPlotImage" />
+        <PopoverImageSaving plot="cluster" trigger="saveScatterPlotImage" />
         <PopoverSubset />
       </Stack>
 

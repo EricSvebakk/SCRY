@@ -108,20 +108,34 @@ const FeatureScatterPlotGenerator = (props: {
   if (!!props.imageTrigger) {
     
     const scale = props.config.scale ?? 1;
-
-    const plotWidth = 1000 * scale;
-    const legendWidth = props.indices !== undefined ? 200 * scale : 0;
-    const imageWidth = plotWidth + legendWidth;
-    const imageHeight = plotWidth;
+    
+    const plotWidth = props.config.width ?? 1000;
+    const plotHeight = props.config.height ?? 1000;
     const imagePadding = plotWidth / 24;
-
+    
     const fontSize = plotWidth / 50;
-
+    
+    const showLegend = !!props.config.showLegend && props.indices !== undefined;
+    const legendWidth = showLegend ? imagePadding * 3 : 0;
+    
+    const maxVal = Math.max(...(props.indices ? (props.indices.categories as number[]) : [0]));  
+    const legendLabels = [
+      "0.00",
+      maxVal.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+    ];
+    
     const finalCanvas = document.createElement("canvas");
+    const finalCtx = finalCanvas.getContext("2d")!;
+    
+    const imageWidth = plotWidth + legendWidth;
+    const imageHeight = plotHeight;
+    
     finalCanvas.width = imageWidth;
     finalCanvas.height = imageHeight;
-
-    const finalCtx = finalCanvas.getContext("2d")!;
+    
     finalCtx.imageSmoothingEnabled = true;
 
     finalCtx.fillStyle = props.config.background ? props.config.background : "white";
@@ -136,21 +150,23 @@ const FeatureScatterPlotGenerator = (props: {
       .scaleLinear()
       .domain(d3.extent(coordinates, (d: number[]) => d[1]) as [number, number])
       .range([imageHeight - imagePadding, imagePadding]);
-
-    coordinates.forEach((e, i) => {
-      finalCtx.beginPath();
-      finalCtx.arc(
-        scaledxScale(e[0]),
-        scaledyScale(e[1]),
-        pointSize * 2,
-        0,
-        2 * Math.PI
-      );
-
-      finalCtx.fillStyle = "#888";
-      finalCtx.fill();
-      finalCtx.closePath();
-    });
+    
+    if (props.config.showHiddenPoints) {
+      coordinates.forEach((e, i) => {
+        finalCtx.beginPath();
+        finalCtx.arc(
+          scaledxScale(e[0]),
+          scaledyScale(e[1]),
+          pointSize * scale,
+          0,
+          2 * Math.PI
+        );
+  
+        finalCtx.fillStyle = "#888";
+        finalCtx.fill();
+        finalCtx.closePath();
+      });
+    }
 
     props.indices?.categories.forEach((e, i) => {
       const point = coordinates[i];
@@ -159,7 +175,7 @@ const FeatureScatterPlotGenerator = (props: {
       finalCtx.arc(
         scaledxScale(point[0]),
         scaledyScale(point[1]),
-        pointSize * 2,
+        pointSize * scale,
         0,
         2 * Math.PI
       );
@@ -169,50 +185,59 @@ const FeatureScatterPlotGenerator = (props: {
       finalCtx.closePath();
     });
     
-    const gradient = finalCtx.createLinearGradient(0, 0, 0, imageHeight);
+    // finalCtx.fillStyle = "#888";
+    // finalCtx.strokeRect(
+    //   0,
+    //   0,
+    //   plotWidth,
+    //   imageHeight
+    // );
     
-    const n = 50;
-    for (let i = 0; i <= n; i++) {
-      const t = i / n;
-      gradient.addColorStop(t, colorScale(t));
+    if (props.indices !== undefined && props.config.showLegend) {
+      
+      const gradient = finalCtx.createLinearGradient(0, 0, 0, imageHeight);
+      
+      const n = 50;
+      for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        gradient.addColorStop(t, colorScale(t));
+      }
+      
+      finalCtx.fillStyle = gradient;
+      finalCtx.fillRect(
+        plotWidth + imagePadding,
+        imagePadding,
+        legendWidth - imagePadding * 2,
+        imageHeight - imagePadding * 2
+      );
+      
+      
+      finalCtx.fillStyle = "#888";
+      finalCtx.strokeRect(
+        plotWidth + imagePadding,
+        imagePadding,
+        legendWidth - imagePadding * 2,
+        imageHeight - imagePadding * 2
+      );
+      
+      finalCtx.textAlign = "end";
+      finalCtx.font = `${fontSize}px serif`;
+      
+      finalCtx.textBaseline = "top"; 
+      finalCtx.fillText(
+        legendLabels[0],
+        plotWidth + imagePadding / 2,
+        imagePadding
+      );
+      
+      finalCtx.textBaseline = "bottom"; 
+      finalCtx.fillText(
+        legendLabels[1],
+        plotWidth + imagePadding / 2,
+        imageHeight - imagePadding
+      );
     }
     
-    finalCtx.fillStyle = gradient;
-    finalCtx.fillRect(
-      plotWidth + imagePadding,
-      imagePadding,
-      legendWidth - imagePadding * 2,
-      imageHeight - imagePadding * 2
-    );
-    
-    
-    finalCtx.fillStyle = "#888";
-    finalCtx.strokeRect(
-      plotWidth + imagePadding,
-      imagePadding,
-      legendWidth - imagePadding * 2,
-      imageHeight - imagePadding * 2
-    );
-    
-    finalCtx.textAlign = "end";
-    finalCtx.font = `${fontSize}px serif`;
-    
-    finalCtx.textBaseline = "top"; 
-    finalCtx.fillText(
-      "0.00",
-      plotWidth + imagePadding / 2,
-      imagePadding
-    );
-    
-    finalCtx.textBaseline = "bottom"; 
-    finalCtx.fillText(
-      Math.max(...range).toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }),
-      plotWidth + imagePadding / 2,
-      imageHeight - imagePadding
-    );
 
     // Export the final canvas as an image
     const a = document.createElement("a");

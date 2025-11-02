@@ -63,18 +63,39 @@ export const AnndataAttributeKeys: (keyof AnndataAttributeData)[] = [
   "obsp",
 ] as const;
 
+
+
 export type PlotConfigurationData = {
   feature: {
     pointSize: number;
-  },
+    showHiddenPoints: boolean;
+    showLegend: boolean;
+  };
   cluster: {
     pointSize: number;
-  },
-  expression: {}
-}
+    showHiddenPoints: boolean;
+    showLegend: boolean;
+  };
+  expression: {
+    selected: string[];
+    sortClustersBy: sortClustersByType;
+    sortGenesBy: sortGenesByType;
+    sortClustersByDirection: sortByDirectionType;
+    sortGenesByDirection: sortByDirectionType;
+    layer: colorTypes;
+    highlight: highlightType;
+    expressionMin: number;
+    expressionMax: number;
+    expressionMinDefault: number;
+    expressionMaxDefault: number;
+    expressionIsDefault: boolean;
+  };
+};
 
 export type PCOther = {
   palette: string;
+  width?: number;
+  height?: number;
   background?: string;
   scale?: number;
 }
@@ -100,6 +121,9 @@ export type geneExpressionData = {
   pvals_adj: number;
   logfoldchange: number;
   rgg_order: number;
+  batch: number;
+  dendro_order: number;
+  within_cluster_rank: number;
 };
 
 export type geneDendrogramData = {
@@ -108,15 +132,15 @@ export type geneDendrogramData = {
   distance: number;
 };
 
-export type DotplotOptions = {
-  coloring: colorTypes;
-  highlight: highlightType;
-  expressionMin: number;
-  expressionMax: number;
-  expressionMinDefault: number;
-  expressionMaxDefault: number;
-  expressionIsDefault: boolean;
-};
+// export type DotplotOptions = {
+//   coloring: colorTypes;
+//   highlight: highlightType;
+//   expressionMin: number;
+//   expressionMax: number;
+//   expressionMinDefault: number;
+//   expressionMaxDefault: number;
+//   expressionIsDefault: boolean;
+// };
 
 export type GDEFields = {
   expression: geneExpressionData[] | null;
@@ -125,9 +149,9 @@ export type GDEFields = {
   clusters: string[];
   nGenes: number;
   nClusters: number;
-  plotOptions: {
-    [key in keyof DotplotOptions]: DotplotOptions[key];
-  };
+  // plotOptions: {
+  //   [key in keyof DotplotOptions]: DotplotOptions[key];
+  // };
 };
 
 export type SelectedFields = {
@@ -138,6 +162,10 @@ export type SelectedFields = {
 export type colorTypes = "mean_expr" | "logfoldchange" | "pvals_adj";
 
 export type highlightType = "cluster" | "gene" | "rgg_order" | "none";
+
+export type sortClustersByType = "dendrogram" | "alphabetical";
+export type sortGenesByType = "rgg_order" | "mean" | "fraction" | "alphabetical";
+export type sortByDirectionType = "ascending" | "descending";
 
 export const fetchOptions = [
   "generate_leiden",
@@ -262,6 +290,7 @@ export type AutocompleteOption = {
   label: string;
   id: number;
   description?: string;
+  value?: string;
 };
 
 export type FileState = {
