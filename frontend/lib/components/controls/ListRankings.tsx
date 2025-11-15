@@ -3,7 +3,7 @@ import { Button, Popover, Stack, Typography } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { MouseEvent, useEffect, useState } from "react";
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 import { PopoverTableData } from "../modals/popover/popoverTableData";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import DialogDotplot from "../modals/DialogDotplot";
@@ -11,11 +11,14 @@ import { geneExpressionData } from "@/lib/types";
 import { useCeleryFileRGGMutation } from "@/lib/redux/api/api";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 import { setGDEField } from "@/lib/redux/reducers/plotReducer";
+import ButtonList from "../custom/ButtonList";
 
-export default function ListTableData() {
+export default function ListRankings() {
   
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.fileHierarchy);
   const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;
+  const selectedRanking = useAppSelector((state) => state.plotReducer.data.GDE.selected);
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.metadata);
+  const statusRGG = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileRGG);
   
   const dispatch = useAppDispatch();
   const [getRGG] = useCeleryFileRGGMutation();
@@ -23,18 +26,19 @@ export default function ListTableData() {
   const [isDotplotDialogOpen, setIsDotplotDialogOpen] = useState(false);
   
   const [tableData, setTableData] = useState<string[]>([]);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+  
   
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [activeKey, setActiveKey] = useState<string | null>(null);
   const open = Boolean(anchorEl);
 
-  const handleOpen = (e: MouseEvent<HTMLElement>, key: string) => {
-    setAnchorEl(e.currentTarget);
+  const handleOpen = (key: string, me: MouseEvent<HTMLElement>) => {
     setActiveKey(key);
+    setAnchorEl(me.currentTarget);
   };
   const handleClose = () => {
-    setAnchorEl(null);
     setActiveKey(null);
+    setAnchorEl(null);
   };
   
   useEffect(() => {
@@ -47,28 +51,31 @@ export default function ListTableData() {
     }
   }, [uns]);
   
-  if (status.inProgress) {
-    return (
-      <CurrentProgress
-        status={status}
-      />
-    )
-  }
-
   return (
     <Stack
       direction="column"
       sx={{
         width: "100%",
+        height: "100%",
         minHeight: "100%",
         backgroundColor: theme.palette.background.paper,
       }}
       justifyContent="space-between"
     >
-      <Stack
+      <ButtonList
+        items={tableData}
+        selectedItem={selectedRanking ?? ""}
+        statusIncoming={status}
+        statusOutgoing={statusRGG}
+        placeholder="No rankings"
+        onClick={(item, me) => {
+          handleOpen(item, me!);
+        }}
+      />
+
+      {/* <Stack
         direction="column"
         sx={{
-          height: "60vh",
           width: "100%",
           overflowY: "auto",
           overflowX: "hidden",
@@ -88,7 +95,7 @@ export default function ListTableData() {
         ) : (
           <></>
         )}
-      </Stack>
+      </Stack> */}
 
       <Popover
         id={open ? `simple-popover-table-data-${activeKey}` : undefined}
@@ -113,13 +120,19 @@ export default function ListTableData() {
                 onClick={() => {
                   const p = uns?.[activeKey]?.params ?? {};
                   if ("n_top_genes" in p && "clustering" in p) {
-                    
                     type parsedDataType = {
                       table: geneExpressionData[];
                       dendro: string;
                       n_genes: number;
                       n_clusters: number;
                     };
+
+                    dispatch(
+                      setGDEField({
+                        field: "selected",
+                        value: activeKey,
+                      })
+                    );
 
                     getRGG({
                       unsKey: uns[activeKey].params.clustering as string,
@@ -129,6 +142,7 @@ export default function ListTableData() {
                       if (data.data?.ok) {
                         pollTaskStatus(
                           data.data.response,
+                          data.data.timestamp,
                           "celeryFileRGG",
                           dispatch,
                           (result: parsedDataType) => {
@@ -136,6 +150,12 @@ export default function ListTableData() {
                               setGDEField({
                                 field: "expression",
                                 value: result.table,
+                              })
+                            );
+                            dispatch(
+                              setGDEField({
+                                field: "dendrogram",
+                                value: JSON.parse(result.dendro),
                               })
                             );
                             dispatch(
@@ -150,20 +170,10 @@ export default function ListTableData() {
                                 value: result.n_clusters,
                               })
                             );
-                            dispatch(
-                              setGDEField({
-                                field: "dendrogram",
-                                value: JSON.parse(
-                                  result.dendro
-                                ),
-                              })
-                            );
                           }
                         );
                       }
                     });
-                    
-                    
                   }
                   handleClose();
                 }}
@@ -177,6 +187,7 @@ export default function ListTableData() {
 
       <ButtonSecondary
         title="+ Generate DGE"
+        loading={statusRGG.inProgress}
         onClick={() => setIsDotplotDialogOpen(true)}
         sx={{
           borderTop: "1px solid grey",

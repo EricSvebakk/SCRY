@@ -3,7 +3,7 @@ import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { setSelectedClusters } from "@/lib/redux/reducers/plotReducer";
 import { useEffect } from "react";
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import { Square } from "@mui/icons-material";
 import { sequentialScaleColorOptions } from "@/lib/design";
@@ -121,7 +121,7 @@ export function ListCluster(props: {
               }}
             >
               <Typography fontSize={theme.typography.fontSize}>
-                No clustering selected
+                No observation selected
               </Typography>
             </Box>
           )}
@@ -153,10 +153,10 @@ function ButtonToggleCluster(props: {
         all: "initial",
         cursor: "pointer",
         "&:hover": {
-          backgroundColor: (theme) => theme.palette.action.hover,
+          backgroundColor: theme.palette.action.hover,
         },
         "&:focus": {
-          backgroundColor: (theme) => theme.palette.action.selected,
+          backgroundColor: theme.palette.action.selected,
         },
       }}
       size="small"

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import DotPlotGenerator from "./DotPlotGenerator";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 import { DotPlotConfigurationPopover } from "../modals/popover/PopoverDotPlotConfiguration";
 import { PopoverImageSavingDotplot } from "../modals/popover/popoverImageSavingDotplot";
 

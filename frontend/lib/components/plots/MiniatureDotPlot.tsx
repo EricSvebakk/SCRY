@@ -1,52 +1,47 @@
 
-
 import { Box, Stack, Typography } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
+import DotPlotGenerator from "./DotPlotGenerator";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { theme } from "@/lib/design";
 import { PopoverImageSaving } from "../modals/popover/PopoverImageSaving";
-import FeatureScatterPlotGenerator from "./FeatureScatterPlotGenerator";
+import { DotPlotConfigurationPopover } from "../modals/popover/PopoverDotPlotConfiguration";
+import { PopoverImageSavingDotplot } from "../modals/popover/popoverImageSavingDotplot";
 
-export function FeatureScatterPlot() {
+export default function MiniatureDotPlot() {
   
-  const vars = useAppSelector((state) => state.plotReducer.anndata.var);
+  const gde = useAppSelector((state) => state.plotReducer.data.GDE);
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileRGG);
+  const config = useAppSelector((state) => state.plotReducer.plot.expression)
   
-  const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
-  const imageTrigger = useAppSelector((state) => state.plotReducer.navigation.triggers.saveFeaturePlotImage);
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.fileObsm);
-  const selectedCluster = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);
-  const config = useAppSelector((state) => state.plotReducer.plot.feature);
+  const dispatch = useAppDispatch();
   
   const [counter, setCounter] = useState(0);
-  const dispatch = useAppDispatch();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   
   useEffect(() => {
-
+    
     let cleanUpFunction;
     
-    if (obsm.data && canvasRef.current) {
-      
-      cleanUpFunction = FeatureScatterPlotGenerator({
-        canvasRef: canvasRef.current,
-        config: config,
-        indices: vars.indices,
-        coordinates: obsm.data,
-        selectedClusters: selectedCluster,
-        dispatch: dispatch,
-        imageTrigger: imageTrigger,
-      });
+    if (svgRef.current && gde.expression && gde.dendrogram) {
+      // cleanUpFunction = DotPlotGenerator({
+      //   current: svgRef.current,
+      //   gde: gde,
+      //   config: config,
+      //   dispatch: dispatch
+      // });
     }
     
     return cleanUpFunction;
     
   }, [
-    vars,
-    obsm,
-    config,
-    imageTrigger,
     counter,
+    gde.expression,
+    config.palette,
+    config.highlight,
+    config.expressionMin,
+    config.expressionMax,
   ]);
   
   const updateCounter = () => {
@@ -57,12 +52,12 @@ export function FeatureScatterPlot() {
     window.addEventListener("resize", updateCounter);
     return () => window.removeEventListener("resize", updateCounter);
   }, [updateCounter]);
-  
+
   return (
     <Stack
       direction="column"
       sx={{
-        height: "30vh",
+        height: "58vh",
         width: "100%",
         backgroundColor: theme.palette.background.paper,
         border: "1px solid grey",
@@ -79,47 +74,53 @@ export function FeatureScatterPlot() {
           borderBottom: "1px solid grey",
         }}
       >
-        <PopoverImageSaving plot="feature" trigger="saveFeaturePlotImage" />
+        <DotPlotConfigurationPopover />
+        <PopoverImageSavingDotplot />
       </Stack>
 
       {status.inProgress ? (
         <CurrentProgress status={status} />
       ) : (
-        <Stack direction="row" position="relative" height="100%" width="100%">
-          {obsm.data ? (
-            <Box
-              component="canvas"
-              id="points_gene"
-              height="100%"
-              width="100%"
-              style={{
-                position: "absolute",
-              }}
-              ref={canvasRef}
-            />
-          ) : (
-            <></>
-          )}
-
-          {!obsm.data ? (
+        <Box
+          position="relative"
+          overflow="auto"
+          height="100%"
+          sx={{
+            backgroundColor: theme.palette.background.paper,
+          }}
+        >
+          <Box
+            component="svg"
+            ref={svgRef}
+            width={gde.nGenes ? gde.nGenes * 15 : "100%"}
+            height={gde.nClusters ? gde.nClusters * 15 + 150 : "100%"}
+            sx={{
+              position: "absolute",
+              zIndex: 1,
+            }}
+            id="dotplot"
+          />
+          {!gde.expression ? (
             <Box
               sx={{
                 position: "absolute",
                 width: "100%",
                 height: "100%",
+                // border: "1px solid yellow",
                 alignContent: "center",
                 justifyItems: "center",
               }}
             >
               <Typography fontSize={theme.typography.fontSize}>
-                No embedding selected
+                No Observations selected
               </Typography>
             </Box>
           ) : (
             <></>
           )}
-        </Stack>
+        </Box>
       )}
     </Stack>
   );
+  
 }

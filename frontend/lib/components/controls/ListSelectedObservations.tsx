@@ -4,11 +4,11 @@ import { Button, Stack, Typography } from "@mui/material";
 import { useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { useEffect, useState } from "react";
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 
 export default function ListSelectedObservations() {
   
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.fileHierarchy);
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.metadata);
   const cats = useAppSelector((state) => state.plotReducer.anndata.obs.indices?.categories)
   const codes = useAppSelector((state) => state.plotReducer.anndata.obs.indices?.codes)
   const selectedClusters = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);

@@ -18,24 +18,26 @@ import {
   Typography,
 } from "@mui/material";
 import React, { useState } from "react";
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import CurrentProgress from "../../OverlayCurrentProgress";
 import formatFileSize from "@/lib/util/formatFileSize";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Folder } from "@mui/icons-material";
-import { useLazySystemFilesQuery } from "@/lib/redux/api/api";
+import { reset } from "@/lib/redux/reducers/plotReducer";
 
 export default function PanelFiles(props: { sx?: SxProps }) {
-  const fileID = useAppSelector((state) => state.fileReducer.activeFile);
-  const filenames = useAppSelector((state) => state.fileReducer.files);
+  
+  const fileID = useAppSelector((state) => state.plotReducer.system.files.active);
+  const filenames = useAppSelector((state) => state.plotReducer.system.files.all);
   const status = useAppSelector(
     (state) => state.plotReducer.statusBackend.fileFeatureCoordinates
   );
 
   const [openPanelFiles, setOpenPanelFiles] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
-
+  
+  const { screenID } = useParams();
   const router = useRouter();
   const dispatch = useAppDispatch();
 
@@ -142,7 +144,9 @@ export default function PanelFiles(props: { sx?: SxProps }) {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filenames.map((e, i) => {
+                      {[...filenames]
+                      .sort((a,b) => a.name.toLocaleLowerCase().localeCompare(b.name.toLocaleLowerCase()))
+                      .map((e, i) => {
                         return (
                           <Tooltip
                             key={`file_table_row_${i}_tooltip`}
@@ -151,13 +155,15 @@ export default function PanelFiles(props: { sx?: SxProps }) {
                           >
                             <TableRow
                               key={`file_table_row_${i}_row`}
-                              selected={e.id === selectedFile}
+                              // selected={e.id === selectedFile}
                               onClick={() => setSelectedFile(e.id)}
                               sx={{
                                 cursor: "pointer",
+                                backgroundColor: e.id === selectedFile
+                                  ? theme.palette.action.selected
+                                  : "",
                                 "&:hover": {
-                                  backgroundColor: (theme) =>
-                                    theme.palette.action.hover,
+                                  backgroundColor: theme.palette.action.hover,
                                 },
                               }}
                             >
@@ -179,7 +185,7 @@ export default function PanelFiles(props: { sx?: SxProps }) {
                                 {formatFileSize(e.fileSize)}
                               </TableCell>
                               <TableCell key={`file_table_row_${i}_cell_usage`}>
-                                {e.id === fileID ? "In-use" : "Available"}
+                                {e.id === fileID ? "In-use" : ""}
                               </TableCell>
                             </TableRow>
                           </Tooltip>
@@ -223,8 +229,9 @@ export default function PanelFiles(props: { sx?: SxProps }) {
                   color="secondary"
                   // fullWidth
                   onClick={() => {
-                    router.push("/files/" + selectedFile);
+                    router.push(`/files/${selectedFile}/${screenID}`);
                     router.refresh();
+                    dispatch(reset(true))
                   }}
                 >
                   Open file

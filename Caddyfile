@@ -4,21 +4,21 @@
   tls internal
 
   handle_path {$BACKEND_PATH}* {
-    reverse_proxy thesis_backend:8000
+    reverse_proxy scry_backend:8000
   }
 
   handle_path /* {
-    reverse_proxy thesis_frontend:3000
+    reverse_proxy scry_frontend:3000
   }
 }
 
 {$HOST}:443 {
   
   handle_path {$BACKEND_PATH}* {
-    reverse_proxy thesis_backend:8000
+    reverse_proxy scry_backend:8000
   }
 
   handle_path /* {
-    reverse_proxy thesis_frontend:3000
+    reverse_proxy scry_frontend:3000
   }
 }

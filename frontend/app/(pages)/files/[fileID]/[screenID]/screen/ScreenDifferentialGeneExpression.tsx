@@ -1,23 +1,14 @@
-import { useAppSelector } from "@/lib/redux/hooks/hooks";
 import { Grid } from "@mui/material";
-import CurrentProgress from "../../OverlayCurrentProgress";
-import { DotPlot } from "../../plots/DotPlot";
-import ListTableData from "../../controls/ListTableData";
-import ListRanking from "../../controls/ListRanking";
-
+import { DotPlot } from "@/lib/components/plots/DotPlot";
+import ListRanking from "@/lib/components/controls/ListRanking";
+import ListRankings from "@/lib/components/controls/ListRankings";
 export default function ScreenDifferentialGeneExpression() {
-  
-  const statusHierarchy = useAppSelector((state) => state.plotReducer.statusBackend.fileHierarchy);  
-  
-  if (statusHierarchy.inProgress) {
-    return <CurrentProgress status={statusHierarchy} />;
-  }
   
   return (
     <Grid
       container
       direction="row"
-      columnGap={1}
+      columnGap={"1vh"}
       sx={{
         height: "100%",
       }}
@@ -27,10 +18,10 @@ export default function ScreenDifferentialGeneExpression() {
         container
         direction="column"
         width={250}
-        rowGap={1}
-        sx={{
-          height: "100%",
-        }}
+        rowGap={"1vh"}
+        // sx={{
+        //   height: "100%"
+        // }}
       >
         <Grid
           item
@@ -38,9 +29,10 @@ export default function ScreenDifferentialGeneExpression() {
           width="100%"
           sx={{
             border: "1px solid grey",
+            height: "50vh",
           }}
         >
-          <ListRanking />
+          <ListRankings />
         </Grid>
 
         <Grid
@@ -49,18 +41,19 @@ export default function ScreenDifferentialGeneExpression() {
           width="100%"
           sx={{
             border: "1px solid grey",
+            height: "40vh"
           }}
         >
-          <ListTableData />
+          <ListRanking />
         </Grid>
       </Grid>
 
       <Grid
         item
         xs
-        sx={{
-          height: "100%",
-        }}
+        // sx={{
+        //   height: "100%",
+        // }}
       >
         <DotPlot />
       </Grid>

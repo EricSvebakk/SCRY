@@ -1,18 +1,21 @@
 
 import os
 from celery import Celery
+from celery.result import AsyncResult
 import scanpy as sc
 import pandas as pd
 import numpy as np
 import celltypist as ct
+import anndata as ad
 
 import json
 import time
+import copy
 from typing import Optional
 from anndata import AnnData
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable
+from typing import Callable, Set
 from my_types import newObservation, ComputationResponse
 from contextlib import contextmanager
 from fastapi import HTTPException
@@ -28,10 +31,16 @@ celery_app = Celery(
   backend=CELERY_BROKER_URL
 )
 
-r = redis.Redis(host="thesis_redis", port=6379, db=0)
+r = redis.Redis(host="scry_redis", port=6379, db=0)
 
 sc.settings.n_jobs = -1
 sc.settings.max_memory = 256
+
+import logging
+logger = logging.getLogger("uvicorn.error")
+logger.setLevel(logging.DEBUG)
+
+# logger.debug(["config", ORIGINS])
 
 print("n_jobs", sc.settings.n_jobs)
 print("max_m", sc.settings.max_memory)
@@ -46,16 +55,67 @@ class PipelineStep:
   description: str
   func: Callable[[], bool]
 
+# ============================================================================================
+def _task_meta_key(task_id: str) -> str:
+  return f"task_meta:{task_id}"
+
+def _user_tasks_key(user_id: str) -> str:
+  return f"user_tasks:{user_id}"
+
+def _set_task_status(task_id: str, status: str, meta: dict | None = None):
+  key = _task_meta_key(task_id)
+  m = {"status": status, "updated_at": str(int(time.time()) * 1000)}
+  if meta:
+      # store a short JSON of your progress meta (current/total/step)
+      m["progress_meta"] = json.dumps(meta)
+  r.hset(key, mapping=m)
+  # refresh TTL
+  r.expire(key, 7 * 24 * 3600)
+
+def _finalize_task(task_id: str, user_id: str, status: str, error: str | None = None):
+  key = _task_meta_key(task_id)
+  m = {"status": status, "finished_at": str(int(time.time()) * 1000)}
+  if error:
+      m["error"] = error[:1000]
+  pipe = r.pipeline()
+  pipe.hset(key, mapping=m)
+  pipe.expire(key, 7 * 24 * 3600)
+  
+  # remove from user index if you only want “running” in the set;
+  # if you prefer to keep recent finished in the list, comment this out.
+  pipe.srem(_user_tasks_key(user_id), task_id)
+  pipe.execute()
+
+def register_task_for_user(user_id: str, file_id: str, task_id: str, func_name: str, args: list):
+  key_user = _user_tasks_key(user_id)
+  key_meta = _task_meta_key(task_id)
+  now = int(time.time()) * 1000
+  meta = {
+      "user_id": user_id,
+      "file_id": os.path.basename(file_id),
+      "task_id": task_id,
+      "task_name": func_name,
+      "created_at": str(now),
+      "status": "PENDING",
+      "func": func_name,
+      "args_json": json.dumps(args),
+  }
+  pipe = r.pipeline()
+  pipe.sadd(key_user, task_id)
+  pipe.hset(key_meta, mapping=meta)
+  pipe.expire(key_meta, 7 * 24 * 3600)  # keep metadata 7 days
+  pipe.execute()
+  
+  return meta
 
 # ============================================================================================
 @contextmanager
-def file_lock(file_path: str, user_id: str, timeout: int = 600, blocking: bool = True):
-
+def file_lock(file_path: str, user_id: str, timeout: int = 600, blocking: bool = True, blocking_timeout: float | None = None):
   lock_key = f"filelock:{file_path}"
   meta_key = f"{lock_key}:meta"
 
   lock = r.lock(lock_key, timeout=timeout)
-  is_locked = lock.acquire(blocking=blocking)
+  is_locked = lock.acquire(blocking=blocking, blocking_timeout=blocking_timeout)
 
   if not is_locked:
     current_user = r.hget(meta_key, "user_id")
@@ -79,7 +139,7 @@ def file_lock(file_path: str, user_id: str, timeout: int = 600, blocking: bool =
 @contextmanager
 def open_h5ad_read(file_path: str, user_id: str, timeout: int = 600):
   
-  with file_lock(file_path, user_id, timeout=timeout, blocking=False):
+  with file_lock(file_path, user_id, timeout=timeout, blocking=True, blocking_timeout=timeout):
   
     adata = None
     
@@ -127,6 +187,8 @@ def start_progress(task):
     state="PROGRESS",
     meta=meta
   )
+  
+  _set_task_status(task.request.id, "PROGRESS", meta)
 
 def end_progress(task):
   
@@ -141,6 +203,8 @@ def end_progress(task):
     state="PROGRESS",
     meta=meta
   )
+  
+  _set_task_status(task.request.id, "PROGRESS", meta)
 
 def simple_update_progress(task, status: str):
   
@@ -155,6 +219,8 @@ def simple_update_progress(task, status: str):
     state="PROGRESS",
     meta=meta
   )
+  
+  _set_task_status(task.request.id, "PROGRESS", meta)
   
 
 def update_progress(task, step_index: int, steps: list[str]):
@@ -173,6 +239,8 @@ def update_progress(task, step_index: int, steps: list[str]):
       state="PROGRESS",
       meta=meta
     )
+    
+    _set_task_status(task.request.id, "PROGRESS", meta)
 
 # ============================================================================================
 def handle_pipeline_steps(task, pipeline_steps: list[PipelineStep]):
@@ -243,17 +311,17 @@ def handle_umap(adata: AnnData, key_umap: str, key_neighbors: str, min_dist: int
   
   return changes_made
 
-def handle_leiden(adata: AnnData, key_neighbors: str, key_resolution: str, resolution: float) -> bool:
+def handle_leiden(adata: AnnData, key_neighbors: str, key_observation: str, resolution: float) -> bool:
   
   changes_made = False
   
-  if not (key_resolution in adata.obsm_keys()):
+  if not (key_observation in adata.obs_keys()):
     
     changes_made = True
     sc.tl.leiden(
       adata,
       neighbors_key=key_neighbors,
-      key_added=key_resolution,
+      key_added=key_observation,
       resolution=resolution,
       flavor="igraph"
     )
@@ -462,28 +530,107 @@ def handle_rgg_data_table(adata: AnnData, key_cluster: str, key_dotplot: str, ke
   
   return True
 
+def notStartWith(s1: str):
+  return not s1.startswith("_")
+
+def make_safe(obj):
+  if isinstance(obj, np.ndarray):
+    return None
+  elif isinstance(obj, pd.DataFrame):
+    return obj.to_dict(orient="records")
+  elif isinstance(obj, (np.integer, np.floating)):
+    return obj.item()
+  elif isinstance(obj, dict):
+    return {k: make_safe(v) for k, v in obj.items()}
+  elif isinstance(obj, list):
+    return None
+  elif isinstance(obj, (str, int, float, bool)) or obj is None:
+    return obj
+  else:
+    return f"<<unsupported: {type(obj).__name__}>>"
+
+# ============================================================================================
+def get_tasks(file_path: str, user_id: str):
+  
+  try:
+    key_user = _user_tasks_key(user_id)
+    task_ids = [tid.decode() for tid in r.smembers(key_user)]
+    items = []
+    
+    # logger.debug([key_user, task_ids])
+    
+    for tid in task_ids:
+      meta_raw = r.hgetall(_task_meta_key(tid))
+      meta = {k.decode(): v.decode() for k, v in meta_raw.items()} if meta_raw else {"task_id": tid}
+      
+      if (meta["file_id"] != os.path.basename(file_path)):
+        continue
+
+      ar = AsyncResult(tid)
+      live_status = ar.status
+      
+      # Skip finished if not requested
+      if live_status in ("SUCCESS", "FAILURE", "REVOKED"):
+        continue
+
+      meta.setdefault("status", live_status)
+      
+      # parse stored progress blob if present
+      if "progress_meta" in meta:
+        try:
+          meta["progress_meta"] = json.loads(meta["progress_meta"])
+        except Exception:
+          pass
+      
+      items.append(meta)
+
+    return {"response": items, "ok": True}
+  
+  except Exception as e:
+    return {"response": f"Error fetching tasks: {e}", "ok": False}
+
+# ============================================================================================
+def get_metadata(file_path: str, user_id: str):
+  
+  result: ComputationResponse = {
+    "response": "Something went VERY wrong",
+    "ok": False,
+  }
+  
+  metadata = {
+    "hierarchy": None,
+    "genes": None,
+  }
+  
+  with open_h5ad_read(file_path, user_id) as adata:
+    
+    try: 
+      
+      metadata["hierarchy"] = {
+        "obs":  list(filter(notStartWith, adata.obs_keys())),
+        "var":  list(filter(notStartWith, adata.var_keys())),
+        "uns": make_safe(adata.uns),
+        "obsm": list(filter(notStartWith, adata.obsm_keys())),
+        "varm": list(filter(notStartWith, adata.varm_keys())),
+        "obsp": list(filter(notStartWith, list(adata.obsp.keys()))),
+      }
+      
+      metadata["genes"] = list(adata.var_names)
+      
+      result["response"] = metadata
+      result["ok"] = True
+      
+    except Exception as e:
+      errorMessage = f"Something unexpected happened: {e}"
+      result["response"] = errorMessage
+      result["ok"] = False
+  
+  return result
+  
+
 # ============================================================================================
 def get_hierarchy(file_path: str, user_id: str):
   
-  def notStartWith(s1: str):
-    return not s1.startswith("_")
-  
-  def make_safe(obj):
-    if isinstance(obj, np.ndarray):
-      return None
-    elif isinstance(obj, pd.DataFrame):
-      return obj.to_dict(orient="records")
-    elif isinstance(obj, (np.integer, np.floating)):
-      return obj.item()
-    elif isinstance(obj, dict):
-      return {k: make_safe(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-      return None
-    elif isinstance(obj, (str, int, float, bool)) or obj is None:
-      return obj
-    else:
-      return f"<<unsupported: {type(obj).__name__}>>"
-    
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
@@ -496,7 +643,6 @@ def get_hierarchy(file_path: str, user_id: str):
         "obs":  list(filter(notStartWith, adata.obs_keys())),
         "var":  list(filter(notStartWith, adata.var_keys())),
         "uns": make_safe(adata.uns),
-        # "uns": list(filter(notStartWith, adata.uns_keys())),
         "obsm": list(filter(notStartWith, adata.obsm_keys())),
         "varm": list(filter(notStartWith, adata.varm_keys())),
         "obsp": list(filter(notStartWith, list(adata.obsp.keys()))),
@@ -633,6 +779,7 @@ def compute_ldr(
   
   start_progress(self)
   
+  
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
@@ -655,10 +802,14 @@ def compute_ldr(
       result["response"] = list(adata.obsm[key_pca][:, :2].tolist())
       result["ok"] = True
       
+      _finalize_task(self.request.id, user_id, "SUCCESS")
+      
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      
+      _finalize_task(self.request.id, user_id, "FAILURE", error=str(e))
   
   return result
 
@@ -687,10 +838,10 @@ def compute_nldr(
     try:
       key_pca = "X_pca"
       key_neighbors = f"{key}"
-      key_umap = f"X_umap_{key}"
+      key_umap = f"UMAP-{key}"
       
       changes_made = handle_pipeline_steps(self, [
-        PipelineStep("Computing PCA", partial(handle_pca, adata, key_pca, n_pcs)),
+        PipelineStep("Computing PCA", partial(handle_pca, adata, key_pca, 50)),
         PipelineStep("Computing neighbors distance matrix", partial(handle_neighbors, adata, key_neighbors, key_pca, n_pcs, n_neighbors)),
         PipelineStep("Computing UMAP", partial(handle_umap, adata, key_umap, key_neighbors, min_dist, spread)),
       ])
@@ -702,11 +853,13 @@ def compute_nldr(
       
       result["response"] = list(adata.obsm[key_umap][:, :2].tolist())
       result["ok"] = True
+      _finalize_task(self.request.id, user_id, "SUCCESS")
       
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      _finalize_task(self.request.id, user_id, "FAILURE", error=str(e))
   
   return result
   
@@ -717,6 +870,7 @@ def compute_leiden(
   file_path: str,
   user_id: str,
   key: str,
+  neighborsKey: str,
   resolution: float = 1
 ):
   
@@ -730,12 +884,11 @@ def compute_leiden(
   with open_h5ad_write(file_path, user_id) as adata:
     
     try:
-      res_to_string = f"{resolution}".replace(".", "_")
-      key_resolution = f"leiden_{res_to_string}_{key}"
-      key_neighbors = f"{key}"
+      key_observation = f"{key}"
+      key_neighbors = f"{neighborsKey}"
       
       changes_made = handle_pipeline_steps(self, [
-        PipelineStep("Computing Leiden clusters", partial(handle_leiden, adata, key_neighbors, key_resolution, resolution)),
+        PipelineStep("Computing Leiden clusters", partial(handle_leiden, adata, key_neighbors, key_observation, resolution)),
       ])
       
       end_progress(self)
@@ -743,20 +896,22 @@ def compute_leiden(
       if changes_made:
         sc.write(file_path, adata)
       
-      obs_data = adata.obs[key_resolution].astype("category")
+      obs_data = adata.obs[key_observation].astype("category")
       labels = list(obs_data.cat.categories)
       label_map = list(obs_data.cat.codes)
       
       result["response"] = {
-        "labels": labels,
-        "label_map": label_map
+        "categories": labels,
+        "codes": label_map
       }
       result["ok"] = True
+      _finalize_task(self.request.id, user_id, "SUCCESS")
     
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      _finalize_task(self.request.id, user_id, "FAILURE", error=str(e))
   
   return result
 
@@ -893,9 +1048,18 @@ def compute_celltypist_annotations(
         "Converting to anndata format"
         "Writing predictions to anndata object"
       ]
-    
+      
       update_progress(self, step_current, function_steps)
       model = ct.models.Model.load(model = annotation_model)
+      
+      keyStripped = connectivities_key.replace('_connectivities', '')
+      
+      adata.uns["neighbors"] = copy.deepcopy(adata.uns[keyStripped])
+      adata.uns["neighbors"]["connectivities_key"] = "connectivities"
+      adata.uns["neighbors"]["distances_key"] = "distances"
+      
+      adata.obsp["connectivities"] = adata.obsp[f"{connectivities_key}"].copy()
+      adata.obsp["distances"] = adata.obsp[f"{connectivities_key.replace('_connectivities', '')}_distances"].copy()
       
       step_current += 1
       update_progress(self, step_current, function_steps)
@@ -903,21 +1067,33 @@ def compute_celltypist_annotations(
       
       step_current += 1
       update_progress(self, step_current, function_steps)
-      adata_with_preds = predictions.to_adata(prefix=key + "_")
+      adata_with_preds = predictions.to_adata(prefix=key + "-")
   
-      labels = predictions.predicted_labels.to_dict(orient="records")
+      # labels = predictions.predicted_labels.to_dict(orient="records")
       
       step_current += 1
       update_progress(self, step_current, function_steps)
       sc.write(file_path, adata_with_preds)
       
+      obs_data = adata.obs[f"{key}-majority_voting"].astype("category")
+      labels = list(obs_data.cat.categories)
+      label_map = list(obs_data.cat.codes)
+      
       result["response"] = {
-        "labels": labels
+        "categories": labels,
+        "codes": label_map
       }
+      
+      # result["response"] = {
+      #   "labels": labels
+      # }
       result["ok"] = True
     
     except Exception as e:
-      errorMessage = f"Something unexpected happened: {e}"
+      
+      logger.debug(["ERROR", e])
+      
+      errorMessage = f"OKAY Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
       
@@ -971,3 +1147,69 @@ def compute_recluster(
       result["ok"] = False
   
   return result
+
+# ============================================================================================
+@celery_app.task(bind=True)
+def compute_merge_data(
+  self,
+  file_path: str,
+  user_id: str,
+  file_path_dest: str,
+  observation_dict: dict
+):
+  
+  start_progress(self)
+  
+  result: ComputationResponse = {
+    "response": "Something went VERY wrong",
+    "ok": False,
+  }
+  
+  with open_h5ad_read(file_path, user_id) as adata_src:
+    
+    with open_h5ad_write(file_path_dest, user_id) as adata_dest:
+      
+      try:
+        observation = newObservation.model_validate(observation_dict)
+        
+        obs_map = {
+          sub: cluster.label
+          for cluster in observation.clusters
+          for sub in cluster.subclusters
+        }
+        
+        obs_key = observation.name
+        
+        valid_source_levels: Set[str] = set(obs_map.keys())
+        mask = adata_src[obs_key].isin(valid_source_levels)
+        
+        src_subset = adata_src[mask].copy()
+        
+        ad.concat(
+          [adata_dest, src_subset],
+          axis=0,
+          join="inner",
+          merge="same",
+          label=None
+        )
+        
+        end_progress(self)
+      
+        sc.write(file_path_dest, adata_dest)
+        
+        result["response"] = {
+          "obs":  list(filter(notStartWith, adata_dest.obs_keys())),
+          "var":  list(filter(notStartWith, adata_dest.var_keys())),
+          "uns": make_safe(adata_dest.uns),
+          "obsm": list(filter(notStartWith, adata_dest.obsm_keys())),
+          "varm": list(filter(notStartWith, adata_dest.varm_keys())),
+          "obsp": list(filter(notStartWith, list(adata_dest.obsp.keys()))),
+        }
+        result["ok"] = True
+
+      except Exception as e:
+        errorMessage = f"Something unexpected happened: {e}"
+        result["response"] = errorMessage
+        result["ok"] = False
+      
+      

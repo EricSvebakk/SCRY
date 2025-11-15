@@ -1,8 +1,8 @@
 
 import { Box, Button, Grid, Stack, SxProps, Typography } from "@mui/material";
 import React, { useState } from "react";
-import { theme } from "@/app/layout";
-import { BlurCircular, FileOpen, GroupWork, ScatterPlot } from "@mui/icons-material";
+import { theme } from "@/lib/design";
+import { BlurCircular, GroupWork } from "@mui/icons-material";
 import PanelGenes from "./panel/PanelGenes";
 import PanelReclustering from "./panel/PanelReclustering";
 import { useAppSelector } from "@/lib/redux/hooks/hooks";
@@ -13,7 +13,7 @@ export default function NavbarRight() {
 
   const [openPanelGenes, setOpenPanelGenes] = useState(false);
   const [openPanelRecluster, setOpenPanelRecluster] = useState(false);
-  const [openPanelFiles, setOpenPanelFiles] = useState(false);
+  const [openPanelMerge, setOpenPanelMerge] = useState(false);
   
   const navItemProps = (isOpen: boolean, up: boolean = false, down: boolean = false) => {
     return {
@@ -35,20 +35,23 @@ export default function NavbarRight() {
   
   return (
     <Box height="100%">
-      <PanelGenes open={openPanelGenes} setOpen={setOpenPanelGenes}/>
-      <PanelReclustering open={openPanelRecluster} setOpen={setOpenPanelRecluster}/>
+      <PanelGenes open={openPanelGenes} setOpen={setOpenPanelGenes} />
+      <PanelReclustering
+        open={openPanelRecluster}
+        setOpen={setOpenPanelRecluster}
+      />
 
       <Grid
         item
         container
         direction="column"
         height="100%"
+        minHeight="100vh"
         overflow="clip"
         sx={{
           zIndex: 1200,
         }}
       >
-        
         <Grid item height={70}>
           <Button
             fullWidth
@@ -71,7 +74,7 @@ export default function NavbarRight() {
             </Stack>
           </Button>
         </Grid>
-        
+
         <Grid item height={70}>
           <Button
             fullWidth
@@ -95,6 +98,30 @@ export default function NavbarRight() {
             </Stack>
           </Button>
         </Grid>
+
+        {/* <Grid item height={70}>
+          <Button
+            fullWidth
+            // disabled={!obs.selectedKey}
+            sx={navItemProps(openPanelMerge, true, true)}
+            onClick={() => {
+              setOpenPanelMerge(!openPanelMerge);
+            }}
+          >
+            <Stack
+              direction="column"
+              sx={{
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {<BlurCircular />}
+              <Typography fontSize={theme.typography.subtitle1.fontSize}>
+                Merge data
+              </Typography>
+            </Stack>
+          </Button>
+        </Grid> */}
 
         <Grid
           item

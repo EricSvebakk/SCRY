@@ -139,6 +139,7 @@ export function PopoverScatterplotSettings() {
                     setPlotConfigField({
                       plot: "cluster",
                       config: {
+                        ...config,
                         background: selectedBackground?.label,
                         palette: selectedColorOption?.label,
                       },

@@ -2,7 +2,7 @@
 
 import { Autocomplete, Box, Collapse, Grid, IconButton, Stack, TextField } from "@mui/material";
 import React, { useEffect, useRef, useState } from "react";
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { AutocompleteOption, Cluster, Reclustering } from "@/lib/types";
 import { Close } from "@mui/icons-material";
@@ -15,8 +15,8 @@ export default function PanelReclustering(props: {
   setOpen: Function;
 }) {
   
-  const fileID = useAppSelector((state) => state.fileReducer.activeFile);
-  const userID = useAppSelector((state) => state.fileReducer.userID);
+  const fileID = useAppSelector((state) => state.plotReducer.system.files.active);
+  const userID = useAppSelector((state) => state.plotReducer.system.user.id);
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
   const statusObs = useAppSelector((state) => state.plotReducer.statusBackend.fileObs);
   const statusNewObs = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileRecluster);
@@ -173,12 +173,13 @@ export default function PanelReclustering(props: {
                   if (data.data?.ok) {
                     pollTaskStatus(
                       data.data.response,
+                      data.data.timestamp,
                       "celeryFileRecluster",
                       dispatch,
                       () => {
                         getHierarchy();
                       }
-                    )
+                    );
                   }
                 })
               }

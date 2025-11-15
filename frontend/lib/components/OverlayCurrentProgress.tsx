@@ -1,7 +1,7 @@
 
 import { CircularProgress, Stack, Typography } from "@mui/material";
 import { statusOptions } from "../types";
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 
 type CurrentProgressProps = {
   status: statusOptions;

@@ -1,4 +1,4 @@
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { setPlotConfigField } from "@/lib/redux/reducers/plotReducer";
 import {
@@ -285,6 +285,9 @@ export function DotPlotConfigurationPopover() {
                 variant="outlined"
                 size="small"
                 type="number"
+                inputProps={{
+                  step: "0.1",
+                }}
                 InputLabelProps={{
                   shrink: true,
                 }}
@@ -302,6 +305,9 @@ export function DotPlotConfigurationPopover() {
                 variant="outlined"
                 size="small"
                 type="number"
+                inputProps={{
+                  step: "0.1",
+                }}
                 InputLabelProps={{
                   shrink: true,
                 }}
@@ -338,7 +344,7 @@ export function DotPlotConfigurationPopover() {
             onChange={(event: any, value: any, reason, details) => {
               const selectedOption = details?.option as any;
 
-              console.log(reason, details);
+              // console.log(reason, details);
 
               if (reason === "selectOption") {
                 setSelectedGenes([...selectedGenes, selectedOption]);
@@ -503,7 +509,7 @@ function ConfigurationOption(props: {
       onChange={(event: any, value: any, reason, details) => {
         const selectedOption = details?.option as any;
 
-        console.log(reason, details);
+        // console.log(reason, details);
 
         if (reason === "selectOption") {
           props.setSelectedOption(selectedOption);

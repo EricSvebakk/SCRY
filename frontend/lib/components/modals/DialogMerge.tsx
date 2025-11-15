@@ -11,7 +11,7 @@
 //   setIsOpen: Function
 // }) {
   
-//   const activeFile = useAppSelector((state) => state.fileReducer.activeFile);
+//   const activeFile = useAppSelector((state) => state.plotReducer.system.files.active);
 //   const uns = useAppSelector((state) => state.plotReducer.hierarchy?.uns);
 //   const obs = useAppSelector((state) => state.plotReducer.hierarchy?.obs);
 //   const genes = useAppSelector((state) => state.plotReducer.genes);

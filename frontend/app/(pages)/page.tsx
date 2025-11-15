@@ -23,22 +23,21 @@ import {
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 import { Close } from "@mui/icons-material";
 import { useLazySystemFilesQuery } from "@/lib/redux/api/api";
 import CurrentProgress from "@/lib/components/OverlayCurrentProgress";
 import formatFileSize from "@/lib/util/formatFileSize";
 import crypto from "crypto"
 import { LoadingButton } from "@mui/lab";
-import { setActiveUser, setPassKey } from "@/lib/redux/reducers/fileReducer";
+import { setActiveUser, setPassKey } from "@/lib/redux/reducers/plotReducer";
 
 
 export default function FileIdPage({}) {
   
-  // const userID = useAppSelector((state) => state.fileReducer.userID);
-  const fileID = useAppSelector((state) => state.fileReducer.activeFile);  
+  const fileID = useAppSelector((state) => state.plotReducer.system.files.active);  
   const status = useAppSelector((state) => state.plotReducer.statusBackend.systemFiles);
-  const filenames = useAppSelector((state) => state.fileReducer.files);
+  const filenames = useAppSelector((state) => state.plotReducer.system.files.all);
   
   const [userID, setUserID] = useState("");
   const [pass, setPass] = useState("");
@@ -52,7 +51,7 @@ export default function FileIdPage({}) {
   
   const [getSystemFiles, { isSuccess, isLoading }] = useLazySystemFilesQuery();
   
-  console.log(userIDError, passError)
+  // console.log(userIDError, passError)
   
   return (
     <>
@@ -127,7 +126,6 @@ export default function FileIdPage({}) {
                 // TODO: fix API-headers
                 getSystemFiles()
                   .then((data: any) => {
-                    console.log(data)
                     if (data.isError) {
                       setPass("");
                       setPassError(true);

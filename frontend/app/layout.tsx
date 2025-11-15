@@ -2,52 +2,10 @@
 "use client"
 
 import { Inter } from "next/font/google";
-import { Container, createTheme, Paper, ThemeProvider } from "@mui/material";
+import { Container, Paper, ThemeProvider } from "@mui/material";
 import { Provider } from "react-redux";
 import { store } from "@/lib/redux/stores/store";
-
-const inter = Inter({ subsets: ["latin"] });
-
-export const theme = createTheme({
-  palette: {
-    // primary: {
-    //   main: ""
-    // },
-    // action: {
-    //   // disabledBackground:"rgb(147, 187, 227)",
-    // },
-    // back
-    text: {
-      // primary: "#000",
-      primary: "#424242",
-      secondary: "#424242",
-    },
-    primary: {
-      main: "#aaaaff",
-    },
-    secondary: {
-      main: "#d9d9feff",
-    },
-    // text: {
-    //   secondary: "#ffffff"
-    // },
-    // secondary: {
-    // }
-    background: {
-      // paper: "#afa",
-      paper: "#ffffff",
-      default: "#aaaaff",
-    },
-  },
-  typography: {
-    fontSize: 12,
-    subtitle1: {
-      fontSize: 9,
-    },
-  },
-  // spacing: 8
-});
-
+import { theme } from "@/lib/design";
 
 export default function RootLayout({
   children,
@@ -55,10 +13,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   
-  
   return (
     <html lang="en">
-      <body style={{ margin: 0 }}>
+      <body style={{ margin: 0, overflow: "hidden" }}>
         <ThemeProvider theme={theme}>
           <Container
             maxWidth={false}
@@ -69,7 +26,7 @@ export default function RootLayout({
             sx={{
               minHeight: "100vh",
               backgroundColor: theme.palette.background.paper,
-              overflowY: "hidden"
+              // overflowY: "hidden",
             }}
           >
             <Container
@@ -80,9 +37,7 @@ export default function RootLayout({
                 minHeight: "100vh",
               }}
             >
-              <Provider store={store}>
-                {children}
-              </Provider>
+              <Provider store={store}>{children}</Provider>
             </Container>
           </Container>
         </ThemeProvider>

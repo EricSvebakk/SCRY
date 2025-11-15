@@ -16,8 +16,9 @@ import { AutocompleteOption } from "@/lib/types";
 import { useCeleryFileRGGMutation } from "@/lib/redux/api/api";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 import { setGDEField } from "@/lib/redux/reducers/plotReducer";
+import DialogTitleHelp from "../custom/DialogTitle";
 
-export default function DotplotDialog(props: {
+export default function DialogDotplot(props: {
   isOpen: boolean;
   setIsOpen: Function;
 }) {
@@ -59,7 +60,13 @@ export default function DotplotDialog(props: {
 
   return (
     <Dialog open={props.isOpen} onClose={() => props.setIsOpen(false)}>
-      <DialogTitle>Dot plot</DialogTitle>
+      <DialogTitle>
+        <DialogTitleHelp
+          title="Create DGE Ranking"
+          tooltip="This will generate a differential gene expression ranking based on the clusters from the selected observation"
+        />
+        {/* Create DGE Dotplot */}
+      </DialogTitle>
       <DialogContent>
         <Stack direction="column" rowGap={2} pt={2} width={300}>
           <Autocomplete
@@ -75,7 +82,7 @@ export default function DotplotDialog(props: {
             onChange={(event: any, value: any, reason, details) => {
               const selectedOption = details?.option as any;
 
-              console.log(reason, details);
+              // console.log(reason, details);
 
               if (reason === "selectOption") {
                 setSelectedUns(selectedOption);
@@ -90,7 +97,7 @@ export default function DotplotDialog(props: {
               return (
                 <TextField
                   {...params}
-                  label="Select key"
+                  label="Select observation"
                   placeholder="key"
                   InputLabelProps={{ shrink: true }}
                 />
@@ -133,14 +140,16 @@ export default function DotplotDialog(props: {
               (value as AutocompleteOption).id
             }
             onChange={(event: any, value: any, reason, details) => {
-              const selectedOption = (details?.option as any);
+              const selectedOption = details?.option as any;
 
-              console.log(reason, details);
+              // console.log(reason, details);
 
               if (reason === "selectOption") {
                 setSelectedGenes([...selectedGenes, selectedOption]);
               } else if (reason === "removeOption") {
-                setSelectedGenes(selectedGenes.filter((e) => e !== selectedOption))
+                setSelectedGenes(
+                  selectedGenes.filter((e) => e !== selectedOption)
+                );
               } else if (reason === "clear") {
                 setSelectedGenes([]);
               }
@@ -159,32 +168,49 @@ export default function DotplotDialog(props: {
             }}
           />
 
-          <Button
-            variant="outlined"
-            size="medium"
-            onClick={() => {
-              console.log(selectedUns, selectedGenes);
-              
-              if (selectedUns) {
+          <Stack direction="row" width="100%" gap={1}>
+            <Button
+              fullWidth
+              variant="outlined"
+              size="medium"
+              sx={{
+                fontWeight: "bold",
+              }}
+              onClick={() => {
+                props.setIsOpen(false);
+              }}
+            >
+              Cancel
+            </Button>
 
-                getRGG({
-                  unsKey: selectedUns.label,
-                  nGenes: nGenes,
-                  selectedGenes: selectedGenes.map((e) => e.label),
-                })
-                  .then((data) => {
-                    
+            <Button
+              fullWidth
+              variant="contained"
+              size="medium"
+              sx={{
+                fontWeight: "bold",
+                boxShadow: "none",
+              }}
+              onClick={() => {
+                // console.log(selectedUns, selectedGenes);
+
+                if (selectedUns) {
+                  getRGG({
+                    unsKey: selectedUns.label,
+                    nGenes: nGenes,
+                    selectedGenes: selectedGenes.map((e) => e.label),
+                  }).then((data) => {
                     if (data.data?.ok) {
-                      
                       pollTaskStatus(
                         data.data.response,
+                        data.data.timestamp,
                         "celeryFileRGG",
                         dispatch,
                         (result: any) => {
                           dispatch(
                             setGDEField({
                               field: "expression",
-                              value: result.data.table
+                              value: result.data.table,
                             })
                           );
                           dispatch(
@@ -205,19 +231,18 @@ export default function DotplotDialog(props: {
                               value: JSON.parse(result.data.dendro),
                             })
                           );
-                          
                         }
-                      )
+                      );
                     }
-                    
-                  })
-                
-                props.setIsOpen(false);
-              }
-            }}
-          >
-            Start
-          </Button>
+                  });
+
+                  props.setIsOpen(false);
+                }
+              }}
+            >
+              Start
+            </Button>
+          </Stack>
         </Stack>
       </DialogContent>
     </Dialog>

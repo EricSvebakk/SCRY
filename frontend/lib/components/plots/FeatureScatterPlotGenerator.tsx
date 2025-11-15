@@ -57,7 +57,7 @@ const FeatureScatterPlotGenerator = (props: {
   
   
   
-  console.log(Math.min(...range), Math.max(...range));
+  // console.log(Math.min(...range), Math.max(...range));
     
   const colorScale = d3
   .scaleSequential()

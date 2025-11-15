@@ -74,8 +74,14 @@ def validate(user_id: str, pass_key: str, file_id: str, func: Callable, *args, d
     print(func.__name__)
     
     if (delay):
+      
+      async_response = func.delay(file_path, user_id, *args)
+      
+      meta = worker.register_task_for_user(user_id, file_path, async_response.id, func.__name__, list(args))
+      
       response: ValidationResponse = {
-        "response": func.delay(file_path, user_id, *args).id,
+        "response": async_response.id,
+        "timestamp": meta["created_at"],
         "ok": True
       }
     else:
@@ -98,7 +104,7 @@ def validate(user_id: str, pass_key: str, file_id: str, func: Callable, *args, d
 async def root():
   """
   """
-  return JSONResponse(content={ "message": "Thesis API" })
+  return JSONResponse(content={ "message": "SCRY API" })
 
 @app.get("/system/files", tags=["SYSTEM"])
 async def system_file_names(
@@ -155,9 +161,17 @@ async def celltypist_models():
     "ok": True
   }
   return JSONResponse(content=obj)
-  
+
 # ============================================================================================
 # CELERY
+@app.get("/file/metadata", tags=["FILE"])
+async def file_metadata(
+ file_id: str = Header(alias=FILEID),
+ user_id: str = Header(alias=USERID),
+ pass_key: str = Header(alias=PASSKEY),
+):
+  obj = validate(user_id, pass_key, file_id, worker.get_metadata)
+  return JSONResponse(content=obj)
 
 @app.get("/file/hierarchy", tags=["FILE"])
 async def file_hierarchy(
@@ -234,12 +248,13 @@ async def celery_file_nldr(
 @app.post("/file/leiden", tags=["FILE"])
 async def celery_file_leiden(
   uns_key: str = Form(...),
+  neighbors_key: str = Form(...),
   resolution: float = Form(...),
   file_id: str = Header(alias=FILEID),
   user_id: str = Header(alias=USERID),
   pass_key: str = Header(alias=PASSKEY),
 ):
-  obj = validate(user_id, pass_key, file_id, worker.compute_leiden, uns_key, resolution, delay=True)
+  obj = validate(user_id, pass_key, file_id, worker.compute_leiden, uns_key, neighbors_key, resolution, delay=True)
   return JSONResponse(content=obj)
 
 @app.post("/file/rgg", tags=["FILE"])
@@ -276,6 +291,17 @@ async def celery_file_recluster(
   obj = validate(user_id, pass_key, file_id, worker.compute_recluster, observation.model_dump(), delay=True)
   return JSONResponse(content=obj)
 
+@app.post("/file/merge", tags=["FILE"])
+async def celery_file_merge(
+  file_path_dest: str,
+  observation: newObservation,
+  file_id: str = Header(alias=FILEID),
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
+):
+  obj = validate(user_id, pass_key, file_id, worker.compute_recluster, file_path_dest, observation.model_dump(), delay=True)
+  return JSONResponse(content=obj)
+
 @app.post("/celltypist/annotate", tags=["CELLTYPIST"])
 async def celery_celltypist_annotate(
   annotation_key: str = Form(...),
@@ -290,6 +316,15 @@ async def celery_celltypist_annotate(
 
 # ============================================================================================
 # STATUS
+
+@app.get("/celery/tasks", tags=["STATUS"])
+async def celery_user_tasks(
+  file_id: str = Header(alias=FILEID),
+  user_id: str = Header(alias=USERID),
+  pass_key: str = Header(alias=PASSKEY),
+):
+  obj = validate(user_id, pass_key, file_id, worker.get_tasks)
+  return JSONResponse(content=obj)
 
 @app.get("/celery/status", tags=["STATUS"])
 async def celery_status(

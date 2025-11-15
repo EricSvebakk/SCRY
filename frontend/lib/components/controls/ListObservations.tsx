@@ -1,19 +1,21 @@
 
-import { Button, Stack } from "@mui/material";
+import { Stack } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { useState } from "react";
 import { setAnndataField } from "@/lib/redux/reducers/plotReducer";
-import CurrentProgress from "../OverlayCurrentProgress";
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
+import { useLazyFileHierarchyQuery, useLazyFileObsQuery } from "@/lib/redux/api/api";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import DialogClustering from "../modals/DialogClustering";
-import AutoAnnotationDialog from "../modals/AutoAnnotationDialog";
-import { useLazyFileObsQuery } from "@/lib/redux/api/api";
+import DialogAutoAnnotation from "../modals/DialogAutoAnnotation";
+import ButtonList from "../custom/ButtonList";
 
 export default function ListClusterings() {
   
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.fileHierarchy)
+  const statusHierachy = useAppSelector((state) => state.plotReducer.statusBackend.metadata);
+  const statusObservation = useAppSelector((state) => state.plotReducer.statusBackend.fileObs);
+  const statusLeiden = useAppSelector((state) => state.plotReducer.statusBackend.Leiden);
   
   const dispatch = useAppDispatch();
   const [getObs] = useLazyFileObsQuery();
@@ -32,90 +34,56 @@ export default function ListClusterings() {
       }}
       justifyContent="end"
     >
-      <Stack
-        direction="column"
-        sx={{
-          width: "100%",
-          height: "100%",
-          overflowY: "auto",
-          overflowX: "hidden",
-          backgroundColor: theme.palette.background.paper,
-        }}
-      >
-        {obs.keys && !status.inProgress ? (
-          [...obs.keys]
-            .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
-            .map((e, i) => {
-              const isSelected = obs.selectedKey === e;
-
-              return (
-                <Button
-                  key={"accordion_" + e}
-                  size="small"
-                  variant="text"
-                  disabled={isSelected}
-                  tabIndex={300 + i}
-                  sx={{
-                    backgroundColor: isSelected
-                      ? theme.palette.action.selected
-                      : "",
-                    color: theme.palette.text.secondary,
-                    justifyContent: "start",
-                    overflowX: "clip",
-                    fontWeight: obs.selectedKey === e ? "bold" : "",
-                    textTransform: "initial",
-                    fontSize: theme.typography.fontSize,
-                  }}
-                  onClick={() => {
-                    dispatch(
-                      setAnndataField({
-                        attribute: "obs",
-                        field: "selectedKey",
-                        value: e,
-                      })
-                    );
-
-                    getObs({
-                      obs: e,
-                    });
-                  }}
-                >
-                  {e}
-                </Button>
-              );
+      <ButtonList
+        items={obs.keys ?? []}
+        selectedItem={obs.selectedKey}
+        statusIncoming={statusHierachy}
+        statusOutgoing={statusObservation}
+        placeholder="No observations"
+        onClick={(item) => {
+          dispatch(
+            setAnndataField({
+              attribute: "obs",
+              field: "selectedKey",
+              value: item,
             })
-        ) : (
-          <CurrentProgress status={status} />
-        )}
-      </Stack>
+          );
+
+          getObs({
+            obs: item,
+          });
+        }}
+      />
 
       <ButtonSecondary
         title="+ Create Observation"
         onClick={() => setIsClusteringDialogOpen(true)}
-        disabled={status.inProgress}
+        loading={statusLeiden.inProgress}
+        disabled={statusHierachy.inProgress}
         sx={{
           borderTop: "1px solid grey",
         }}
       />
 
-      <ButtonSecondary
+      {/* <ButtonSecondary
         title="+ Create Auto-Annotation"
         onClick={() => setIsAutoAnnotDialogOpen(true)}
-        disabled={status.inProgress}
+        loading={statusLeiden.inProgress}
+        disabled={statusHierachy.inProgress}
         sx={{
           borderTop: "1px solid grey",
         }}
-      />
+      /> */}
 
       <DialogClustering
         isOpen={isClusteringDialogOpen}
         setIsOpen={setIsClusteringDialogOpen}
       />
 
-      <AutoAnnotationDialog
+      {/* <DialogAutoAnnotation
         isOpen={isAutoAnnotDialogOpen}
         setIsOpen={setIsAutoAnnotDialogOpen}
-      />
+      /> */}
     </Stack>
   );
   

@@ -1,5 +1,6 @@
 
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
+import { useAppSelector } from "@/lib/redux/hooks/hooks";
 import {
   Button,
   Tooltip,
@@ -11,22 +12,32 @@ export function PopoverTableData(props: {
   params: Record<string, unknown>;
   onOpen: (e: MouseEvent<HTMLElement>, title: string) => void;
 }) {
+  
+  const selected = useAppSelector((state) => state.plotReducer.data.GDE.selected);
+  const statusRGG = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileRGG);
+  
+  const isSelected = selected === props.title;
+  
   return (
     <Tooltip title={props.title} placement="right">
-      <Button
-        fullWidth
-        sx={{
-          color: theme.palette.text.secondary,
-          justifyContent: "start",
-          overflowX: "clip",
-          textTransform: "initial",
-          fontSize: theme.typography.fontSize,
-        }}
-        size="small"
-        onClick={(e) => props.onOpen(e, props.title)}
-      >
-        {props.title}
-      </Button>
+      <span>
+        <Button
+          fullWidth
+          disabled={isSelected || statusRGG.inProgress}
+          sx={{
+            backgroundColor: isSelected ? theme.palette.action.selected : "",
+            color: theme.palette.text.secondary,
+            justifyContent: "start",
+            overflowX: "clip",
+            textTransform: "initial",
+            fontSize: theme.typography.fontSize,
+          }}
+          size="small"
+          onClick={(e) => props.onOpen(e, props.title)}
+        >
+          {props.title}
+        </Button>
+      </span>
     </Tooltip>
   );
 }

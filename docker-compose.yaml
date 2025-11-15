@@ -1,8 +1,8 @@
 
 services:
   
-  thesis_caddy:
-    container_name: thesis-caddy
+  scry_caddy:
+    container_name: scry-caddy
     image: caddy:2.10.0-alpine
     restart: unless-stopped
     env_file:
@@ -18,8 +18,8 @@ services:
     networks:
       - caddy_net
    
-  thesis_backend:
-    container_name: thesis-backend
+  scry_backend:
+    container_name: scry-backend
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -32,36 +32,36 @@ services:
       - ./persistent01:/persistent01  # Mount for file access
     environment:
       - PYTHONPATH=/usr/src/app
-      - CELERY_BROKER_URL=redis://thesis_redis:6379/0
+      - CELERY_BROKER_URL=redis://scry_redis:6379/0
     networks:
       - caddy_net
   
-  thesis_redis:
+  scry_redis:
+    container_name: scry-redis
     image: redis:7-alpine
-    container_name: thesis-redis
     restart: unless-stopped
     networks:
       - caddy_net
   
-  thesis_celery:
+  scry_celery:
+    container_name: scry-celery
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: thesis-celery
     command: celery -A worker:celery_app worker --loglevel=info --concurrency=4
     depends_on:
-      - thesis_backend
-      - thesis_redis
+      - scry_backend
+      - scry_redis
     volumes:
       - ./backend/app:/usr/src/app
       - ./persistent01:/persistent01  # Mount for file access
     environment:
-      - CELERY_BROKER_URL=redis://thesis_redis:6379/0
+      - CELERY_BROKER_URL=redis://scry_redis:6379/0
     networks:
       - caddy_net
   
-  thesis_frontend:
-    container_name: thesis-frontend
+  scry_frontend:
+    container_name: scry-frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -69,12 +69,12 @@ services:
         NEXT_PUBLIC_BACKEND_ENDPOINT: ${BACKEND_ENDPOINT}
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/usr/src/app # Sync the frontend code
+    # volumes:
+      # - ./frontend:/app # Sync the frontend code
     networks:
       - caddy_net
     depends_on:
-      - thesis_backend
+      - scry_backend
 
 volumes:
   caddy_data:

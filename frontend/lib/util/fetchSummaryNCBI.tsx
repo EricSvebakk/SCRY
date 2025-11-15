@@ -1,7 +1,7 @@
 import { setGeneReport } from "../redux/reducers/plotReducer";
 import { geneReport } from "../types";
 
-export default function get_ncbi_gene_summary(gene: string, dispatch: Function) {
+export default function fetchSummaryNCBI(gene: string, dispatch: Function) {
   
   const request =
     "https://api.ncbi.nlm.nih.gov/datasets/v2/gene/symbol/" + gene + "/taxon/9606";

@@ -2,6 +2,7 @@ import { backendAPI } from "./redux/api/api";
 
 // ==== Related to reducer =================================================================
 export type InitialPlotStateProps = {
+  system: systemFields;
   anndata: AnndataAttributes;
   plot: PlotConfiguration;
   data: {
@@ -24,6 +25,25 @@ export type InitialPlotStateProps = {
   statusBackend: statusBackendAPI;
   status: statusAttributes;
   error: errorAttributes;
+};
+
+export type fileType = {
+  id: string;
+  name: string;
+  fileSize: number;
+  fileType: string;
+};
+
+export type systemFields = {
+  user: {
+    id: string;
+    passKey: string;
+  };
+  files: {
+    all: fileType[];
+    selected: fileType[];
+    active: string;
+  };
 };
 
 export type AnndataAttributeData = {
@@ -143,12 +163,13 @@ export type geneDendrogramData = {
 // };
 
 export type GDEFields = {
+  selected: string | null;
   expression: geneExpressionData[] | null;
   dendrogram: geneDendrogramData | null;
-  genes: string[];
-  clusters: string[];
   nGenes: number;
   nClusters: number;
+  genes: string[];
+  clusters: string[];
   // plotOptions: {
   //   [key in keyof DotplotOptions]: DotplotOptions[key];
   // };
@@ -189,6 +210,7 @@ export const fetchOptions = [
 
 export type statusOptions = {
   inProgress: boolean;
+  timestamp: string;
   message: string;
 };
 
@@ -277,14 +299,6 @@ export type dgeAttributes = {
 export type obsmData = {
   coordinates: number[][];
 };
-
-export type fileType = {
-  id: string;
-  name: string;
-  fileSize: number;
-  fileType: string;
-};
-
 
 export type AutocompleteOption = {
   label: string;

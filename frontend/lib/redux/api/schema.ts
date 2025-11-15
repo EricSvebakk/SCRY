@@ -2,6 +2,7 @@ import { fetchOptions, Reclustering } from "@/lib/types";
 
 export type backendResponse = {
   response: any,
+  timestamp?: string,
   ok: boolean
 }
 
@@ -19,6 +20,7 @@ export type celeryFileNLDRSchema = {
 
 export type celeryFileLeidenSchema = {
   unsKey: string,
+  neighborsKey: string,
   resolution: number,
 }
 
@@ -37,6 +39,11 @@ export type celeryFileCopySchema = {
 export type celeryFileReclusterSchema = {
   reclustering: Reclustering;
 }
+
+export type celeryFileMergeSchema = {
+  reclustering: Reclustering;
+  fileDestID: string;
+};
 
 export type celeryCelltypistAnnotateSchema = {
   annotationKey: string;

@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
 COPY ./requirements.txt /usr/src/app/requirements.txt
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir --upgrade -r /usr/src/app/requirements.txt
+RUN pip install "uvicorn[standard]" gunicorn
 
 # Copy project files into the container
 COPY ./app /usr/src/app
@@ -21,8 +22,15 @@ COPY ./app /usr/src/app
 # Expose the application port
 EXPOSE 8000
 
-# Run the application
-# CMD ["uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000", "--reload"]
-# CMD [ "fastapi", "run", "app/main.py", "--port", "8000" ]
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--timeout-keep-alive", "1800"]
-
+# run prod
+CMD exec gunicorn "main:app" \
+    -k uvicorn.workers.UvicornWorker \
+    --bind 0.0.0.0:8000 \
+    --workers 4 \
+    --worker-tmp-dir /dev/shm \
+    --timeout 1800 \
+    --keep-alive 5 \
+    --log-level debug
+    
+# run dev
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--timeout-keep-alive", "1800"]

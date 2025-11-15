@@ -4,16 +4,14 @@ import ClusterScatterPlotGenerator from "./ClusterScatterPlotGenerator";
 import { useEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 import { PopoverImageSaving } from "../modals/popover/PopoverImageSaving";
 import { PopoverScatterplotSettings } from "../modals/popover/popoverScatterplotSettings";
 import { PopoverSubset } from "../modals/popover/popoverSubset";
 
 export function ClusterScatterPlot(props: {
-  selectedClusters: string[];
   canvasID: string;
 } = {
-  selectedClusters: [],
   canvasID: ""
 }) {
   
@@ -22,6 +20,7 @@ export function ClusterScatterPlot(props: {
   const config = useAppSelector((state) => state.plotReducer.plot.cluster);
   const imageTrigger = useAppSelector((state) => state.plotReducer.navigation.triggers.saveScatterPlotImage);
   const status = useAppSelector((state) => state.plotReducer.statusBackend.fileObsm);
+    const statusOutgoing = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileNLDR);
   const selectedCluster = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);
   
   const [counter, setCounter] = useState(0);
@@ -100,7 +99,7 @@ export function ClusterScatterPlot(props: {
 
       <Stack width="100%" height="100%" direction="row" columnGap={1}>
         {status.inProgress ? (
-          <CurrentProgress status={status} />
+          <CurrentProgress status={statusOutgoing} />
         ) : (
           <Stack direction="row" position="relative" height="100%" width="100%">
             {obsm.data ? (

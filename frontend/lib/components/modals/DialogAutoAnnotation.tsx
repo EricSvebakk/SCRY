@@ -1,12 +1,12 @@
 import { useCeleryCelltypistAnnotateMutation, useLazyFileHierarchyQuery } from "@/lib/redux/api/api";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
-import { setAnndataField } from "@/lib/redux/reducers/plotReducer";
 import { AutocompleteOption } from "@/lib/types";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 import { Autocomplete, Button, createFilterOptions, Dialog, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
+import DialogTitleHelp from "../custom/DialogTitle";
 
-export default function AutoAnnotationDialog(props: {
+export default function DialogAutoAnnotation(props: {
   isOpen: boolean;
   setIsOpen: Function;
 }) {
@@ -16,19 +16,16 @@ export default function AutoAnnotationDialog(props: {
   const obsp = useAppSelector((state) => state.plotReducer.anndata.obsp.keys);
   
   const dispatch = useAppDispatch();
-  
-  const [selectedModel, setSelectedModel] = useState<AutocompleteOption | null>(null);
-  const [structuredmodels, setStructuredModels] = useState<AutocompleteOption[]>([]);
-  
-  const [connectivitiesFilteredOptions, setConnectivitiesFilteredOptions] = useState<AutocompleteOption[]>([]);
-  const [selectedConnectivity, setSelectedConnectivity] = useState<AutocompleteOption | null>(null);
+  const [getAnnotation] = useCeleryCelltypistAnnotateMutation();
+  const [getHierarchy] = useLazyFileHierarchyQuery();
   
   const [annotationKey, setAnnotationKey] = useState<string>("");
+  const [selectedModel, setSelectedModel] = useState<AutocompleteOption | null>(null);
+  const [selectedConnectivity, setSelectedConnectivity] = useState<AutocompleteOption | null>(null);
+  const [structuredmodels, setStructuredModels] = useState<AutocompleteOption[]>([]);
+  const [connectivitiesFilteredOptions, setConnectivitiesFilteredOptions] = useState<AutocompleteOption[]>([]);
   
   const filterOptions = createFilterOptions({ limit: 20 });
-  
-  const [getAnnotation] = useCeleryCelltypistAnnotateMutation();
-  const [getHierarchy] = useLazyFileHierarchyQuery();  
   
   useEffect(() => {
     if (models.length > 0) {
@@ -41,7 +38,7 @@ export default function AutoAnnotationDialog(props: {
     }
   }, [models]);
   
-    useEffect(() => {
+  useEffect(() => {
     if (uns && obsp) {
       const structuredOptions: AutocompleteOption[] = Object.keys(uns)
         .filter((e: string) => uns[e] && Object.keys(uns[e]).includes("connectivities_key"))
@@ -53,10 +50,14 @@ export default function AutoAnnotationDialog(props: {
   
   return (
     <Dialog open={props.isOpen} onClose={() => props.setIsOpen(false)}>
-      <DialogTitle>Automatic Annotation Suggestion</DialogTitle>
-      <DialogContent>
+      <DialogTitle>
+        <DialogTitleHelp
+          title="Create Observation with CellTypist"
+          tooltip="This will generate a clustering using Machine-Learning based on a UMAP neighborhood graph"
+        />
+      </DialogTitle>
+      <DialogContent sx={{ p: 2, width: 300 }}>
         <Stack direction="column" rowGap={2} pt={2}>
-
           <Autocomplete
             disabled={connectivitiesFilteredOptions.length === 0}
             size="small"
@@ -66,7 +67,7 @@ export default function AutoAnnotationDialog(props: {
             onChange={(event: any, value: any, reason, details) => {
               const selectedOption = details?.option as any;
 
-              console.log(reason, details);
+              // console.log(reason, details);
 
               if (reason === "selectOption") {
                 setSelectedConnectivity(selectedOption);
@@ -81,7 +82,7 @@ export default function AutoAnnotationDialog(props: {
               return (
                 <TextField
                   {...params}
-                  label="Select connectivities"
+                  label="Select neighborhood graph"
                   placeholder="key"
                   InputLabelProps={{ shrink: true }}
                 />
@@ -98,7 +99,7 @@ export default function AutoAnnotationDialog(props: {
             onChange={(event: any, value: any, reason, details) => {
               const selectedOption = details?.option as any;
 
-              console.log(reason, details);
+              // console.log(reason, details);
 
               if (reason === "selectOption") {
                 setSelectedModel(selectedOption);
@@ -113,7 +114,7 @@ export default function AutoAnnotationDialog(props: {
               return (
                 <TextField
                   {...params}
-                  label="Select model"
+                  label="Select CellTypist model"
                   placeholder="model"
                   InputLabelProps={{ shrink: true }}
                 />
@@ -133,25 +134,43 @@ export default function AutoAnnotationDialog(props: {
             onChange={(event) => setAnnotationKey(event.target.value)}
           />
 
-          <Button
-            variant="outlined"
-            size="medium"
-            onClick={() => {
-              
-              if (selectedConnectivity?.label && selectedModel?.label) {
-                
-                const connectivitiesKey = uns[selectedConnectivity?.label].connectivities_key;
-                
-                getAnnotation({
+          <Stack direction="row" width="100%" gap={1}>
+            <Button
+              fullWidth
+              variant="outlined"
+              size="medium"
+              sx={{
+                fontWeight: "bold",
+              }}
+              onClick={() => {
+                props.setIsOpen(false);
+              }}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              fullWidth
+              variant="contained"
+              size="medium"
+              sx={{
+                fontWeight: "bold",
+                boxShadow: "none",
+              }}
+              onClick={() => {
+                if (selectedConnectivity?.label && selectedModel?.label) {
+                  const connectivitiesKey =
+                    uns[selectedConnectivity?.label].connectivities_key;
+
+                  getAnnotation({
                     annotationKey: annotationKey,
                     connectivitiesKey: connectivitiesKey,
                     annotationModel: selectedModel.label,
-                })
-                  .then((data) => {
-                    
+                  }).then((data) => {
                     if (data.data?.ok) {
                       pollTaskStatus(
                         data.data.response,
+                        data.data.timestamp,
                         "celeryCelltypistAnnotate",
                         dispatch,
                         () => {
@@ -159,15 +178,15 @@ export default function AutoAnnotationDialog(props: {
                         }
                       );
                     }
-                    
-                  })
-                
-                props.setIsOpen(false);
-              }
-            }}
-          >
-            Start
-          </Button>
+                  });
+
+                  props.setIsOpen(false);
+                }
+              }}
+            >
+              Start
+            </Button>
+          </Stack>
         </Stack>
       </DialogContent>
     </Dialog>

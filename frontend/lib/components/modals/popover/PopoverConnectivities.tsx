@@ -1,5 +1,5 @@
 
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 import {
   Button,
   Popover,

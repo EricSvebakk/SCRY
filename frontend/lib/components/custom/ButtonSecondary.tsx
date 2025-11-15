@@ -1,4 +1,4 @@
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 import { LoadingButton } from "@mui/lab";
 import { SxProps, Theme } from "@mui/material";
 

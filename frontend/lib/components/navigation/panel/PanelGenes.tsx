@@ -1,26 +1,29 @@
 
 
-import { Autocomplete, Box, Collapse, createFilterOptions, Grid, Link, Stack, TextField, Typography } from "@mui/material";
+import { Autocomplete, Collapse, createFilterOptions, Stack, TextField } from "@mui/material";
 import React, { useEffect, useRef, useState } from "react";
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { AutocompleteOption } from "@/lib/types";
 import { LoadingButton } from "@mui/lab";
-import get_ncbi_gene_summary from "@/lib/fetch/get_ncbi_gene_summary";
+import fetchSummaryNCBI from "@/lib/util/fetchSummaryNCBI";
 import { FeatureScatterPlot } from "../../plots/FeatureScatterPlot";
 import { useLazyFileFeatureCoordinatesQuery } from "@/lib/redux/api/api";
+import GeneSummary from "../../custom/GeneSummary";
 
 export default function PanelGenes(props: {
   open: boolean;
   setOpen: Function;
 }) {
 
+  const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;  
   const genes = useAppSelector((state) => state.plotReducer.data.genes);
   const status = useAppSelector((state) => state.plotReducer.statusBackend.fileFeatureCoordinates);
   const report = useAppSelector((state) => state.plotReducer.data.geneReport);
   
   const ref = useRef();
   
+  const [tableData, setTableData] = useState<string[]>([]);  
   const [selectedGene, setSelectedGene] = useState<AutocompleteOption | null>(null);  
   const [geneOptionsFiltered, setGeneOptionsFiltered] = useState<AutocompleteOption[]>([]);
     
@@ -39,6 +42,16 @@ export default function PanelGenes(props: {
     }
   }, [genes]);
   
+   useEffect(() => {
+     if (uns) {
+       const newTableData = Object.keys(uns).filter((e: string) =>
+         uns[e] && Object.keys(uns[e]).includes("n_genes")
+       );
+
+       setTableData(newTableData);
+     }
+   }, [uns]);
+  
   return (
     <Collapse
       unmountOnExit
@@ -53,204 +66,168 @@ export default function PanelGenes(props: {
         zIndex: 500,
       }}
     >
-      <Grid
-        container
+      <Stack
         direction="column"
-        height="100%"
+        // height="100%"
         width={300}
         rowGap={1}
         sx={{
           p: 1,
+          height: "100vh",
+          overflow: "hidden",
           borderLeft: "1px solid grey",
           backgroundColor: theme.palette.primary.main,
           WebkitBoxShadow: "-1px 0 2px -1px #000000",
           boxShadow: "-1px 0 2px -1px #000000",
         }}
       >
-        <Grid item>
-          <FeatureScatterPlot />
-        </Grid>
+        <FeatureScatterPlot />
 
-        <Grid item>
-          <Stack
-            direction="column"
-            rowGap={1}
-            sx={{
-              border: "1px solid grey",
-              p: 1,
-              pt: 2,
-              backgroundColor: theme.palette.background.paper,
-            }}
-          >
-            <Autocomplete
-              disabled={genes.length === 0}
-              size="small"
-              fullWidth
-              value={selectedGene}
-              options={geneOptionsFiltered}
-              isOptionEqualToValue={(option, value) =>
-                (option as AutocompleteOption).id ===
-                (value as AutocompleteOption).id
-              }
-              onChange={(event: any, value: any, reason, details) => {
-                const selectedOption = details?.option as any;
-
-                if (reason === "selectOption") {
-                  setSelectedGene(selectedOption);
-                } else if (reason === "removeOption") {
-                  setSelectedGene(null);
-                } else if (reason === "clear") {
-                  setSelectedGene(null);
-                }
-              }}
-              filterOptions={unsFilterOptions}
-              noOptionsText="No matching gene"
-              renderInput={(params) => {
-                return (
-                  <TextField
-                    {...params}
-                    label="Select gene"
-                    placeholder="gene"
-                    InputLabelProps={{ shrink: true }}
-                  />
-                );
-              }}
-            />
-
-            <LoadingButton
-              variant="outlined"
-              size="medium"
-              loading={status.inProgress}
-              onClick={() => {
-                if (selectedGene) {
-                  
-                  getFeatureCoordinates({
-                    featureKey: selectedGene.label
-                  })
-
-                  get_ncbi_gene_summary(selectedGene.label, dispatch);
-                }
-              }}
-            >
-              Fetch feature data
-            </LoadingButton>
-          </Stack>
-        </Grid>
-
-        <Grid
-          item
-          xs
+        <Stack
+          direction="column"
+          rowGap={1}
           sx={{
-            p: 1,
-            height: "100%",
-            backgroundColor: theme.palette.background.paper,
             border: "1px solid grey",
+            p: 1,
+            pt: 2,
+            backgroundColor: theme.palette.background.paper,
           }}
         >
-          <Stack
-            direction="column"
-            sx={{
-              height: "100%",
+          <Autocomplete
+            disabled={genes.length === 0}
+            size="small"
+            fullWidth
+            value={selectedGene}
+            options={geneOptionsFiltered}
+            isOptionEqualToValue={(option, value) =>
+              (option as AutocompleteOption).id ===
+              (value as AutocompleteOption).id
+            }
+            onChange={(event: any, value: any, reason, details) => {
+              const selectedOption = details?.option as any;
+
+              if (reason === "selectOption") {
+                setSelectedGene(selectedOption);
+              } else if (reason === "removeOption") {
+                setSelectedGene(null);
+              } else if (reason === "clear") {
+                setSelectedGene(null);
+              }
+            }}
+            filterOptions={unsFilterOptions}
+            noOptionsText="No matching gene"
+            renderInput={(params) => {
+              return (
+                <TextField
+                  {...params}
+                  label="Select gene"
+                  placeholder="gene"
+                  InputLabelProps={{ shrink: true }}
+                />
+              );
+            }}
+          />
+
+          <LoadingButton
+            variant="outlined"
+            size="medium"
+            loading={status.inProgress}
+            onClick={() => {
+              if (selectedGene) {
+                getFeatureCoordinates({
+                  featureKey: selectedGene.label,
+                });
+
+                fetchSummaryNCBI(selectedGene.label, dispatch);
+              }
             }}
           >
-            <Stack
-              direction="row"
-              sx={{
-                width: "100%",
-                justifyContent: "end",
-              }}
-            >
-              <Typography
-                variant="caption"
-              >
-                Gene Summary
-              </Typography>
-            </Stack>
-            
-            {report ? (
-              <Stack
-                direction="column"
-                sx={{
-                  height: "100%",
-                }}
-              >
-                <Stack
-                  direction="column"
-                  rowGap={1}
-                  sx={{
-                    height: "100%",
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {report.symbol}
-                  </Typography>
+            Fetch feature data
+          </LoadingButton>
 
-                  <Typography
-                    sx={{
-                      fontStyle: "italic",
-                    }}
-                    variant="body2"
-                  >
-                    {report.description}
-                  </Typography>
+          {/* <Autocomplete
+            disabled={genes.length === 0}
+            size="small"
+            sx={{
+              pt: 1
+            }}
+            fullWidth
+            value={selectedGene}
+            options={geneOptionsFiltered}
+            isOptionEqualToValue={(option, value) =>
+              (option as AutocompleteOption).id ===
+              (value as AutocompleteOption).id
+            }
+            onChange={(event: any, value: any, reason, details) => {
+              const selectedOption = details?.option as any;
 
-                  {report.summary.map((e, i) => {
-                    return (
-                      <Typography key={"report_summary_" + i} variant="body2">
-                        {e}
-                      </Typography>
-                    );
-                  })}
-                  <Stack direction="column" rowGap={0}>
-                    <Typography variant="body2">Synonyms</Typography>
-                    <Typography variant="body2">
-                      [{report.synonyms.join(", ")}]
-                    </Typography>
-                  </Stack>
-                </Stack>
-                
-                <Stack
-                  direction="row"
-                  sx={{
-                    width: "100%",
-                    justifyContent: "end",
-                  }}
-                >
-                  <Link
-                    href={report.source}
-                    underline="hover"
-                    variant="body2"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    [Source]
-                  </Link>
-                </Stack>
-              </Stack>
-            ) : (
-              <Box
-                sx={{
-                  height: "100%",
-                  width: "100%",
-                  alignContent: "center",
-                  justifyItems: "center"
-                }}
-              >
-                <Typography variant="body2">
-                  No gene selected
-                </Typography>
-              </Box>
-            )}
+              if (reason === "selectOption") {
+                setSelectedGene(selectedOption);
+              } else if (reason === "removeOption") {
+                setSelectedGene(null);
+              } else if (reason === "clear") {
+                setSelectedGene(null);
+              }
+            }}
+            filterOptions={unsFilterOptions}
+            noOptionsText="No matching gene"
+            renderInput={(params) => {
+              return (
+                <TextField
+                  {...params}
+                  label="Select DGE result"
+                  placeholder="DGE"
+                  InputLabelProps={{ shrink: true }}
+                />
+              );
+            }}
+          />
 
+          <LoadingButton
+            variant="outlined"
+            size="medium"
+            loading={status.inProgress}
+            onClick={() => {
+              if (selectedGene) {
+                getFeatureCoordinates({
+                  featureKey: selectedGene.label,
+                });
 
-          </Stack>
-        </Grid>
+                get_ncbi_gene_summary(selectedGene.label, dispatch);
+              }
+            }}
+          >
+            Fetch expression dotplot
+          </LoadingButton> */}
+        </Stack>
 
-      </Grid>
+        {/* <Stack
+          direction="column"
+          rowGap={1}
+          sx={{
+            border: "1px solid grey",
+            p: 1,
+            pt: 2,
+            backgroundColor: theme.palette.background.paper,
+          }}
+        >
+        </Stack> */}
+
+        <Stack
+          direction="column"
+          rowGap={1}
+          sx={{
+            height: "30vh",
+            // height: "60vh",
+            overflowY: "auto",
+            overflowX: "hidden",
+          }}
+        >
+          <GeneSummary />
+
+          {/* <MiniatureDotPlot /> */}
+        </Stack>
+      </Stack>
     </Collapse>
   );
   

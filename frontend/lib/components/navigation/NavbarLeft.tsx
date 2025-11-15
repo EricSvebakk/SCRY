@@ -1,9 +1,10 @@
 
 import { Button, Grid, Stack, SvgIconProps, SxProps, Typography } from "@mui/material";
-import { ReactElement, useState } from "react";
-import { theme } from "@/app/layout";
-import { NotificationPopover } from "../modals/popover/NotificationPopover";
+import { ReactElement } from "react";
+import { theme } from "@/lib/design";
+import { PopoverNotifications } from "../modals/popover/PopoverNotifications";
 import PanelFiles from "./panel/PanelFiles";
+import { useParams, useRouter } from "next/navigation";
 
 type Screen = {
   label: string;
@@ -14,11 +15,12 @@ type Screen = {
 
 export default function NavbarLeft(props: {
   screens: Screen[];
-  selectedScreen: number;
-  setSelectedScreen: Function;
 }) {
   
-  const [openPanelFiles, setOpenPanelFiles] = useState(false); 
+  const { fileID, screenID } = useParams();
+  const navigate = useRouter();
+  
+  // console.log("nl", fileID, screenID)
   
   const navItemProps = (isOpen: boolean, index: number | null = null) => {
     return {
@@ -46,25 +48,28 @@ export default function NavbarLeft(props: {
       height="100%"
       width="100%"
       overflow="clip"
-    > 
-      <Grid
-        item
-        height={70}
-      >
-        <PanelFiles sx={navItemProps(false, 0)}/>
+      minHeight="100vh"
+      maxHeight="100vh"
+      sx={{
+        backgroundColor: theme.palette.secondary.main,
+      }}
+    >
+      <Grid item height={70}>
+        <PanelFiles sx={navItemProps(false, 0)} />
       </Grid>
-      
-      {props.screens.map((e, i) => {
-        const isOpen = props.selectedScreen === i;
+
+      {props.screens.map((screen, i) => {
+        const isOpen = screen.id === (screenID as string);
 
         return (
           <Grid item key={`screen_item_grid_${i}`} height={70}>
             <Button
               key={`screen_item_button_${i}`}
+              tabIndex={100 + i}
               fullWidth
               sx={navItemProps(isOpen, i)}
               onClick={() => {
-                props.setSelectedScreen(i);
+                navigate.push(`/files/${fileID}/${screen.id}`);
               }}
             >
               <Stack
@@ -75,19 +80,19 @@ export default function NavbarLeft(props: {
                   justifyContent: "center",
                 }}
               >
-                {e.icon}
+                {screen.icon}
                 <Typography
                   key={`screen_item_text_${i}`}
                   fontSize={theme.typography.subtitle1.fontSize}
                 >
-                  {e.label}
+                  {screen.label}
                 </Typography>
               </Stack>
             </Button>
           </Grid>
         );
       })}
-      
+
       <Grid
         item
         xs
@@ -98,16 +103,10 @@ export default function NavbarLeft(props: {
           backgroundColor: theme.palette.secondary.main,
         }}
       />
-      
-      <Grid
-        item
-        height={70}
-      >
-        <NotificationPopover sx={navItemProps(false, 0)}/>
-      </Grid>
 
-      
-      
+      <Grid item height={70}>
+        <PopoverNotifications sx={navItemProps(false, 0)} />
+      </Grid>
     </Grid>
   );
   

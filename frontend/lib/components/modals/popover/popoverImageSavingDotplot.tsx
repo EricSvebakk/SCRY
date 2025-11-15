@@ -1,10 +1,10 @@
 
+
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
-import { setPlotConfigField, setTrigger } from "@/lib/redux/reducers/plotReducer";
-import { PlotConfigurationData, triggerOptions } from "@/lib/types";
 import { Close, Save } from "@mui/icons-material";
 import { Button, IconButton, Popover, Stack, TextField, Tooltip } from "@mui/material";
 import { MouseEvent, useEffect, useState } from "react";
+import d3ToPng from "d3-svg-to-png";
 
 type plotOption = {
   label: string;
@@ -16,14 +16,10 @@ const plotOptions: plotOption[] = [
   { label: "Dot plot", id: "dotplot" },
 ]
 
-export function ImageSavingPopover(props: {
-  trigger: keyof triggerOptions;
-  plot: keyof PlotConfigurationData;
-}) {
+export function PopoverImageSavingDotplot() {
  
   const expression = useAppSelector((state) => state.plotReducer.data.GDE.expression);
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm.selectedKey);
-  const config = useAppSelector((state) => state.plotReducer.plot[props.plot]);
   const dispatch = useAppDispatch();
   
   const [title, setTitle] = useState("");
@@ -55,7 +51,7 @@ export function ImageSavingPopover(props: {
   
   useEffect(() => {
     if (open && title === "") {
-      setTitle("plot_" + props.plot + "_" + (new Date().toISOString().split('T')[0]))
+      setTitle("plot_" + (new Date().toISOString().split('T')[0]))
     }
   }, [anchorEl]);
   
@@ -145,17 +141,25 @@ export function ImageSavingPopover(props: {
                   return;
                 }
                 
-                dispatch(setPlotConfigField({
-                  plot: props.plot,
-                  config: {
-                    ...config,
-                    scale: parsedScale
-                  }
-                }))
+                d3ToPng("#dotplot", title, {
+                  cssinline: 0,
+                  format: "png",
+                  download: true,
+                  background: "white",
+                  scale: parsedScale,
+                });
+                
+                // dispatch(setPlotConfigField({
+                //   plot: props.plot,
+                //   config: {
+                //     ...config,
+                //     scale: parsedScale
+                //   }
+                // }))
 
-                dispatch(
-                  setTrigger({ type: props.trigger, value: title })
-                );
+                // dispatch(
+                //   setTrigger({ type: props.trigger, value: title })
+                // );
               }}
             >
               Create Image

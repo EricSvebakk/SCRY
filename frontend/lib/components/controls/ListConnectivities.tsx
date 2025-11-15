@@ -3,12 +3,12 @@ import { Stack } from "@mui/material";
 import { useAppSelector } from "../../redux/hooks/hooks";
 import CurrentProgress from "../OverlayCurrentProgress";
 import { MouseEvent, useEffect, useState } from "react";
-import { theme } from "@/app/layout";
+import { theme } from "@/lib/design";
 import { PopoverConnectivities } from "../modals/popover/PopoverConnectivities";
 
 export default function ListConnectivities() {
   
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.fileHierarchy);
+  const status = useAppSelector((state) => state.plotReducer.statusBackend.metadata);
   const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;
   
   const [connectivities, setConnectivities] = useState<string[]>([]);

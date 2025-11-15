@@ -1,5 +1,5 @@
 
-import { useCeleryFileCopyMutation, useLazySystemFilesQuery } from "@/lib/redux/api/api";
+import { useCeleryFileCopyMutation } from "@/lib/redux/api/api";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 import { Close, ContentCut } from "@mui/icons-material";
@@ -9,7 +9,7 @@ import { MouseEvent, useEffect, useState } from "react";
 
 export function PopoverSubset() {
  
-  const fileID = useAppSelector((state) => state.fileReducer.activeFile);
+  const fileID = useAppSelector((state) => state.plotReducer.system.files.active);
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
   const selectedClusters = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);
@@ -45,7 +45,7 @@ export function PopoverSubset() {
     <>
       <IconButton
         size="small"
-        disabled={!obsm.selectedKey || !obs.selectedKey}
+        disabled={!obs.selectedKey}
         onClick={handleClick}
         aria-describedby={id}
         sx={{
@@ -116,13 +116,14 @@ export function PopoverSubset() {
                     if (data.data?.ok) {
                       pollTaskStatus(
                         data.data.response,
+                        data.data.timestamp,
                         "celeryFileCopy",
                         dispatch,
                         () => {
                           router.push(`/${filename}`);
                           router.refresh();
                         }
-                      )
+                      );
                     }
                   })
                   

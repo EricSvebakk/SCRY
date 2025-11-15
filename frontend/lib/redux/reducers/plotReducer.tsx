@@ -25,9 +25,19 @@ import {
   PayloadAction,
 } from "@reduxjs/toolkit";
 import { backendAPI } from "../api/api";
-import { stringify } from "querystring";
 
 const initialPlotState: InitialPlotStateProps = {
+  system: {
+    user: {
+      id: "",
+      passKey: "",
+    },
+    files: {
+      all: [],
+      selected: [],
+      active: "",
+    }
+  },
   anndata: AnndataAttributeKeys.reduce((acc, key) => {
     acc[key] = {};
     return acc;
@@ -66,6 +76,7 @@ const initialPlotState: InitialPlotStateProps = {
   data: {
     genes: [],
     GDE: {
+      selected: null,
       expression: null,
       dendrogram: null,
       genes: [],
@@ -102,6 +113,7 @@ const initialPlotState: InitialPlotStateProps = {
   statusBackend: backendEndpoints.reduce((acc, key) => {
     acc[key] = {
       inProgress: false,
+      timestamp: "",
       message: "",
     };
     return acc;
@@ -125,6 +137,16 @@ export const plotSlice = createSlice({
         }
       }
     },
+    setActiveFile: (state, action: PayloadAction<string>) => {
+      state.system.files.active = action.payload;
+    },
+    setActiveUser: (state, action: PayloadAction<string>) => {
+      state.system.user.id = action.payload;
+    },
+    setPassKey: (state, action: PayloadAction<string>) => {
+      state.system.user.passKey = action.payload;
+    },
+    
     setAnndataField<
       A extends keyof AnndataAttributeData,
       F extends keyof AnndataAttributeFields<AnndataAttributeData[A]>
@@ -138,11 +160,15 @@ export const plotSlice = createSlice({
     ) {
       const { attribute, field, value } = action.payload;
 
-      (
-        state.anndata[attribute] as AnndataAttributeFields<
-          AnndataAttributeData[A]
-        >
-      )[field] = value;
+      type attrType = AnndataAttributeFields<AnndataAttributeData[A]>;
+      
+      (state.anndata[attribute] as attrType)[field] = value;
+      
+      // if (field === "keys" && state.system.files.active !== "") { 
+      //   localStorage.setItem(`${state.system.files.active}_${attribute}`, JSON.stringify(value));
+      // }
+      // else if (field === "selectedKey" && state.anndata[attribute].keys && !state.anndata[attribute].keys.includes(value as string)) {
+      // }
     },
     setPlotConfigField<A extends keyof PlotConfiguration>(
       state: InitialPlotStateProps,
@@ -203,12 +229,18 @@ export const plotSlice = createSlice({
       action: PayloadAction<{
         type: (typeof backendEndpoints)[number];
         value: boolean;
+        timestamp?: string;
         message?: string;
       }>
     ) => {
       const type = state.statusBackend[action.payload.type];
 
       type.inProgress = action.payload.value;
+      
+      
+      if (action.payload.timestamp !== undefined) {
+        type.timestamp = action.payload.timestamp;
+      }
 
       if (action.payload.message !== undefined) {
         type.message = action.payload.message;
@@ -235,38 +267,127 @@ export const plotSlice = createSlice({
   },
   extraReducers: (builder) => {
     // Handles status messages
-    builder.addMatcher(backendAPI.endpoints.systemFiles.matchPending, (state) => {
-      state.statusBackend.systemFiles.message = "Loading in available files";
-    }),
-    builder.addMatcher(backendAPI.endpoints.fileHierarchy.matchPending, (state) => {
-      state.statusBackend.fileHierarchy.message = "Loading in Anndata metadata";
-    }),
-    builder.addMatcher(backendAPI.endpoints.fileObsm.matchPending, (state) => {
-      state.statusBackend.fileObsm.message = "Loading embedding coordinates";
-    }),
-    builder.addMatcher(backendAPI.endpoints.fileObs.matchPending, (state) => {
-      state.statusBackend.fileObs.message = "Loading observation data";
-    }),
-    builder.addMatcher(backendAPI.endpoints.fileGenes.matchPending, (state) => {
-      state.statusBackend.fileGenes.message = "Loading gene labels";
-    }),
-    builder.addMatcher(backendAPI.endpoints.celltypistModels.matchPending, (state) => {
-      state.statusBackend.celltypistModels.message = "Loading CellTypist models";
-    }),
     builder.addMatcher(
-      backendAPI.endpoints.celeryFileNLDR.matchPending,
+      backendAPI.endpoints.systemFiles.matchPending,
       (state) => {
-        state.statusBackend.celeryFileNLDR.message = "requesting changes";
+        state.statusBackend.systemFiles.message = "Loading in available files";
       }
     ),
     builder.addMatcher(
-      backendAPI.endpoints.celeryFileLeiden.matchPending,
+      backendAPI.endpoints.metadata.matchPending,
       (state) => {
-        state.statusBackend.celeryFileLeiden.message = "requesting changes";
+        state.statusBackend.metadata.message = "Loading in AnnData metadata";
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.fileHierarchy.matchPending,
+      (state) => {
+        state.statusBackend.metadata.message = "Loading in Anndata metadata";
+      }
+    ),
+    builder.addMatcher(backendAPI.endpoints.fileObs.matchPending,
+      (state) => {
+        state.statusBackend.fileObs.message = "Loading observation data";
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.fileObsm.matchPending,
+      (state) => {
+        state.statusBackend.fileObsm.message = "Loading embedding coordinates";
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.fileGenes.matchPending,
+      (state) => {
+        state.statusBackend.fileGenes.message = "Loading gene labels";
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.fileFeatureCoordinates.matchPending,
+      (state) => {
+        state.statusBackend.fileFeatureCoordinates.message = "Loading feature coordinates";
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.celltypistModels.matchPending,
+      (state) => {
+        state.statusBackend.celltypistModels.message = "Loading CellTypist models";
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.celeryFileLDR.matchPending,
+      (state) => {
+        state.statusBackend.celeryFileLDR.message = "Requesting linear dimensioal reduction";
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.celeryFileNLDR.matchPending,
+      (state) => {
+        state.statusBackend.celeryFileNLDR.message = "Requesting non-linear dimensioal reduction";
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.Leiden.matchPending,
+      (state) => {
+        state.statusBackend.Leiden.message = "Requesting clustering";
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.celeryFileLDR.matchPending,
+      (state) => {
+        state.statusBackend.celeryFileLDR.message = "Loading gene labels";
       }
     ),
     // ===========================================================================
     // Handles setting data correctly
+    builder.addMatcher(
+      backendAPI.endpoints.systemFiles.matchFulfilled,
+      (state, action) => {
+        const { response, ok } = action.payload;
+        if (ok) {
+          
+          const fileRows = response.files
+            .map((e: string, i: number) => ({
+              id: e,
+              name: e,
+              fileSize: response.h5ad_sizes[i],
+              fileType: e.split(".")[1],
+            }));
+          
+          const updatesFiles = state.system.files.all.map((file) => {
+            const newFile = fileRows.find((f: any) => f.id === file.id)
+            return newFile ? newFile : file
+          });
+          
+          const newFiles = fileRows.filter(
+            (f: any) => !state.system.files.all.some((file) => f.id === file.id)
+          );
+          
+          state.system.files.all = [...updatesFiles, ...newFiles];
+          
+        }
+      }
+    ),
+    builder.addMatcher(
+      backendAPI.endpoints.metadata.matchFulfilled,
+      (state, action) => {
+        const { response, ok } = action.payload;
+        
+        if (ok) {
+          const { hierarchy, genes } = response;
+
+          state.data.genes = genes;
+          
+          Object.keys(hierarchy).forEach((k: string) => {
+            const key = k as keyof AnndataAttributeData;
+            state.anndata[key].keys = hierarchy[key];
+
+            // localStorage.setItem(`${state.system.files.active}_${key}`, JSON.stringify(response[key]));
+          });
+
+        }
+      }
+    ),
     builder.addMatcher(
       backendAPI.endpoints.fileHierarchy.matchFulfilled,
       (state, action) => {
@@ -275,9 +396,8 @@ export const plotSlice = createSlice({
           Object.keys(response).forEach((k: string) => {
             const key = k as keyof AnndataAttributeData;
             state.anndata[key].keys = response[key];
-            
-            localStorage.setItem(key, JSON.stringify(response[key]));
-            
+
+            // localStorage.setItem(`${state.system.files.active}_${key}`, JSON.stringify(response[key]));
           });
         }
       }
@@ -285,7 +405,7 @@ export const plotSlice = createSlice({
     builder.addMatcher(
       backendAPI.endpoints.fileObsm.matchFulfilled,
       (state, action) => {
-        console.log(action)
+        // console.log(action);
         if (action.payload.ok) {
           state.anndata.obsm.data = action.payload.response;
         }
@@ -334,12 +454,12 @@ export const plotSlice = createSlice({
         const endpoint = (action.meta.arg as any).endpointName;
         state.statusBackend[endpoint] = {
           inProgress: false,
+          timestamp: "",
           message: "",
         };
       }
     }),
     builder.addMatcher(isPending, (state, action) => {
-      // console.log(action);
       if (action.type.startsWith(backendAPI.reducerPath)) {
         const endpoint = (action.meta.arg as any).endpointName;
         state.statusBackend[endpoint].inProgress = true;
@@ -349,11 +469,12 @@ export const plotSlice = createSlice({
       }
     }),
     builder.addMatcher(isRejectedWithValue, (state, action) => {
-      console.log(action);
+      // console.log(action);
       if (action.type.startsWith(backendAPI.reducerPath)) {
         const endpoint = (action.meta.arg as any).endpointName;
         state.statusBackend[endpoint] = {
           inProgress: false,
+          timestamp: "",
           message: "",
         };
 
@@ -383,6 +504,9 @@ export const plotSlice = createSlice({
 
 export const {
   reset,
+  setActiveFile,
+  setActiveUser,
+  setPassKey,
   setAnndataField,
   setPlotConfigField,
   setGDEField,

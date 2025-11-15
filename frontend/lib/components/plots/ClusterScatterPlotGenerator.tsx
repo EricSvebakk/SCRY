@@ -133,7 +133,7 @@ const ClusterScatterPlotGenerator = (props: {
     const maxItemsPerCol = Math.floor((imageHeight - 2 * imagePadding) / step);
     const numCols = Math.ceil(legendItemCount / maxItemsPerCol);
     
-    console.log(numCols, maxItemsPerCol, legendItemCount)
+    // console.log(numCols, maxItemsPerCol, legendItemCount)
 
     const finalCanvas = document.createElement("canvas");
     const finalCtx = finalCanvas.getContext("2d")!;
