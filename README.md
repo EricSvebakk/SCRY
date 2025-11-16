@@ -39,4 +39,6 @@ This is a high-level abstraction of the architecture used for the application.
 
 # Thesis reference
 
-A link to the related thesis will appear here once it is uploaded to the UiO DUO-archive.
+This project was developed as part of a Masters thesis in Informatics, at the University of Oslo.
+
+A link to the thesis will appear here once it is uploaded to the UiO DUO-archive.
