@@ -36,7 +36,7 @@ import { setActiveUser, setPassKey } from "@/lib/redux/reducers/plotReducer";
 export default function FileIdPage({}) {
   
   const fileID = useAppSelector((state) => state.plotReducer.system.files.active);  
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.systemFiles);
+  const status = useAppSelector((state) => state.plotReducer.status.SystemFiles);
   const filenames = useAppSelector((state) => state.plotReducer.system.files.all);
   
   const [userID, setUserID] = useState("");

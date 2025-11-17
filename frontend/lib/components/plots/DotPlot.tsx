@@ -12,7 +12,7 @@ export function DotPlot() {
 
   const gde = useAppSelector((state) => state.plotReducer.data.GDE);
   const config = useAppSelector((state) => state.plotReducer.plot.expression);
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileRGG);
+  const status = useAppSelector((state) => state.plotReducer.status.DGE);
   const dispatch = useAppDispatch();
   
   const [counter, setCounter] = useState(0);

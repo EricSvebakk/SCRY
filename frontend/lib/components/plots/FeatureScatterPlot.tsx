@@ -14,7 +14,7 @@ export function FeatureScatterPlot() {
   
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
   const imageTrigger = useAppSelector((state) => state.plotReducer.navigation.triggers.saveFeaturePlotImage);
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.fileObsm);
+  const status = useAppSelector((state) => state.plotReducer.status.Obsm);
   const selectedCluster = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);
   const config = useAppSelector((state) => state.plotReducer.plot.feature);
   

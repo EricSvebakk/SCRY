@@ -17,7 +17,7 @@ import {
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { AutocompleteOption } from "@/lib/types";
-import { useCeleryCelltypistAnnotateMutation, useLeidenMutation } from "@/lib/redux/api/api";
+import { useCelltypistAnnotateMutation, useLeidenMutation } from "@/lib/redux/api/api";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 import { setAnndataField } from "@/lib/redux/reducers/plotReducer";
 import DialogTitleHelp from "../custom/DialogTitle";
@@ -37,7 +37,7 @@ export default function DialogClustering(props: {
 
   const dispatch = useAppDispatch();
   const [getLeiden] = useLeidenMutation();
-  const [getAnnotation] = useCeleryCelltypistAnnotateMutation();
+  const [getAnnotation] = useCelltypistAnnotateMutation();
 
   const [observationLabel, setObservationLabel] = useState<string>("");
   const [selectedGraph, setSelectedGraph] = useState<AutocompleteOption | null>(null);
@@ -164,15 +164,15 @@ export default function DialogClustering(props: {
         pollTaskStatus(
           data.data.response,
           data.data.timestamp,
-          "celeryCelltypistAnnotate",
+          "CelltypistAnnotate",
           dispatch,
           (result: any) => {
             // getHierarchy();
-            
+
             // if (result.)
-            
+
             const mvKey = `${key}-majority_voting`;
-            
+
             dispatch(
               setAnndataField({
                 attribute: "obs",
@@ -180,7 +180,7 @@ export default function DialogClustering(props: {
                 value: result,
               })
             );
-            
+
             if (obs.keys && !obs.keys.includes(mvKey)) {
               dispatch(
                 setAnndataField({
@@ -191,12 +191,11 @@ export default function DialogClustering(props: {
                     mvKey,
                     `${key}-predicted_labels`,
                     `${key}-over_clustering`,
-                    
                   ],
                 })
               );
             }
-            
+
             dispatch(
               setAnndataField({
                 attribute: "obs",

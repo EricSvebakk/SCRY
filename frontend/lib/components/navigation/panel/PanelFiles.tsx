@@ -31,7 +31,7 @@ export default function PanelFiles(props: { sx?: SxProps }) {
   const fileID = useAppSelector((state) => state.plotReducer.system.files.active);
   const filenames = useAppSelector((state) => state.plotReducer.system.files.all);
   const status = useAppSelector(
-    (state) => state.plotReducer.statusBackend.fileFeatureCoordinates
+    (state) => state.plotReducer.status.Feature
   );
 
   const [openPanelFiles, setOpenPanelFiles] = useState(false);

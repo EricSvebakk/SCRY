@@ -1,5 +1,5 @@
 
-import { useCeleryFileCopyMutation } from "@/lib/redux/api/api";
+import { useFileCopyMutation } from "@/lib/redux/api/api";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 import { Close, ContentCut } from "@mui/icons-material";
@@ -17,7 +17,7 @@ export function PopoverSubset() {
   const router = useRouter();
   
   const dispatch = useAppDispatch();
-  const [getFileCopy] = useCeleryFileCopyMutation();
+  const [getFileCopy] = useFileCopyMutation();
   
   const [filename, setFilename] = useState("");
   const [filenameError, setFilenameError] = useState(false);

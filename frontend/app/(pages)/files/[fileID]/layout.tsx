@@ -9,18 +9,14 @@ import { theme } from "@/lib/design";
 import { ScatterPlot, ViewCompact } from "@mui/icons-material";
 import {
   useCelltypistModelsQuery,
-  useFileGenesQuery,
-  useLazyFileHierarchyQuery,
   useLazyMetadataQuery,
   useSystemFilesQuery,
 } from "@/lib/redux/api/api";
 import {
   setActiveFile,
   setActiveUser,
-  setAnndataField,
   setPassKey,
 } from "@/lib/redux/reducers/plotReducer";
-import { AnndataAttributeKeys } from "@/lib/types";
 import ScreenDimensionalReduction from "@/app/(pages)/files/[fileID]/[screenID]/screen/ScreenDimensionalReduction";
 import ScreenDifferentialGeneExpression from "@/app/(pages)/files/[fileID]/[screenID]/screen/ScreenDifferentialGeneExpression";
 import NavbarLeft from "@/lib/components/navigation/NavbarLeft";
@@ -49,9 +45,9 @@ export default function LayoutApp({
   };
 
   const {} = useSystemFilesQuery(undefined, params);
-  // const {} = useFileGenesQuery(undefined, params);
+  // const {} = useGenesQuery(undefined, params);
   const {} = useCelltypistModelsQuery(undefined, params);
-  // const [getFileHierarchy] = useLazyFileHierarchyQuery();
+  // const [getFileHierarchy] = useLazyHierarchyQuery();
   const [getMetadata] = useLazyMetadataQuery();
 
   const router = useRouter();

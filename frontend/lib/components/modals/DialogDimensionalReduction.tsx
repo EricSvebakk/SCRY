@@ -11,7 +11,7 @@ import {
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { theme } from "@/lib/design";
-import { useCeleryFileNLDRMutation, useLazyFileHierarchyQuery } from "@/lib/redux/api/api";
+import { useEmbeddingMutation, useLazyHierarchyQuery } from "@/lib/redux/api/api";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 import { setAnndataField } from "@/lib/redux/reducers/plotReducer";
 import { LoadingButton } from "@mui/lab";
@@ -27,8 +27,8 @@ export default function DialogDimensionalReduction(props: {
   const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;
   
   const dispatch = useAppDispatch();
-  const [getNLDR] = useCeleryFileNLDRMutation();
-  const [getHierarchy] = useLazyFileHierarchyQuery();
+  const [getNLDR] = useEmbeddingMutation();
+  const [getHierarchy] = useLazyHierarchyQuery();
 
   const [adataKey, setAdataKey] = useState<string>(
     // new Date().toISOString().split("T")[0]
@@ -256,7 +256,7 @@ export default function DialogDimensionalReduction(props: {
                       pollTaskStatus(
                         data.data.response,
                         data.data.timestamp,
-                        "celeryFileNLDR",
+                        "Embedding",
                         dispatch,
                         (result: any) => {
                           dispatch(

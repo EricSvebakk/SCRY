@@ -3,7 +3,7 @@ import { setAnndataField } from "../../redux/reducers/plotReducer";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { useState } from "react";
 import { theme } from "@/lib/design";
-import { useLazyFileObsmQuery } from "@/lib/redux/api/api";
+import { useLazyObsmQuery } from "@/lib/redux/api/api";
 import DialogDimensionalReduction from "../modals/DialogDimensionalReduction";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import ButtonList from "../custom/ButtonList";
@@ -11,12 +11,12 @@ import ButtonList from "../custom/ButtonList";
 export default function ListEmbeddings() {
   
   const obsm = useAppSelector((state) => state.plotReducer.anndata.obsm);
-  const statusHierachy = useAppSelector((state) => state.plotReducer.statusBackend.metadata);
-  const statusNLDR = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileNLDR);
-  const statusEmbedding = useAppSelector((state) => state.plotReducer.statusBackend.fileObsm)
+  const statusHierachy = useAppSelector((state) => state.plotReducer.status.Metadata);
+  const statusNLDR = useAppSelector((state) => state.plotReducer.status.Embedding);
+  const statusEmbedding = useAppSelector((state) => state.plotReducer.status.Obsm)
   
   const dispatch = useAppDispatch();
-  const [getObsm] = useLazyFileObsmQuery();
+  const [getObsm] = useLazyObsmQuery();
   
   const [isNLDRDialogOpen, setIsNLDRDialogOpen] = useState<boolean>(false);
 

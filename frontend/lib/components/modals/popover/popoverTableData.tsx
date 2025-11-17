@@ -14,7 +14,7 @@ export function PopoverTableData(props: {
 }) {
   
   const selected = useAppSelector((state) => state.plotReducer.data.GDE.selected);
-  const statusRGG = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileRGG);
+  const statusRGG = useAppSelector((state) => state.plotReducer.status.DGE);
   
   const isSelected = selected === props.title;
   

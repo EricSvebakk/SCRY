@@ -8,7 +8,7 @@ import { PopoverConnectivities } from "../modals/popover/PopoverConnectivities";
 
 export default function ListConnectivities() {
   
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.metadata);
+  const status = useAppSelector((state) => state.plotReducer.status.Metadata);
   const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;
   
   const [connectivities, setConnectivities] = useState<string[]>([]);

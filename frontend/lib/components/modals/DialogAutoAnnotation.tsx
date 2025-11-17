@@ -1,4 +1,4 @@
-import { useCeleryCelltypistAnnotateMutation, useLazyFileHierarchyQuery } from "@/lib/redux/api/api";
+import { useCelltypistAnnotateMutation, useLazyHierarchyQuery } from "@/lib/redux/api/api";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { AutocompleteOption } from "@/lib/types";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
@@ -16,8 +16,8 @@ export default function DialogAutoAnnotation(props: {
   const obsp = useAppSelector((state) => state.plotReducer.anndata.obsp.keys);
   
   const dispatch = useAppDispatch();
-  const [getAnnotation] = useCeleryCelltypistAnnotateMutation();
-  const [getHierarchy] = useLazyFileHierarchyQuery();
+  const [getAnnotation] = useCelltypistAnnotateMutation();
+  const [getHierarchy] = useLazyHierarchyQuery();
   
   const [annotationKey, setAnnotationKey] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<AutocompleteOption | null>(null);
@@ -171,7 +171,7 @@ export default function DialogAutoAnnotation(props: {
                       pollTaskStatus(
                         data.data.response,
                         data.data.timestamp,
-                        "celeryCelltypistAnnotate",
+                        "CelltypistAnnotate",
                         dispatch,
                         () => {
                           getHierarchy();

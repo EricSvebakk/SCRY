@@ -14,7 +14,7 @@ export function ListCluster(props: {
   
   const config = useAppSelector((state) => state.plotReducer.plot.cluster);
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.fileObs);
+  const status = useAppSelector((state) => state.plotReducer.status.Obs);
   const selectedClusters = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);
   
   const allClusters = obs.indices ? obs.indices.categories as string[] : [];

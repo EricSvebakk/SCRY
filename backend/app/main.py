@@ -154,7 +154,7 @@ async def system_file_names(
 # ============================================================================================
 # CELLTYPIST
 
-@app.get("/celltypist/models", tags=["CELLTYPIST"])
+@app.get("/celltypist/models", tags=["SYSTEM"])
 async def celltypist_models():
   obj = {
     "response": ct.models.models_description().to_dict(orient="records"),
@@ -211,8 +211,8 @@ async def file_genes(
   obj = validate(user_id, pass_key, file_id, worker.get_genes)
   return JSONResponse(content=obj)
   
-@app.get("/file/feature/coordinates", tags=["FILE"])
-async def file_feature_coordinates(
+@app.get("/file/feature", tags=["FILE"])
+async def file_feature(
   feature_key: str,
   file_id: str = Header(alias=FILEID),
   user_id: str = Header(alias=USERID),
@@ -221,32 +221,32 @@ async def file_feature_coordinates(
   obj = validate(user_id, pass_key, file_id, worker.get_feature_indices, feature_key)
   return JSONResponse(content=obj)
 
-@app.post("/file/ldr", tags=["FILE"])
-async def celery_file_ldr(
-  n_pcs: int = Form(...),
-  file_id: str = Header(alias=FILEID),
-  user_id: str = Header(alias=USERID),
-  pass_key: str = Header(alias=PASSKEY),
-):
-  obj = validate(user_id, pass_key, file_id, worker.compute_ldr, n_pcs, delay=True)
-  return JSONResponse(content=obj)
+# @app.post("/file/ldr", tags=["FILE"])
+# async def celery_file_ldr(
+#   n_pcs: int = Form(...),
+#   file_id: str = Header(alias=FILEID),
+#   user_id: str = Header(alias=USERID),
+#   pass_key: str = Header(alias=PASSKEY),
+# ):
+#   obj = validate(user_id, pass_key, file_id, worker.compute_ldr, n_pcs, delay=True)
+#   return JSONResponse(content=obj)
 
-@app.post("/file/nldr", tags=["FILE"])
-async def celery_file_nldr(
-  file_id: str = Header(alias=FILEID),
+@app.post("/compute/embedding", tags=["COMPUTE"])
+async def compute_embedding(
   adata_key: str = Form(...),
   n_pcs: int = Form(...),
   min_dist: float = Form(...),
   spread: float = Form(...),
   n_neighbors: int = Form(...),
+  file_id: str = Header(alias=FILEID),
   user_id: str = Header(alias=USERID),
   pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.compute_nldr, adata_key, n_pcs, min_dist, spread, n_neighbors, delay=True)
   return JSONResponse(content=obj)
 
-@app.post("/file/leiden", tags=["FILE"])
-async def celery_file_leiden(
+@app.post("/compute/leiden", tags=["COMPUTE"])
+async def compute_leiden(
   uns_key: str = Form(...),
   neighbors_key: str = Form(...),
   resolution: float = Form(...),
@@ -257,8 +257,8 @@ async def celery_file_leiden(
   obj = validate(user_id, pass_key, file_id, worker.compute_leiden, uns_key, neighbors_key, resolution, delay=True)
   return JSONResponse(content=obj)
 
-@app.post("/file/rgg", tags=["FILE"])
-async def celery_file_rgg(
+@app.post("/compute/dge", tags=["COMPUTE"])
+async def compute_dge(
   uns_key: str = Form(...),
   n_genes: int = Form(...),
   selected_genes: Optional[list[str]] = Form(None),
@@ -269,8 +269,8 @@ async def celery_file_rgg(
   obj = validate(user_id, pass_key, file_id, worker.compute_rgg, uns_key, n_genes, selected_genes, delay=True)
   return JSONResponse(content=obj)
 
-@app.post("/file/copy", tags=["FILE"])
-async def celery_file_copy(
+@app.post("/compute/copy", tags=["COMPUTE"])
+async def compute_copy(
   new_file_id: str = Form(...),
   selected_obs: str = Form(...),
   selected_obs_clusters: list[str] = Form(...),
@@ -281,8 +281,8 @@ async def celery_file_copy(
   obj = validate(user_id, pass_key, file_id, worker.compute_save_file_as, new_file_id, selected_obs, selected_obs_clusters, delay=True)
   return JSONResponse(content=obj)
 
-@app.post("/file/recluster", tags=["FILE"])
-async def celery_file_recluster(
+@app.post("/compute/recluster", tags=["COMPUTE"])
+async def compute_recluster(
   observation: newObservation,
   file_id: str = Header(alias=FILEID),
   user_id: str = Header(alias=USERID),
@@ -291,8 +291,8 @@ async def celery_file_recluster(
   obj = validate(user_id, pass_key, file_id, worker.compute_recluster, observation.model_dump(), delay=True)
   return JSONResponse(content=obj)
 
-@app.post("/file/merge", tags=["FILE"])
-async def celery_file_merge(
+@app.post("/compute/merge", tags=["COMPUTE"])
+async def compute_merge(
   file_path_dest: str,
   observation: newObservation,
   file_id: str = Header(alias=FILEID),
@@ -302,8 +302,8 @@ async def celery_file_merge(
   obj = validate(user_id, pass_key, file_id, worker.compute_recluster, file_path_dest, observation.model_dump(), delay=True)
   return JSONResponse(content=obj)
 
-@app.post("/celltypist/annotate", tags=["CELLTYPIST"])
-async def celery_celltypist_annotate(
+@app.post("/celltypist/annotate", tags=["COMPUTE"])
+async def celltypist_annotate(
   annotation_key: str = Form(...),
   connectivities_key: str = Form(...),
   annotation_model: Optional[str] = Form(None),
@@ -317,7 +317,7 @@ async def celery_celltypist_annotate(
 # ============================================================================================
 # STATUS
 
-@app.get("/celery/tasks", tags=["STATUS"])
+@app.get("/status/tasks", tags=["STATUS"])
 async def celery_user_tasks(
   file_id: str = Header(alias=FILEID),
   user_id: str = Header(alias=USERID),
@@ -326,7 +326,7 @@ async def celery_user_tasks(
   obj = validate(user_id, pass_key, file_id, worker.get_tasks)
   return JSONResponse(content=obj)
 
-@app.get("/celery/status", tags=["STATUS"])
+@app.get("/status/task", tags=["STATUS"])
 async def celery_status(
   task_id: str,
   user_id: str = Header(alias=USERID),
@@ -348,7 +348,7 @@ async def celery_status(
     "progress": result.info if result.status not in ("SUCCESS") else "See /get_finished_task for results"
   })
 
-@app.get("/celery/result", tags=["STATUS"])
+@app.get("/status/result", tags=["STATUS"])
 async def celery_result(
   task_id: str,
   user_id: str = Header(alias=USERID),

@@ -1,7 +1,7 @@
 
 import { theme } from "@/lib/design";
 import { useAppSelector } from "@/lib/redux/hooks/hooks";
-import { errorAttributes, statusBackendAPI } from "@/lib/types";
+import { errorAttributes, statusType } from "@/lib/types";
 import { Notifications } from "@mui/icons-material";
 import { Badge, Button, Dialog, DialogContent, Stack, SxProps, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from "@mui/material";
 import { useState } from "react";
@@ -10,10 +10,10 @@ export function PopoverNotifications(props: {
   sx?: SxProps
 }) {
  
-  const status = useAppSelector((state) => state.plotReducer.statusBackend);
+  const status = useAppSelector((state) => state.plotReducer.status);
   const error = useAppSelector((state) => state.plotReducer.error);
   
-  const statusActive = Object.keys(status).filter((e) => status[e as keyof statusBackendAPI].inProgress);
+  const statusActive = Object.keys(status).filter((e) => status[e as keyof statusType].inProgress);
   const errorActive = Object.keys(error).filter((e) => error[e as keyof errorAttributes].time !== undefined);
   
   const [open, setOpen] = useState<boolean>(false);
@@ -159,7 +159,7 @@ export function PopoverNotifications(props: {
                         <Typography
                           key={`notification_table_body_row_${i}_timestamp`}
                         >
-                          {status[e as keyof statusBackendAPI].timestamp}
+                          {status[e as keyof statusType].timestamp}
                         </Typography>
                       </TableCell>
                       <TableCell
@@ -179,7 +179,7 @@ export function PopoverNotifications(props: {
                         <Typography
                           key={`notification_table_body_row_${i}_message_text`}
                         >
-                          {status[e as keyof statusBackendAPI].message}
+                          {status[e as keyof statusType].message}
                         </Typography>
                       </TableCell>
                     </TableRow>

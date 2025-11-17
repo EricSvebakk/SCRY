@@ -8,7 +8,7 @@ import { AutocompleteOption } from "@/lib/types";
 import { LoadingButton } from "@mui/lab";
 import fetchSummaryNCBI from "@/lib/util/fetchSummaryNCBI";
 import { FeatureScatterPlot } from "../../plots/FeatureScatterPlot";
-import { useLazyFileFeatureCoordinatesQuery } from "@/lib/redux/api/api";
+import { useLazyFeatureQuery } from "@/lib/redux/api/api";
 import GeneSummary from "../../custom/GeneSummary";
 
 export default function PanelGenes(props: {
@@ -18,7 +18,7 @@ export default function PanelGenes(props: {
 
   const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;  
   const genes = useAppSelector((state) => state.plotReducer.data.genes);
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.fileFeatureCoordinates);
+  const status = useAppSelector((state) => state.plotReducer.status.Feature);
   const report = useAppSelector((state) => state.plotReducer.data.geneReport);
   
   const ref = useRef();
@@ -30,7 +30,7 @@ export default function PanelGenes(props: {
   const unsFilterOptions = createFilterOptions({ limit: 20 });
   
   const dispatch = useAppDispatch();  
-  const [getFeatureCoordinates] = useLazyFileFeatureCoordinatesQuery();
+  const [getFeatureCoordinates] = useLazyFeatureQuery();
   
   useEffect(() => {
     if (genes) {

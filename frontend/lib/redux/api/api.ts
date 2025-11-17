@@ -1,7 +1,14 @@
-
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { backendResponse, celeryCelltypistAnnotateSchema, celeryFileCopySchema, celeryFileLDRSchema, celeryFileLeidenSchema, celeryFileMergeSchema, celeryFileNLDRSchema, celeryFileReclusterSchema, celeryFileRGGSchema, celeryResultSchema, celeryStatusSchema } from "./schema";
-import { tagsBackendAPI } from "@/lib/types";
+import {
+  backendResponse,
+  celeryCelltypistAnnotateSchema as CelltypistAnnotateSchema,
+  celeryFileCopySchema as FileCopySchema,
+  celeryFileLeidenSchema as LeidenSchema,
+  celeryFileMergeSchema as FileMergeSchema,
+  celeryFileNLDRSchema as EmbeddingSchema,
+  celeryFileReclusterSchema as FileReclusterSchema,
+  celeryFileRGGSchema as DGESchema,
+} from "./schema";
 import { RootState } from "../stores/store";
 
 const BACKEND_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "";
@@ -20,50 +27,48 @@ export const backendAPI = createApi({
   }),
   // tagTypes: tagsBackendAPI,
   endpoints: (builder) => ({
-    systemFiles: builder.query<backendResponse, void>({
+    SystemFiles: builder.query<backendResponse, void>({
       query: () => `system/files`,
-      // providesTags: ["HIERARCHY"]
     }),
-    metadata: builder.query<backendResponse, void>({
-      query: () => `file/metadata`,
-    }),
-    fileHierarchy: builder.query<backendResponse, void>({
-      query: () => `file/hierarchy`,
-      // providesTags: ["HIERARCHY"]
-    }),
-    fileObs: builder.query<backendResponse, { obs: string }>({
-      query: ({ obs }) => `file/obs?obs=${obs}`,
-    }),
-    fileObsm: builder.query<backendResponse, { obsm: string }>({
-      query: ({ obsm }) => `file/obsm?obsm=${obsm}`,
-    }),
-    fileGenes: builder.query<backendResponse, void>({
-      query: () => `file/genes`,
-    }),
-    fileFeatureCoordinates: builder.query<
-      backendResponse,
-      { featureKey: string }
-    >({
-      query: ({ featureKey }) =>
-        `file/feature/coordinates?feature_key=${featureKey}`,
-    }),
-    celltypistModels: builder.query<backendResponse, void>({
+    CelltypistModels: builder.query<backendResponse, void>({
       query: () => `celltypist/models`,
     }),
-    // CELERY
-    celeryFileLDR: builder.mutation<backendResponse, celeryFileLDRSchema>({
-      query: (body) => {
-        const formData = new FormData();
-        formData.append("n_pcs", body.numPCs.toString());
-        return {
-          url: `celery/file/ldr`,
-          method: "POST",
-          body: formData,
-        };
-      },
-      // invalidatesTags: ["HIERARCHY"]
+    Metadata: builder.query<backendResponse, void>({
+      query: () => `file/metadata`,
     }),
-    celeryFileNLDR: builder.mutation<backendResponse, celeryFileNLDRSchema>({
+    Hierarchy: builder.query<backendResponse, void>({
+      query: () => `file/hierarchy`,
+    }),
+    Obs: builder.query<backendResponse, { obs: string }>({
+      query: ({ obs }) => `file/obs?obs=${obs}`,
+    }),
+    Obsm: builder.query<backendResponse, { obsm: string }>({
+      query: ({ obsm }) => `file/obsm?obsm=${obsm}`,
+    }),
+    Genes: builder.query<backendResponse, void>({
+      query: () => `file/genes`,
+    }),
+    Feature: builder.query<backendResponse, { featureKey: string }>({
+      query: ({ featureKey }) => `file/feature?feature_key=${featureKey}`,
+    }),
+    statusTask: builder.query<backendResponse, { taskID: string }>({
+      query: ({ taskID }) => `status/task?task_id=${taskID}`,
+    }),
+    statusResult: builder.query<backendResponse, { taskID: string }>({
+      query: ({ taskID }) => `status/result?task_id=${taskID}`,
+    }),
+    // celeryFileLDR: builder.mutation<backendResponse, celeryFileLDRSchema>({
+    //   query: (body) => {
+    //     const formData = new FormData();
+    //     formData.append("n_pcs", body.numPCs.toString());
+    //     return {
+    //       url: `celery/file/ldr`,
+    //       method: "POST",
+    //       body: formData,
+    //     };
+    //   },
+    // }),
+    Embedding: builder.mutation<backendResponse, EmbeddingSchema>({
       query: (body) => {
         const formData = new FormData();
         formData.append("adata_key", body.adataKey);
@@ -72,30 +77,26 @@ export const backendAPI = createApi({
         formData.append("spread", body.spread.toString());
         formData.append("n_neighbors", body.nNeighbors.toString());
         return {
-          url: `file/nldr`,
+          url: `compute/embedding`,
           method: "POST",
           body: formData,
         };
       },
-      // invalidatesTags: ["HIERARCHY"]
     }),
-    Leiden: builder.mutation<backendResponse, celeryFileLeidenSchema>(
-      {
-        query: (body) => {
-          const formData = new FormData();
-          formData.append("uns_key", body.unsKey);
-          formData.append("neighbors_key", body.neighborsKey);
-          formData.append("resolution", body.resolution.toString());
-          return {
-            url: `file/leiden`,
-            method: "POST",
-            body: formData,
-          };
-        },
-        // invalidatesTags: ["HIERARCHY"]
-      }
-    ),
-    celeryFileRGG: builder.mutation<backendResponse, celeryFileRGGSchema>({
+    Leiden: builder.mutation<backendResponse, LeidenSchema>({
+      query: (body) => {
+        const formData = new FormData();
+        formData.append("uns_key", body.unsKey);
+        formData.append("neighbors_key", body.neighborsKey);
+        formData.append("resolution", body.resolution.toString());
+        return {
+          url: `compute/leiden`,
+          method: "POST",
+          body: formData,
+        };
+      },
+    }),
+    DGE: builder.mutation<backendResponse, DGESchema>({
       query: (body) => {
         const formData = new FormData();
         formData.append("uns_key", body.unsKey);
@@ -104,14 +105,13 @@ export const backendAPI = createApi({
           formData.append("selected_genes", gene);
         });
         return {
-          url: `file/rgg`,
+          url: `compute/dge`,
           method: "POST",
           body: formData,
         };
       },
-      // invalidatesTags: ["HIERARCHY"]
     }),
-    celeryFileCopy: builder.mutation<backendResponse, celeryFileCopySchema>({
+    FileCopy: builder.mutation<backendResponse, FileCopySchema>({
       query: (body) => {
         const formData = new FormData();
         formData.append("new_file_id", body.newFileID);
@@ -120,29 +120,27 @@ export const backendAPI = createApi({
           formData.append("selected_obs_clusters", cluster);
         });
         return {
-          url: `file/copy`,
+          url: `compute/copy`,
           method: "POST",
           body: formData,
         };
       },
     }),
-    celeryFileRecluster: builder.mutation<
-      backendResponse,
-      celeryFileReclusterSchema
-    >({
+    FileRecluster: builder.mutation<backendResponse, FileReclusterSchema>(
+      {
+        query: (body) => {
+          return {
+            url: `compute/recluster`,
+            method: "POST",
+            body: body.reclustering,
+          };
+        },
+      }
+    ),
+    FileMerge: builder.mutation<backendResponse, FileMergeSchema>({
       query: (body) => {
         return {
-          url: `file/recluster`,
-          method: "POST",
-          body: body.reclustering,
-        };
-      },
-      // invalidatesTags: ["HIERARCHY"]
-    }),
-    celeryFileMerge: builder.mutation<backendResponse, celeryFileMergeSchema>({
-      query: (body) => {
-        return {
-          url: `file/merge`,
+          url: `compute/merge`,
           method: "POST",
           body: {
             observation: body.reclustering,
@@ -150,11 +148,10 @@ export const backendAPI = createApi({
           },
         };
       },
-      // invalidatesTags: ["HIERARCHY"]
     }),
-    celeryCelltypistAnnotate: builder.mutation<
+    CelltypistAnnotate: builder.mutation<
       backendResponse,
-      celeryCelltypistAnnotateSchema
+      CelltypistAnnotateSchema
     >({
       query: (body) => {
         const formData = new FormData();
@@ -167,43 +164,31 @@ export const backendAPI = createApi({
           body: formData,
         };
       },
-      // invalidatesTags: ["HIERARCHY"]
-    }),
-    celeryStatus: builder.query<backendResponse, { taskID: string }>({
-      query: ({ taskID }) => `celery/status?task_id=${taskID}`,
-    }),
-    celeryResult: builder.query<backendResponse, { taskID: string }>({
-      query: ({ taskID }) => `celery/result?task_id=${taskID}`,
     }),
   }),
 });
 
-export const { 
+export const {
+  // QUERY
   useSystemFilesQuery,
-  useLazyMetadataQuery,
-  useFileHierarchyQuery,
-  // useFileObsQuery,
-  // useFileObsmQuery,
-  useFileGenesQuery,
-  // useFileFeatureCoordinatesQuery,
+  useGenesQuery,
   useCelltypistModelsQuery,
-  // LAZY
+  useStatusTaskQuery,
+  useStatusResultQuery,
+  // LAZY QUERY
+  useLazyHierarchyQuery,
   useLazySystemFilesQuery,
-  useLazyFileHierarchyQuery,
-  useLazyFileObsQuery,
-  useLazyFileObsmQuery,
-  useLazyFileFeatureCoordinatesQuery,
+  useLazyMetadataQuery,
+  useLazyObsQuery,
+  useLazyObsmQuery,
+  useLazyFeatureQuery,
   useLazyCelltypistModelsQuery,
-  // CELERY
-  // useCeleryFileLDRMutation,
-  useCeleryFileNLDRMutation,
+  // MUTATION
+  useEmbeddingMutation,
   useLeidenMutation,
-  useCeleryFileRGGMutation,
-  useCeleryFileCopyMutation,
-  useCeleryFileReclusterMutation,
-  useCeleryFileMergeMutation,
-  useCeleryCelltypistAnnotateMutation,
-  // STATUS
-  useCeleryStatusQuery,
-  useCeleryResultQuery,
+  useDGEMutation,
+  useFileCopyMutation,
+  useFileReclusterMutation,
+  useFileMergeMutation,
+  useCelltypistAnnotateMutation,
 } = backendAPI;

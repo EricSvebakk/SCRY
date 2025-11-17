@@ -8,7 +8,7 @@ import { PopoverTableData } from "../modals/popover/popoverTableData";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import DialogDotplot from "../modals/DialogDotplot";
 import { geneExpressionData } from "@/lib/types";
-import { useCeleryFileRGGMutation } from "@/lib/redux/api/api";
+import { useDGEMutation } from "@/lib/redux/api/api";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 import { setGDEField } from "@/lib/redux/reducers/plotReducer";
 import ButtonList from "../custom/ButtonList";
@@ -17,11 +17,11 @@ export default function ListRankings() {
   
   const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;
   const selectedRanking = useAppSelector((state) => state.plotReducer.data.GDE.selected);
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.metadata);
-  const statusRGG = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileRGG);
+  const status = useAppSelector((state) => state.plotReducer.status.Metadata);
+  const statusRGG = useAppSelector((state) => state.plotReducer.status.DGE);
   
   const dispatch = useAppDispatch();
-  const [getRGG] = useCeleryFileRGGMutation();
+  const [getRGG] = useDGEMutation();
   
   const [isDotplotDialogOpen, setIsDotplotDialogOpen] = useState(false);
   
@@ -143,7 +143,7 @@ export default function ListRankings() {
                         pollTaskStatus(
                           data.data.response,
                           data.data.timestamp,
-                          "celeryFileRGG",
+                          "DGE",
                           dispatch,
                           (result: parsedDataType) => {
                             dispatch(

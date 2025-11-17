@@ -9,7 +9,7 @@ export default function ListRanking() {
   
   const uns = useAppSelector((state) => state.plotReducer.anndata.uns.keys) as any;
   const selected = useAppSelector((state) => state.plotReducer.data.GDE.selected);
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.metadata);
+  const status = useAppSelector((state) => state.plotReducer.status.Metadata);
   const gde = useAppSelector((state) => state.plotReducer.data.GDE);
   const config = useAppSelector((state) => state.plotReducer.plot.expression);
   const dispatch = useAppDispatch();

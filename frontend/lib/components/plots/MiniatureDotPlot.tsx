@@ -12,7 +12,7 @@ import { PopoverImageSavingDotplot } from "../modals/popover/popoverImageSavingD
 export default function MiniatureDotPlot() {
   
   const gde = useAppSelector((state) => state.plotReducer.data.GDE);
-  const status = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileRGG);
+  const status = useAppSelector((state) => state.plotReducer.status.DGE);
   const config = useAppSelector((state) => state.plotReducer.plot.expression)
   
   const dispatch = useAppDispatch();

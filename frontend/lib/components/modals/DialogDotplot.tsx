@@ -13,7 +13,7 @@ import {
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { AutocompleteOption } from "@/lib/types";
-import { useCeleryFileRGGMutation } from "@/lib/redux/api/api";
+import { useDGEMutation } from "@/lib/redux/api/api";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 import { setGDEField } from "@/lib/redux/reducers/plotReducer";
 import DialogTitleHelp from "../custom/DialogTitle";
@@ -28,7 +28,7 @@ export default function DialogDotplot(props: {
   const genes = useAppSelector((state) => state.plotReducer.data.genes);
 
   const dispatch = useAppDispatch();
-  const [getRGG] = useCeleryFileRGGMutation();
+  const [getRGG] = useDGEMutation();
   
   const [selectedUns, setSelectedUns] = useState<AutocompleteOption | null>(null);
   const [selectedGenes, setSelectedGenes] = useState<AutocompleteOption[]>([]);
@@ -204,7 +204,7 @@ export default function DialogDotplot(props: {
                       pollTaskStatus(
                         data.data.response,
                         data.data.timestamp,
-                        "celeryFileRGG",
+                        "DGE",
                         dispatch,
                         (result: any) => {
                           dispatch(

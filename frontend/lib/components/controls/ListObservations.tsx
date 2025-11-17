@@ -4,7 +4,7 @@ import { useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
 import { useState } from "react";
 import { setAnndataField } from "@/lib/redux/reducers/plotReducer";
 import { theme } from "@/lib/design";
-import { useLazyFileHierarchyQuery, useLazyFileObsQuery } from "@/lib/redux/api/api";
+import { useLazyObsQuery } from "@/lib/redux/api/api";
 import ButtonSecondary from "../custom/ButtonSecondary";
 import DialogClustering from "../modals/DialogClustering";
 import DialogAutoAnnotation from "../modals/DialogAutoAnnotation";
@@ -13,12 +13,12 @@ import ButtonList from "../custom/ButtonList";
 export default function ListClusterings() {
   
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
-  const statusHierachy = useAppSelector((state) => state.plotReducer.statusBackend.metadata);
-  const statusObservation = useAppSelector((state) => state.plotReducer.statusBackend.fileObs);
-  const statusLeiden = useAppSelector((state) => state.plotReducer.statusBackend.Leiden);
+  const statusHierachy = useAppSelector((state) => state.plotReducer.status.Metadata);
+  const statusObservation = useAppSelector((state) => state.plotReducer.status.Obs);
+  const statusLeiden = useAppSelector((state) => state.plotReducer.status.Leiden);
   
   const dispatch = useAppDispatch();
-  const [getObs] = useLazyFileObsQuery();
+  const [getObs] = useLazyObsQuery();
   
   const [isClusteringDialogOpen, setIsClusteringDialogOpen] = useState<boolean>(false);
   const [isAutoAnnotDialogOpen, setIsAutoAnnotDialogOpen] = useState<boolean>(false);

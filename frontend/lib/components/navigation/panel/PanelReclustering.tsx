@@ -7,7 +7,7 @@ import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks/hooks";
 import { AutocompleteOption, Cluster, Reclustering } from "@/lib/types";
 import { Close } from "@mui/icons-material";
 import { LoadingButton } from "@mui/lab";
-import { useCeleryFileReclusterMutation, useLazyFileHierarchyQuery } from "@/lib/redux/api/api";
+import { useFileReclusterMutation, useLazyHierarchyQuery } from "@/lib/redux/api/api";
 import { pollTaskStatus } from "@/lib/util/handlerPollingTaskStatus";
 
 export default function PanelReclustering(props: {
@@ -18,8 +18,8 @@ export default function PanelReclustering(props: {
   const fileID = useAppSelector((state) => state.plotReducer.system.files.active);
   const userID = useAppSelector((state) => state.plotReducer.system.user.id);
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
-  const statusObs = useAppSelector((state) => state.plotReducer.statusBackend.fileObs);
-  const statusNewObs = useAppSelector((state) => state.plotReducer.statusBackend.celeryFileRecluster);
+  const statusObs = useAppSelector((state) => state.plotReducer.status.Obs);
+  const statusNewObs = useAppSelector((state) => state.plotReducer.status.FileRecluster);
   
   const [observationName, setObservationName] = useState<string>("");
   const [catOptions, setCatOptions] = useState<AutocompleteOption[]>([]);
@@ -28,8 +28,8 @@ export default function PanelReclustering(props: {
   
   const ref = useRef();
   const dispatch = useAppDispatch();
-  const [getReclustering] = useCeleryFileReclusterMutation();
-  const [getHierarchy] = useLazyFileHierarchyQuery();
+  const [getReclustering] = useFileReclusterMutation();
+  const [getHierarchy] = useLazyHierarchyQuery();
   
   useEffect(() => {
     if (obs.selectedKey && obs.indices) {

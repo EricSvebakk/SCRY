@@ -22,8 +22,8 @@ export type InitialPlotStateProps = {
       [key in keyof triggerOptions]: triggerOptions[key] | null;
     };
   };
-  statusBackend: statusBackendAPI;
-  status: statusAttributes;
+  status: statusType;
+  // status: statusAttributes;
   error: errorAttributes;
 };
 
@@ -188,25 +188,26 @@ export type sortClustersByType = "dendrogram" | "alphabetical";
 export type sortGenesByType = "rgg_order" | "mean" | "fraction" | "alphabetical";
 export type sortByDirectionType = "ascending" | "descending";
 
-export const fetchOptions = [
-  "generate_leiden",
-  "generate_umap",
-  "generate_ranked_genes_groups",
-  "get_rgg_dotplot",
-  "get_ranked_genes_groups",
-  "get_file_hierarchy",
-  "get_file_obs",
-  "get_file_obsm",
-  "get_filenames",
-  "get_genes",
-  "get_embedding",
-  "get_clustering",
-  "get_celltypist_annotations",
-  "get_model_types",
-  "get_feature_coordinates",
-  "save_file_as",
-  "post_new_observation",
-] as const;
+// Equivalent to Object.keys(backendAPI.endpoints) but this offers better type support
+export const endpoints: readonly string[] = [
+  "SystemFiles",
+  "CelltypistModels",
+  "Metadata",
+  "Hierarchy",
+  "Obs",
+  "Obsm",
+  "Genes",
+  "Feature",
+  "statusTask",
+  "statusResult",
+  "Embedding",
+  "Leiden",
+  "DGE",
+  "FileCopy",
+  "FileRecluster",
+  "FileMerge",
+  "CelltypistAnnotate",
+];
 
 export type statusOptions = {
   inProgress: boolean;
@@ -214,10 +215,9 @@ export type statusOptions = {
   message: string;
 };
 
-export type statusAttributes = {
-  [key in (typeof fetchOptions)[number]]: statusOptions;
+export type statusType = {
+  [key in (typeof endpoints)[number]]: statusOptions;
 };
-
 
 export type triggerOptions = {
   saveScatterPlotImage: string;
@@ -256,26 +256,6 @@ export type Reclustering = {
   clusters: Cluster[];
 }
 
-export const tagsBackendAPI = [
-  "HIERARCHY",
-  "OBSM",
-  "OBS",
-  "GENES",
-  "FEATURE",
-  "LEIDEN",
-  "ANNOTATION",
-  "LDR",
-  "NLDR",
-  "RGG",
-  "RECLUSTER",
-  "CELLTYPIST"
-] as const
-
-export const backendEndpoints: string[] = Object.keys(backendAPI.endpoints); // as readonly string[];
-
-export type statusBackendAPI = {
-  [key in typeof backendEndpoints[number]]: statusOptions;
-};
 
 export type errorOptions = {
   message: string;
@@ -283,7 +263,7 @@ export type errorOptions = {
 }
 
 export type errorAttributes = {
-  [key in typeof backendEndpoints[number]]: errorOptions;
+  [key in (typeof endpoints)[number]]: errorOptions;
 };
 
 // ==== Not related to reducer =============================================================
