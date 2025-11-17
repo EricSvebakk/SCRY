@@ -1,4 +1,4 @@
-import { fetchOptions, Reclustering } from "@/lib/types";
+import { endpoints, Reclustering } from "@/lib/types";
 
 export type backendResponse = {
   response: any,
@@ -53,7 +53,7 @@ export type celeryCelltypistAnnotateSchema = {
 
 export type celeryStatusSchema = {
   taskID: string;
-  statusID: typeof fetchOptions[number];
+  statusID: typeof endpoints[number];
 }
 
 export type celeryResultSchema = {
