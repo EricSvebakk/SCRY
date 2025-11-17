@@ -29,7 +29,7 @@ ORIGINS = [
 config = dotenv_values(".env")
 app = FastAPI(root_path=BACKEND_PATH)
 
-print(config, ORIGINS)
+# print(config, ORIGINS)
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,7 +46,7 @@ UPLOAD_CHUNK_SIZE = 1024 * 1024 * 10 # 1MB chunks
 logger = logging.getLogger("uvicorn.error")
 logger.setLevel(logging.DEBUG)
 
-logger.debug(["config", ORIGINS])
+# logger.debug(["config", ORIGINS])
 
 # Creates directory if it does not exist
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)

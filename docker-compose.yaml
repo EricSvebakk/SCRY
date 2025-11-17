@@ -33,6 +33,10 @@ services:
     environment:
       - PYTHONPATH=/usr/src/app
       - CELERY_BROKER_URL=redis://scry_redis:6379/0
+      - REDIS_HOST=scry_redis
+      - REDIS_PORT=6379
+      - UPLOAD_DIR=/persistent01
+      - DEBUG=false
     networks:
       - caddy_net
   
@@ -70,7 +74,7 @@ services:
     ports:
       - "3000:3000"
     # volumes:
-      # - ./frontend:/app # Sync the frontend code
+    #   - ./frontend:/usr/src/app # Sync the frontend code
     networks:
       - caddy_net
     depends_on:

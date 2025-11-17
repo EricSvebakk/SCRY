@@ -23,15 +23,21 @@ import redis
 from scipy.cluster.hierarchy import to_tree
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-UPLOAD_DIR = "/persistent01"
+
+REDIS_HOST = os.getenv("CELERY_HOST", "scry_redis")
+REDIS_PORT = os.getenv("CELERY_PORT", "6379")
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "/persistent01")
+DEBUG = os.getenv("UPLOAD_DIR", False)
+
+url = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
 
 celery_app = Celery(
   "worker",
-  broker=CELERY_BROKER_URL,
-  backend=CELERY_BROKER_URL
+  broker=url,
+  backend=url
 )
 
-r = redis.Redis(host="scry_redis", port=6379, db=0)
+r = redis.Redis(host=REDIS_HOST, port=6379, db=0)
 
 sc.settings.n_jobs = -1
 sc.settings.max_memory = 256
@@ -40,15 +46,13 @@ import logging
 logger = logging.getLogger("uvicorn.error")
 logger.setLevel(logging.DEBUG)
 
-# logger.debug(["config", ORIGINS])
-
-print("n_jobs", sc.settings.n_jobs)
-print("max_m", sc.settings.max_memory)
-
-print("Redis", r.ping())
-
-print("URL", CELERY_BROKER_URL)
-print(celery_app)
+if (DEBUG):
+  print("URL", url)
+  print("upload_dir", UPLOAD_DIR)
+  print("n_jobs", sc.settings.n_jobs)
+  print("max_m", sc.settings.max_memory)
+  print("Redis", r.ping())
+  print(celery_app)
 
 @dataclass
 class PipelineStep:
@@ -110,7 +114,7 @@ def register_task_for_user(user_id: str, file_id: str, task_id: str, func_name: 
 
 # ============================================================================================
 @contextmanager
-def file_lock(file_path: str, user_id: str, timeout: int = 600, blocking: bool = True, blocking_timeout: float | None = None):
+def _file_lock(file_path: str, user_id: str, timeout: int = 600, blocking: bool = True, blocking_timeout: float | None = None):
   lock_key = f"filelock:{file_path}"
   meta_key = f"{lock_key}:meta"
 
@@ -124,7 +128,7 @@ def file_lock(file_path: str, user_id: str, timeout: int = 600, blocking: bool =
       detail=f"File '{os.path.basename(file_path)}' is already locked by {current_user.decode() if current_user else 'unknown'}",
     )
 
-  r.hset(meta_key, mapping={"user_id": user_id, "started_at": str(time.time())})
+  r.hset(meta_key, mapping={"user_id": user_id, "started_at": str(int(time.time()) * 1000)})
 
   try:
     yield
@@ -139,7 +143,7 @@ def file_lock(file_path: str, user_id: str, timeout: int = 600, blocking: bool =
 @contextmanager
 def open_h5ad_read(file_path: str, user_id: str, timeout: int = 600):
   
-  with file_lock(file_path, user_id, timeout=timeout, blocking=True, blocking_timeout=timeout):
+  with _file_lock(file_path, user_id, timeout=timeout, blocking=True, blocking_timeout=timeout):
   
     adata = None
     
@@ -158,7 +162,7 @@ def open_h5ad_read(file_path: str, user_id: str, timeout: int = 600):
 @contextmanager
 def open_h5ad_write(file_path: str, user_id: str, timeout: int = 600):
   
-  with file_lock(file_path, user_id, timeout=timeout, blocking=True):
+  with _file_lock(file_path, user_id, timeout=timeout, blocking=True):
     
     adata = None  # backed=None by default
     
