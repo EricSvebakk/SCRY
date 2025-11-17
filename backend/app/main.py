@@ -13,6 +13,7 @@ from typing import Optional, TypedDict, Callable
 from celery.result import AsyncResult
 from my_types import newObservation
 import hashlib
+from my_types import ValidationResponse
 
 load_dotenv()
 FRONTEND_ENDPOINT = os.environ.get("FRONTEND_ENDPOINT")
@@ -51,16 +52,14 @@ logger.setLevel(logging.DEBUG)
 # Creates directory if it does not exist
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 
-class ValidationResponse(TypedDict):
-  response: str
-  ok: bool
 
 def validate(user_id: str, pass_key: str, file_id: str, func: Callable, *args, delay: bool = False) -> ValidationResponse:
   
   if ((len(user_id) == 0) or (pass_key != PASSKEY_SECRET)):
     response: ValidationResponse = {
-      "response": "Missing parameter",
-      "ok": False
+      "response": "Unauthorized Access",
+      "ok": False,
+      "code": 401,
     }
     return response
     
@@ -82,7 +81,8 @@ def validate(user_id: str, pass_key: str, file_id: str, func: Callable, *args, d
       response: ValidationResponse = {
         "response": async_response.id,
         "timestamp": meta["created_at"],
-        "ok": True
+        "ok": True,
+        "code": 200
       }
     else:
       response = func(file_path, user_id, *args)
@@ -117,8 +117,8 @@ async def system_file_names(
   if ((len(user_id) == 0) or (pass_key != PASSKEY_SECRET)):
     return JSONResponse(
       content={
-        "response": "Missing parameter",
-        "ok": False
+        "response": "Unauthorized Access",
+        "ok": False,
       },
       status_code=401
     )
@@ -171,7 +171,7 @@ async def file_metadata(
  pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.get_metadata)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
 
 @app.get("/file/hierarchy", tags=["FILE"])
 async def file_hierarchy(
@@ -180,7 +180,7 @@ async def file_hierarchy(
  pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.get_hierarchy)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
 
 @app.get("/file/obs", tags=["FILE"])
 async def file_obs(
@@ -190,7 +190,7 @@ async def file_obs(
   pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.get_observation, obs)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
 
 @app.get("/file/obsm", tags=["FILE"])
 async def file_obsm(
@@ -200,7 +200,7 @@ async def file_obsm(
   pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.get_obsm, obsm)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
 
 @app.get("/file/genes", tags=["FILE"])
 async def file_genes(
@@ -209,7 +209,7 @@ async def file_genes(
   pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.get_genes)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
   
 @app.get("/file/feature", tags=["FILE"])
 async def file_feature(
@@ -219,7 +219,7 @@ async def file_feature(
   pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.get_feature_indices, feature_key)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
 
 # @app.post("/file/ldr", tags=["FILE"])
 # async def celery_file_ldr(
@@ -229,7 +229,7 @@ async def file_feature(
 #   pass_key: str = Header(alias=PASSKEY),
 # ):
 #   obj = validate(user_id, pass_key, file_id, worker.compute_ldr, n_pcs, delay=True)
-#   return JSONResponse(content=obj)
+#   return JSONResponse(content=obj, status_code=obj["code"])
 
 @app.post("/compute/embedding", tags=["COMPUTE"])
 async def compute_embedding(
@@ -243,7 +243,7 @@ async def compute_embedding(
   pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.compute_nldr, adata_key, n_pcs, min_dist, spread, n_neighbors, delay=True)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
 
 @app.post("/compute/leiden", tags=["COMPUTE"])
 async def compute_leiden(
@@ -255,7 +255,7 @@ async def compute_leiden(
   pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.compute_leiden, uns_key, neighbors_key, resolution, delay=True)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
 
 @app.post("/compute/dge", tags=["COMPUTE"])
 async def compute_dge(
@@ -267,7 +267,7 @@ async def compute_dge(
   pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.compute_rgg, uns_key, n_genes, selected_genes, delay=True)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
 
 @app.post("/compute/copy", tags=["COMPUTE"])
 async def compute_copy(
@@ -279,7 +279,7 @@ async def compute_copy(
   pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.compute_save_file_as, new_file_id, selected_obs, selected_obs_clusters, delay=True)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
 
 @app.post("/compute/recluster", tags=["COMPUTE"])
 async def compute_recluster(
@@ -289,7 +289,7 @@ async def compute_recluster(
   pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.compute_recluster, observation.model_dump(), delay=True)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
 
 @app.post("/compute/merge", tags=["COMPUTE"])
 async def compute_merge(
@@ -300,7 +300,7 @@ async def compute_merge(
   pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.compute_recluster, file_path_dest, observation.model_dump(), delay=True)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
 
 @app.post("/celltypist/annotate", tags=["COMPUTE"])
 async def celltypist_annotate(
@@ -312,7 +312,7 @@ async def celltypist_annotate(
   pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.compute_celltypist_annotations, annotation_key, connectivities_key, annotation_model, delay=True)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
 
 # ============================================================================================
 # STATUS
@@ -324,7 +324,7 @@ async def celery_user_tasks(
   pass_key: str = Header(alias=PASSKEY),
 ):
   obj = validate(user_id, pass_key, file_id, worker.get_tasks)
-  return JSONResponse(content=obj)
+  return JSONResponse(content=obj, status_code=obj["code"])
 
 @app.get("/status/task", tags=["STATUS"])
 async def celery_status(
@@ -333,20 +333,30 @@ async def celery_status(
   pass_key: str = Header(alias=PASSKEY),
 ):
   
+  obj = None
+  
   if ((len(user_id) == 0) or (pass_key != PASSKEY_SECRET)):
-    response: ValidationResponse = {
-      "response": "Missing parameter",
-      "ok": False
+    obj: ValidationResponse = {
+      "response": "Unauthorized Access",
+      "ok": False,
+      "code": 401
     }
-    return response
   
-  result = AsyncResult(task_id)
+  else:
   
-  return JSONResponse(content={
-    "task_id": task_id,
-    "status": result.status,
-    "progress": result.info if result.status not in ("SUCCESS") else "See /get_finished_task for results"
-  })
+    result = AsyncResult(task_id)
+  
+    obj: ValidationResponse = {
+      "response": {
+        "task_id": task_id,
+        "status": result.status,
+        "progress": result.info if result.status not in ("SUCCESS") else "See /get_finished_task for results"
+      },
+      "ok": True,
+      "code": 200,
+    }
+  
+  return JSONResponse(content=obj)
 
 @app.get("/status/result", tags=["STATUS"])
 async def celery_result(
@@ -355,26 +365,41 @@ async def celery_result(
   pass_key: str = Header(alias=PASSKEY),
 ):
   
-  if ((len(user_id) == 0) or (pass_key != PASSKEY_SECRET)):
-    response: ValidationResponse = {
-      "response": "Missing parameter",
-      "ok": False
-    }
-    return response
+  obj = None
   
-  result = AsyncResult(task_id)
-
-  if result.successful():
-    return result.result
-  elif result.failed():
-    return {
-      "error": {
-        "type": type(result.result).__name__,
-        "message": str(result.result)
-      }
+  if ((len(user_id) == 0) or (pass_key != PASSKEY_SECRET)):
+    obj: ValidationResponse = {
+      "response": "Unauthorized Access",
+      "ok": False, 
+      "code": 401
     }
+    
   else:
-    return {
-      "status": result.status,
-      "message": "Task not finished yet"
-    }
+  
+    result = AsyncResult(task_id)
+    
+    if result.failed():
+      
+      obj: ValidationResponse = {
+        "response": {
+          "type": type(result.result).__name__,
+          "message": str(result.result)
+        },
+        "ok": False,
+        "code": 500
+      }
+      
+    elif result.successful():
+      obj: ValidationResponse = result.result
+    
+    else:
+      obj: ValidationResponse = {
+        "response": {
+          "status": result.status,
+          "message": "Task not finished yet"
+        },
+        "ok": True,
+        "code": 200
+      }
+      
+  return JSONResponse(content=obj)

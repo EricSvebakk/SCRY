@@ -10,7 +10,7 @@ import {
   PlotConfiguration,
   geneReport,
   statusType,
-  errorAttributes,
+  errorType,
   endpoints,
 } from "@/lib/types";
 import {
@@ -112,7 +112,7 @@ const initialPlotState: InitialPlotStateProps = {
       message: "",
     };
     return acc;
-  }, {} as errorAttributes),
+  }, {} as errorType),
 };
 
 export const plotSlice = createSlice({
@@ -239,7 +239,7 @@ export const plotSlice = createSlice({
       action: PayloadAction<{
         type: (typeof endpoints)[number];
         message: string;
-        time: string;
+        time?: string;
       }>
     ) => {
       const type = state.error[action.payload.type];
@@ -490,6 +490,7 @@ export const {
   setModelTypes,
   setGeneReport,
   setStatusBackend,
+  setError,
 } = plotSlice.actions;
 
 export default plotSlice.reducer;

@@ -599,6 +599,7 @@ def get_metadata(file_path: str, user_id: str):
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   metadata = {
@@ -623,11 +624,15 @@ def get_metadata(file_path: str, user_id: str):
       
       result["response"] = metadata
       result["ok"] = True
+      result["code"] = 200
       
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      result["code"] = 500
+      result["code"] = 500
+      
   
   return result
   
@@ -638,6 +643,7 @@ def get_hierarchy(file_path: str, user_id: str):
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   with open_h5ad_read(file_path, user_id) as adata:
@@ -652,11 +658,14 @@ def get_hierarchy(file_path: str, user_id: str):
         "obsp": list(filter(notStartWith, list(adata.obsp.keys()))),
       }
       result["ok"] = True
+      result["code"] = 200
+
       
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      result["code"] = 500
   
   return result
 
@@ -666,6 +675,7 @@ def get_genes(file_path: str, user_id: str):
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   with open_h5ad_read(file_path, user_id) as adata:
@@ -673,11 +683,13 @@ def get_genes(file_path: str, user_id: str):
     try:
       result["response"] = list(adata.var_names)
       result["ok"] = True
+      result["code"] = 200
       
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      result["code"] = 500
   
   return result
 
@@ -687,6 +699,7 @@ def get_observation(file_path: str, user_id: str, selectedObs: str):
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   with open_h5ad_read(file_path, user_id) as adata:
@@ -702,11 +715,13 @@ def get_observation(file_path: str, user_id: str, selectedObs: str):
         "codes": label_map
       }
       result["ok"] = True
+      result["code"] = 200
     
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      result["code"] = 500
     
   return result
 
@@ -716,6 +731,7 @@ def get_obsm(file_path: str, user_id: str, selectedObsm: str):
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   with open_h5ad_read(file_path, user_id) as adata:
@@ -723,11 +739,13 @@ def get_obsm(file_path: str, user_id: str, selectedObsm: str):
     try:
       result["response"] = list(adata.obsm[selectedObsm][:, :2].tolist())
       result["ok"] = True
+      result["code"] = 200
       
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      result["code"] = 500
   
   return result
 
@@ -737,6 +755,7 @@ def get_feature_indices(file_path: str, user_id: str, feature_key: str):
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   with open_h5ad_read(file_path, user_id) as adata:
@@ -760,15 +779,18 @@ def get_feature_indices(file_path: str, user_id: str, feature_key: str):
           "codes": indices.tolist(),
         }
         result["ok"] = True
+        result["code"] = 200
       
       else:
         result["response"] = "Feature key does not exist"
         result["ok"] = False
+        result["code"] = 500
         
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      result["code"] = 500
   
   return result
 
@@ -787,6 +809,7 @@ def compute_ldr(
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   with open_h5ad_write(file_path, user_id) as adata:
@@ -805,6 +828,7 @@ def compute_ldr(
       
       result["response"] = list(adata.obsm[key_pca][:, :2].tolist())
       result["ok"] = True
+      result["code"] = 200
       
       _finalize_task(self.request.id, user_id, "SUCCESS")
       
@@ -812,6 +836,7 @@ def compute_ldr(
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      result["code"] = 500
       
       _finalize_task(self.request.id, user_id, "FAILURE", error=str(e))
   
@@ -835,6 +860,7 @@ def compute_nldr(
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   with open_h5ad_write(file_path, user_id) as adata:
@@ -857,12 +883,14 @@ def compute_nldr(
       
       result["response"] = list(adata.obsm[key_umap][:, :2].tolist())
       result["ok"] = True
+      result["code"] = 200
       _finalize_task(self.request.id, user_id, "SUCCESS")
       
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      result["code"] = 500
       _finalize_task(self.request.id, user_id, "FAILURE", error=str(e))
   
   return result
@@ -883,6 +911,7 @@ def compute_leiden(
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   with open_h5ad_write(file_path, user_id) as adata:
@@ -909,12 +938,14 @@ def compute_leiden(
         "codes": label_map
       }
       result["ok"] = True
+      result["code"] = 200
       _finalize_task(self.request.id, user_id, "SUCCESS")
     
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      result["code"] = 500
       _finalize_task(self.request.id, user_id, "FAILURE", error=str(e))
   
   return result
@@ -935,6 +966,7 @@ def compute_rgg(
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   with open_h5ad_write(file_path, user_id) as adata:
@@ -975,11 +1007,13 @@ def compute_rgg(
         "dendro": json.dumps(make_safe(dendro_tree)),
       }
       result["ok"] = True
+      result["code"] = 200
       
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      result["code"] = 500
   
   return result
 
@@ -998,6 +1032,7 @@ def compute_save_file_as(
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   with open_h5ad_write(file_path, user_id) as adata:
@@ -1013,11 +1048,13 @@ def compute_save_file_as(
       
       result["response"] = "Slicing successful"
       result["ok"] = True
+      result["code"] = 200
     
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      result["code"] = 500
   
   return result
   
@@ -1039,6 +1076,7 @@ def compute_celltypist_annotations(
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   with open_h5ad_write(file_path, user_id) as adata:
@@ -1092,6 +1130,7 @@ def compute_celltypist_annotations(
       #   "labels": labels
       # }
       result["ok"] = True
+      result["code"] = 200
     
     except Exception as e:
       
@@ -1100,6 +1139,7 @@ def compute_celltypist_annotations(
       errorMessage = f"OKAY Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      result["code"] = 500
       
   return result
   
@@ -1118,6 +1158,7 @@ def compute_recluster(
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   with open_h5ad_write(file_path, user_id) as adata:
@@ -1144,11 +1185,13 @@ def compute_recluster(
       
       result["response"] = obs_key
       result["ok"] = True
+      result["code"] = 200
 
     except Exception as e:
       errorMessage = f"Something unexpected happened: {e}"
       result["response"] = errorMessage
       result["ok"] = False
+      result["code"] = 500
   
   return result
 
@@ -1167,6 +1210,7 @@ def compute_merge_data(
   result: ComputationResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
+    "code": 500
   }
   
   with open_h5ad_read(file_path, user_id) as adata_src:
@@ -1210,10 +1254,12 @@ def compute_merge_data(
           "obsp": list(filter(notStartWith, list(adata_dest.obsp.keys()))),
         }
         result["ok"] = True
+        result["code"] = 200
 
       except Exception as e:
         errorMessage = f"Something unexpected happened: {e}"
         result["response"] = errorMessage
         result["ok"] = False
+        result["code"] = 500
       
       

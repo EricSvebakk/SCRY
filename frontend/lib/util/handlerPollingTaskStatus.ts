@@ -1,3 +1,4 @@
+import { backendResponse } from "../redux/api/schema";
 import { setStatusBackend } from "../redux/reducers/plotReducer";
 import { RootState, store } from "../redux/stores/store";
 import { endpoints } from "../types";
@@ -61,8 +62,11 @@ export function pollTaskStatus(
         }
         return response.json();
       })
-      .then((data) => {
-        if (data.status === "SUCCESS" || data.status === "FAILURE") {
+      .then((data: backendResponse) => {
+        
+        const response = data.response;
+        
+        if (response.status === "SUCCESS" || response.status === "FAILURE") {
           clearInterval(interval);
           clearInterval(intervalTimestamp);
 
@@ -74,7 +78,7 @@ export function pollTaskStatus(
             })
           );
 
-          if (data.status === "SUCCESS") {
+          if (response.status === "SUCCESS") {
             fetch(`${BACKEND_ENDPOINT}/status/result?task_id=${taskID}`, {
               method: "GET",
               headers: {
@@ -93,19 +97,19 @@ export function pollTaskStatus(
                 }
                 return data.json();
               })
-              .then((data: any) => {
+              .then((data: backendResponse) => {
                 onSuccess(data.response);
               })
               .catch((error) => {
                 console.error(error);
               });
           }
-        } else if (data.status === "PROGRESS") {
+        } else if (response.status === "PROGRESS") {
           dispatch(
             setStatusBackend({
               type: statusID,
               value: true,
-              message: data.progress.status,
+              message: response.progress.status,
             })
           );
         }

@@ -20,7 +20,7 @@ export function ClusterScatterPlot(props: {
   const config = useAppSelector((state) => state.plotReducer.plot.cluster);
   const imageTrigger = useAppSelector((state) => state.plotReducer.navigation.triggers.saveScatterPlotImage);
   const status = useAppSelector((state) => state.plotReducer.status.Obsm);
-    const statusOutgoing = useAppSelector((state) => state.plotReducer.status.Embedding);
+  const statusOutgoing = useAppSelector((state) => state.plotReducer.status.Embedding);
   const selectedCluster = useAppSelector((state) => state.plotReducer.filtering.selected.clusters);
   
   const [counter, setCounter] = useState(0);
@@ -99,7 +99,7 @@ export function ClusterScatterPlot(props: {
 
       <Stack width="100%" height="100%" direction="row" columnGap={1}>
         {status.inProgress ? (
-          <CurrentProgress status={statusOutgoing} />
+          <CurrentProgress status={status} />
         ) : (
           <Stack direction="row" position="relative" height="100%" width="100%">
             {obsm.data ? (

@@ -24,7 +24,7 @@ export type InitialPlotStateProps = {
   };
   status: statusType;
   // status: statusAttributes;
-  error: errorAttributes;
+  error: errorType;
 };
 
 export type fileType = {
@@ -219,6 +219,15 @@ export type statusType = {
   [key in (typeof endpoints)[number]]: statusOptions;
 };
 
+export type errorOptions = {
+  message: string;
+  time?: string;
+}
+
+export type errorType = {
+  [key in (typeof endpoints)[number]]: errorOptions;
+};
+
 export type triggerOptions = {
   saveScatterPlotImage: string;
   saveFeaturePlotImage: string;
@@ -257,14 +266,6 @@ export type Reclustering = {
 }
 
 
-export type errorOptions = {
-  message: string;
-  time?: string;
-}
-
-export type errorAttributes = {
-  [key in (typeof endpoints)[number]]: errorOptions;
-};
 
 // ==== Not related to reducer =============================================================
 
