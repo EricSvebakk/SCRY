@@ -12,12 +12,7 @@ class newObservation(BaseModel):
   base: str
   clusters: list[newCluster]
   
-class ValidationResponse(TypedDict):
+class BackendResponse(TypedDict):
   response: str
-  ok: bool
-  code: str
-  
-class ComputationResponse(TypedDict):
-  response: Any
   ok: bool
   code: str

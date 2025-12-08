@@ -1,26 +1,21 @@
 
 import os
-from celery import Celery
-from celery.result import AsyncResult
+import json
+import redis
 import scanpy as sc
 import pandas as pd
 import numpy as np
-import celltypist as ct
-import anndata as ad
 
-import json
-import time
-import copy
+from celery.result import AsyncResult
+from celery import Celery, Task
 from typing import Optional
-from anndata import AnnData
-from dataclasses import dataclass
-from functools import partial
-from typing import Callable, Set
-from my_types import newObservation, ComputationResponse
-from contextlib import contextmanager
-from fastapi import HTTPException
-import redis
-from scipy.cluster.hierarchy import to_tree
+from redis import Redis
+
+from my_types import newObservation, BackendResponse
+from util.context_manager import open_h5ad_read
+from util.task_tracker import TaskRunner, StatusTracker
+from util import task_steps as ts
+
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 
@@ -54,372 +49,6 @@ if (DEBUG):
   print("Redis", r.ping())
   print(celery_app)
 
-@dataclass
-class PipelineStep:
-  description: str
-  func: Callable[[], bool]
-
-# ============================================================================================
-def _task_meta_key(task_id: str) -> str:
-  return f"task_meta:{task_id}"
-
-def _user_tasks_key(user_id: str) -> str:
-  return f"user_tasks:{user_id}"
-
-def _set_task_status(task_id: str, status: str, meta: dict | None = None):
-  key = _task_meta_key(task_id)
-  m = {"status": status, "updated_at": str(int(time.time()) * 1000)}
-  if meta:
-      # store a short JSON of your progress meta (current/total/step)
-      m["progress_meta"] = json.dumps(meta)
-  r.hset(key, mapping=m)
-  # refresh TTL
-  r.expire(key, 7 * 24 * 3600)
-
-def _finalize_task(task_id: str, user_id: str, status: str, error: str | None = None):
-  key = _task_meta_key(task_id)
-  m = {"status": status, "finished_at": str(int(time.time()) * 1000)}
-  if error:
-      m["error"] = error[:1000]
-  pipe = r.pipeline()
-  pipe.hset(key, mapping=m)
-  pipe.expire(key, 7 * 24 * 3600)
-  
-  # remove from user index if you only want “running” in the set;
-  # if you prefer to keep recent finished in the list, comment this out.
-  pipe.srem(_user_tasks_key(user_id), task_id)
-  pipe.execute()
-
-def register_task_for_user(user_id: str, file_id: str, task_id: str, func_name: str, args: list):
-  key_user = _user_tasks_key(user_id)
-  key_meta = _task_meta_key(task_id)
-  now = int(time.time()) * 1000
-  meta = {
-      "user_id": user_id,
-      "file_id": os.path.basename(file_id),
-      "task_id": task_id,
-      "task_name": func_name,
-      "created_at": str(now),
-      "status": "PENDING",
-      "func": func_name,
-      "args_json": json.dumps(args),
-  }
-  pipe = r.pipeline()
-  pipe.sadd(key_user, task_id)
-  pipe.hset(key_meta, mapping=meta)
-  pipe.expire(key_meta, 7 * 24 * 3600)  # keep metadata 7 days
-  pipe.execute()
-  
-  return meta
-
-# ============================================================================================
-@contextmanager
-def _file_lock(file_path: str, user_id: str, timeout: int = 600, blocking: bool = True, blocking_timeout: float | None = None):
-  lock_key = f"filelock:{file_path}"
-  meta_key = f"{lock_key}:meta"
-
-  lock = r.lock(lock_key, timeout=timeout)
-  is_locked = lock.acquire(blocking=blocking, blocking_timeout=blocking_timeout)
-
-  if not is_locked:
-    current_user = r.hget(meta_key, "user_id")
-    raise HTTPException(
-      status_code=423,
-      detail=f"File '{os.path.basename(file_path)}' is already locked by {current_user.decode() if current_user else 'unknown'}",
-    )
-
-  r.hset(meta_key, mapping={"user_id": user_id, "started_at": str(int(time.time()) * 1000)})
-
-  try:
-    yield
-  finally:
-    if is_locked:
-      try:
-        lock.release()
-      except redis.exceptions.LockError:
-        pass
-      r.delete(meta_key)
-
-@contextmanager
-def open_h5ad_read(file_path: str, user_id: str, timeout: int = 600):
-  
-  with _file_lock(file_path, user_id, timeout=timeout, blocking=True, blocking_timeout=timeout):
-  
-    adata = None
-    
-    try:
-      adata = sc.read_h5ad(file_path, backed="r")
-      yield adata
-      
-    except Exception as e:
-      print(f"Something unexpected happened while opening the file: {e}")
-      raise
-    
-    finally:
-      if adata is not None and getattr(adata, "file", None) is not None:
-        adata.file.close()
-
-@contextmanager
-def open_h5ad_write(file_path: str, user_id: str, timeout: int = 600):
-  
-  with _file_lock(file_path, user_id, timeout=timeout, blocking=True):
-    
-    adata = None  # backed=None by default
-    
-    try:
-      adata = sc.read_h5ad(file_path)
-      yield adata
-      
-    except Exception as e:
-      print(f"Something unexpected happened while opening the file: {e}")
-      raise
-      
-    finally:
-      pass
-
-# ============================================================================================
-def start_progress(task):
-  
-  meta = {
-    "current": 0,
-    "total": None,
-    "step": "Opening AnnData object",
-    "status": f"Opening AnnData object"
-  }
-  
-  task.update_state(
-    state="PROGRESS",
-    meta=meta
-  )
-  
-  _set_task_status(task.request.id, "PROGRESS", meta)
-
-def end_progress(task):
-  
-  meta = {
-    "current": 0,
-    "total": None,
-    "step": "Writing new data to AnnData object",
-    "status": f"Writing new data to AnnData object"
-  }
-  
-  task.update_state(
-    state="PROGRESS",
-    meta=meta
-  )
-  
-  _set_task_status(task.request.id, "PROGRESS", meta)
-
-def simple_update_progress(task, status: str):
-  
-  meta = {
-    "current": 1,
-    "total": 1,
-    "step": status,
-    "status": "Status: " + status
-  }
-    
-  task.update_state(
-    state="PROGRESS",
-    meta=meta
-  )
-  
-  _set_task_status(task.request.id, "PROGRESS", meta)
-  
-
-def update_progress(task, step_index: int, steps: list[str]):
-  total = len(steps)
-  
-  if (step_index >= 0) and (step_index < total):
-    
-    meta = {
-      "current": step_index + 1,
-      "total": total,
-      "step": steps[step_index],
-      "status": f"Step {step_index + 1}/{total if (total != 1) else 'X'}: {steps[step_index]}"
-    }
-    
-    task.update_state(
-      state="PROGRESS",
-      meta=meta
-    )
-    
-    _set_task_status(task.request.id, "PROGRESS", meta)
-
-# ============================================================================================
-def handle_pipeline_steps(task, pipeline_steps: list[PipelineStep]):
-  
-  changes_made = False
-  step_current = 0
-  
-  pipeline_description_steps = [x.description for x in pipeline_steps]
-
-  for step in pipeline_steps:
-    
-    print(step.description)
-    
-    update_progress(task, step_current, pipeline_description_steps)
-    changes_made = step.func() or changes_made
-    
-    step_current += 1
-  
-  return changes_made
-
-# ============================================================================================
-def handle_pca(adata: AnnData, key_pca: str, n_pcs: int) -> bool:
-  
-  changes_made = False
-  
-  if (not (key_pca in adata.obsm_keys())) or (adata.obsm[key_pca].shape[1] < n_pcs):
-    
-    changes_made = True
-    sc.pp.pca(
-      adata,
-      key_added=key_pca,
-      n_comps=n_pcs,
-    )
-  
-  return changes_made
-
-def handle_neighbors(adata: AnnData, key_neighbors: str, key_pca: str, n_pcs: int, n_neighbors: int) -> bool:
-  
-  changes_made = False
-  
-  if not (key_neighbors in adata.uns_keys()):
-    
-    changes_made = True
-    sc.pp.neighbors(
-      adata,
-      key_added=key_neighbors,
-      use_rep=key_pca,
-      n_pcs=n_pcs,
-      n_neighbors=n_neighbors
-    )
-  
-  return changes_made
-
-def handle_umap(adata: AnnData, key_umap: str, key_neighbors: str, min_dist: int, spread: int) -> bool:
-  
-  changes_made = False
-  
-  if not (key_umap in adata.obsm_keys()):
-
-    changes_made = True
-    sc.tl.umap(
-      adata,
-      neighbors_key=key_neighbors,
-      key_added=key_umap,
-      min_dist=min_dist,
-      spread=spread,
-    )
-  
-  return changes_made
-
-def handle_leiden(adata: AnnData, key_neighbors: str, key_observation: str, resolution: float) -> bool:
-  
-  changes_made = False
-  
-  if not (key_observation in adata.obs_keys()):
-    
-    changes_made = True
-    sc.tl.leiden(
-      adata,
-      neighbors_key=key_neighbors,
-      key_added=key_observation,
-      resolution=resolution,
-      flavor="igraph"
-    )
-  
-  return changes_made
-
-def handle_rank_genes_groups(adata: AnnData, key_cluster: str, key_rgg: str) -> bool:
-  
-  changes_made = False
-  
-  if not (key_rgg in adata.uns_keys()):
-  
-    changes_made = True
-    sc.tl.rank_genes_groups(
-      adata,
-      method="wilcoxon",
-      groupby=key_cluster,
-      key_added=key_rgg
-    )
-    
-  return changes_made
-
-def handle_load_model(adata: AnnData):
-  
-  changes_made = False
-  
-  if (False):
-    pass
-  
-  return changes_made
-
-def handle_predict_annotation(adata: AnnData, annotation_model: str):
-  
-  changes_made = False
-  
-  if (len(annotation_model) > 0):
-    
-    model = ct.models.Model.load(model = annotation_model)
-      
-    predictions = ct.annotate(adata, model = model, majority_voting = True)
-    
-    changes_made = True
-  
-  return changes_made
-
-def build_dendrogram_tree(linkage_matrix, labels: list[str]):
-  
-  tree, nodes = to_tree(linkage_matrix, rd=True)
-  
-  def add_node(node):
-    if node.is_leaf():
-      return {"name": node.id}
-    else:
-      return {
-        "name": None,
-        "children": [add_node(node.left), add_node(node.right)],
-        # "distance": node.dist
-      }
-
-  return add_node(tree)
-
-def sort_by_dendro_rgg_rbb_order(df: pd.DataFrame, dendro_order: list[str], n_genes: int):
-  
-  # Sorts dataframe by dendro-order, then by rgg-order
-  sorted_df = (
-    df
-    .assign(dendro_order=pd.Categorical(df["cluster"], categories=dendro_order, ordered=True))
-    .assign(dendro_order=lambda x: x["dendro_order"].cat.codes)
-    .sort_values(by=["dendro_order", "rgg_order"])
-  )
-
-  # Sorts dataframe further by round-robin-batch-order
-  # NOTE: within_cluster_rank is reliant on the correct previous sorting given by rgg_order and rank
-  sorted_df = (
-    sorted_df
-      .assign(
-        within_cluster_rank=sorted_df.groupby("cluster").cumcount(),
-        batch=lambda temp_df: temp_df["within_cluster_rank"] // n_genes
-      )
-      .sort_values(
-        by=[
-          "batch",
-          "dendro_order",
-        ],
-        ascending=[
-          True,
-          True,
-        ]
-      )
-      # .drop(columns=["dendro_order", "within_cluster_rank", "batch"])
-  )
-  
-  return sorted_df
-
 def make_safe(obj):
   if isinstance(obj, np.ndarray):
     return obj.tolist()
@@ -436,135 +65,22 @@ def make_safe(obj):
   else:
     return f"<<unsupported: {type(obj).__name__}>>"
 
-def handle_dendrogram(adata: AnnData, key_cluster: str, key_dendrogram: str) -> bool:
-  
-  changes_made = False
-  
-  if not (key_dendrogram in adata.uns_keys()):
-  
-    changes_made = True
-    sc.tl.dendrogram(adata, groupby=key_cluster, key_added=key_dendrogram)
-    
-  return changes_made
-
-def handle_rgg_data_table(adata: AnnData, key_cluster: str, key_dotplot: str, key_rgg: str, n_genes: int, selected_genes: Optional[list[str]]) -> bool:
-  
-  if (key_dotplot in adata.uns_keys()):
-    return False
-  
-  rgg = adata.uns[key_rgg]
-  
-  top_genes = set()
-  for group in rgg["names"].dtype.names:
-    top_genes.update(rgg["names"][group][:n_genes])
-  
-  fig = sc.pl.rank_genes_groups_dotplot(
-    adata,
-    key=key_rgg,
-    var_names=list(top_genes),
-    return_fig=True
-  )
-  
-  mean_expr_df = fig.dot_color_df
-  frac_expr_df = fig.dot_size_df
-  
-  mean_expr_df_no_dup = mean_expr_df.loc[:, ~mean_expr_df.T.duplicated()]
-  frac_expr_df_no_dup = frac_expr_df.loc[:, ~frac_expr_df.T.duplicated()]
-  
-  n_genes_present = len(mean_expr_df_no_dup.columns)
-  
-  mean_expr_long = (
-    mean_expr_df_no_dup
-      .reset_index()
-      .melt(id_vars="index", var_name="gene", value_name="mean_expr")
-      .rename(columns={"index": "cluster"})
-  )
-  
-  frac_expr_long = (
-    frac_expr_df_no_dup
-    .reset_index()
-    .melt(id_vars="index", var_name="gene", value_name="frac_expr")
-    .rename(columns={"index": "cluster"})
-  )
-  
-  merged_expr = mean_expr_long.merge(frac_expr_long, on=["gene", "cluster"])
-  
-  # Get remaining data not provided by fig
-  pvals = []
-  logfcs = []
-  ranks = []
-  
-  for index, row in merged_expr.iterrows():
-    
-    gene, group = row["gene"], row["cluster"]
-    
-    try:
-      gene_list = rgg["names"][group]
-      
-      index = list(gene_list).index(gene)
-      
-      pval = rgg["pvals_adj"][group][index]
-      logfc = rgg["logfoldchanges"][group][index]
-      rank = index
-      
-    except ValueError:
-      pval = None
-      logfc = None
-      rank = None
-      
-    pvals.append(pval)
-    logfcs.append(logfc)
-    ranks.append(rank)
-  
-  merged_expr["pvals_adj"] = pvals
-  merged_expr["logfoldchange"] = logfcs
-  merged_expr["rgg_order"] = ranks
-  
-  filtered_df = merged_expr[merged_expr["pvals_adj"] < 0.05]
-  
-  adata.uns[key_dotplot] = {
-    "data": filtered_df.to_dict(orient="list"),
-    "n_genes": n_genes_present,
-    "params": {
-      "clustering": key_cluster,
-      "n_top_genes": n_genes,
-      "selected_genes": selected_genes,
-    }
-  }
-  
-  return True
 
 def notStartWith(s1: str):
   return not s1.startswith("_")
-
-def make_safe(obj):
-  if isinstance(obj, np.ndarray):
-    return None
-  elif isinstance(obj, pd.DataFrame):
-    return obj.to_dict(orient="records")
-  elif isinstance(obj, (np.integer, np.floating)):
-    return obj.item()
-  elif isinstance(obj, dict):
-    return {k: make_safe(v) for k, v in obj.items()}
-  elif isinstance(obj, list):
-    return None
-  elif isinstance(obj, (str, int, float, bool)) or obj is None:
-    return obj
-  else:
-    return f"<<unsupported: {type(obj).__name__}>>"
 
 # ============================================================================================
 def get_tasks(file_path: str, user_id: str):
   
   try:
-    key_user = _user_tasks_key(user_id)
+    key_user = StatusTracker.user_task_key(user_id)
     task_ids = [tid.decode() for tid in r.smembers(key_user)]
     items = []
     
     # logger.debug([key_user, task_ids])
     
     for tid in task_ids:
-      meta_raw = r.hgetall(_task_meta_key(tid))
+      meta_raw = r.hgetall(StatusTracker.task_meta_key(tid))
       meta = {k.decode(): v.decode() for k, v in meta_raw.items()} if meta_raw else {"task_id": tid}
       
       if (meta["file_id"] != os.path.basename(file_path)):
@@ -594,9 +110,9 @@ def get_tasks(file_path: str, user_id: str):
     return {"response": f"Error fetching tasks: {e}", "ok": False}
 
 # ============================================================================================
-def get_metadata(file_path: str, user_id: str):
+def get_metadata(file_path: str, user_id: str) -> BackendResponse:
   
-  result: ComputationResponse = {
+  result: BackendResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
     "code": 500
@@ -607,7 +123,7 @@ def get_metadata(file_path: str, user_id: str):
     "genes": None,
   }
   
-  with open_h5ad_read(file_path, user_id) as adata:
+  with open_h5ad_read(r, file_path, user_id) as adata:
     
     try: 
       
@@ -638,15 +154,15 @@ def get_metadata(file_path: str, user_id: str):
   
 
 # ============================================================================================
-def get_hierarchy(file_path: str, user_id: str):
+def get_hierarchy(file_path: str, user_id: str) -> BackendResponse:
   
-  result: ComputationResponse = {
+  result: BackendResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
     "code": 500
   }
   
-  with open_h5ad_read(file_path, user_id) as adata:
+  with open_h5ad_read(r, file_path, user_id) as adata:
     
     try: 
       result["response"] = {
@@ -670,15 +186,15 @@ def get_hierarchy(file_path: str, user_id: str):
   return result
 
 # ============================================================================================
-def get_genes(file_path: str, user_id: str):
+def get_genes(file_path: str, user_id: str) -> BackendResponse:
   
-  result: ComputationResponse = {
+  result: BackendResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
     "code": 500
   }
   
-  with open_h5ad_read(file_path, user_id) as adata:
+  with open_h5ad_read(r, file_path, user_id) as adata:
   
     try:
       result["response"] = list(adata.var_names)
@@ -694,15 +210,15 @@ def get_genes(file_path: str, user_id: str):
   return result
 
 # ============================================================================================
-def get_observation(file_path: str, user_id: str, selectedObs: str):
+def get_observation(file_path: str, user_id: str, selectedObs: str) -> BackendResponse:
   
-  result: ComputationResponse = {
+  result: BackendResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
     "code": 500
   }
   
-  with open_h5ad_read(file_path, user_id) as adata:
+  with open_h5ad_read(r, file_path, user_id) as adata:
     
     try:
       obs_data = adata.obs[selectedObs].astype("category")
@@ -726,15 +242,15 @@ def get_observation(file_path: str, user_id: str, selectedObs: str):
   return result
 
 # ============================================================================================
-def get_obsm(file_path: str, user_id: str, selectedObsm: str):
+def get_obsm(file_path: str, user_id: str, selectedObsm: str) -> BackendResponse:
   
-  result: ComputationResponse = {
+  result: BackendResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
     "code": 500
   }
   
-  with open_h5ad_read(file_path, user_id) as adata:
+  with open_h5ad_read(r, file_path, user_id) as adata:
   
     try:
       result["response"] = list(adata.obsm[selectedObsm][:, :2].tolist())
@@ -750,15 +266,15 @@ def get_obsm(file_path: str, user_id: str, selectedObsm: str):
   return result
 
 # ============================================================================================
-def get_feature_indices(file_path: str, user_id: str, feature_key: str):
+def get_feature_indices(file_path: str, user_id: str, feature_key: str) -> BackendResponse:
 
-  result: ComputationResponse = {
+  result: BackendResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
     "code": 500
   }
   
-  with open_h5ad_read(file_path, user_id) as adata:
+  with open_h5ad_read(r, file_path, user_id) as adata:
     
     try:
       if (feature_key in adata.var.index):
@@ -796,56 +312,8 @@ def get_feature_indices(file_path: str, user_id: str, feature_key: str):
 
 # ============================================================================================
 @celery_app.task(bind=True)
-def compute_ldr(
-  self,
-  file_path: str,
-  user_id: str,
-  n_pcs: int = 30,
-):
-  
-  start_progress(self)
-  
-  
-  result: ComputationResponse = {
-    "response": "Something went VERY wrong",
-    "ok": False,
-    "code": 500
-  }
-  
-  with open_h5ad_write(file_path, user_id) as adata:
-  
-    try:
-      key_pca = "X_pca"
-      
-      changes_made = handle_pipeline_steps(self, [
-        PipelineStep("Computing PCA", partial(handle_pca, adata, key_pca, n_pcs)),
-      ])
-      
-      end_progress(self)
-      
-      if (changes_made):
-        sc.write(file_path, adata)
-      
-      result["response"] = list(adata.obsm[key_pca][:, :2].tolist())
-      result["ok"] = True
-      result["code"] = 200
-      
-      _finalize_task(self.request.id, user_id, "SUCCESS")
-      
-    except Exception as e:
-      errorMessage = f"Something unexpected happened: {e}"
-      result["response"] = errorMessage
-      result["ok"] = False
-      result["code"] = 500
-      
-      _finalize_task(self.request.id, user_id, "FAILURE", error=str(e))
-  
-  return result
-
-# ============================================================================================
-@celery_app.task(bind=True)
 def compute_nldr(
-  self,
+  self: Task,
   file_path: str,
   user_id: str,
   key: str,
@@ -853,413 +321,462 @@ def compute_nldr(
   min_dist: float = 0.5,
   spread: float = 1.0,
   n_neighbors: int = 15,
-):
+) -> BackendResponse:
   
-  start_progress(self)
+  runner = TaskRunner(
+    r=r,
+    task=self,
+    file_path=file_path,
+    user_id=user_id,
+    func_name="compute_nldr",
+    func_args=[key, n_pcs, min_dist, spread, n_neighbors]
+  )
   
-  result: ComputationResponse = {
+  key_pca = "X_pca"
+  key_neighbors = f"{key}"
+  key_umap = f"UMAP-{key}"
+  
+  runner.add_step(
+    "Computing PCA",
+    predicate=lambda ad: (key_pca not in ad.obsm_keys()) or (ad.obsm[key_pca].shape[1] < n_pcs),
+    func=lambda ad: sc.pp.pca(
+      ad,
+      key_added=key_pca,
+      n_comps=50
+    )
+  )
+  
+  runner.add_step(
+    "Computing neighbors distance matrix",
+    predicate=lambda ad: key_neighbors not in ad.uns_keys(),
+    func=lambda ad: sc.pp.neighbors(
+      ad,
+      key_added=key_neighbors,
+      use_rep=key_pca,
+      n_pcs=n_pcs,
+      n_neighbors=n_neighbors
+    )
+  )
+  
+  runner.add_step(
+    "Computing UMAP",
+    predicate=lambda ad: key_umap not in ad.obsm_keys(),
+    func=lambda ad: sc.tl.umap(
+      ad,
+      neighbors_key=key_neighbors,
+      key_added=key_umap,
+      min_dist=min_dist, spread=spread
+    )
+  )
+  
+  result: BackendResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
-    "code": 500
   }
   
-  with open_h5ad_write(file_path, user_id) as adata:
-    
-    try:
-      key_pca = "X_pca"
-      key_neighbors = f"{key}"
-      key_umap = f"UMAP-{key}"
+  try: 
+    with runner as job:
       
-      changes_made = handle_pipeline_steps(self, [
-        PipelineStep("Computing PCA", partial(handle_pca, adata, key_pca, 50)),
-        PipelineStep("Computing neighbors distance matrix", partial(handle_neighbors, adata, key_neighbors, key_pca, n_pcs, n_neighbors)),
-        PipelineStep("Computing UMAP", partial(handle_umap, adata, key_umap, key_neighbors, min_dist, spread)),
-      ])
+      job.run_steps()
       
-      end_progress(self)
+      if job.changes_made:
+        sc.write(file_path, job.adata)
       
-      if changes_made:
-        sc.write(file_path, adata)
-      
-      result["response"] = list(adata.obsm[key_umap][:, :2].tolist())
+      embedding = job.adata.obsm[key_umap][:, :2].tolist()
+      result["response"] = embedding
       result["ok"] = True
-      result["code"] = 200
-      _finalize_task(self.request.id, user_id, "SUCCESS")
-      
-    except Exception as e:
-      errorMessage = f"Something unexpected happened: {e}"
-      result["response"] = errorMessage
-      result["ok"] = False
-      result["code"] = 500
-      _finalize_task(self.request.id, user_id, "FAILURE", error=str(e))
+  
+  except Exception as e:
+    result["response"] = f"Something unexpected happened: {e}"
+    result["ok"] = False
+    result["code"] = 500
   
   return result
   
 # ============================================================================================
 @celery_app.task(bind=True)
 def compute_leiden(
-  self,
+  self: Task,
   file_path: str,
   user_id: str,
   key: str,
   neighborsKey: str,
   resolution: float = 1
-):
+) -> BackendResponse:
   
-  start_progress(self)
+  runner = TaskRunner(
+    r=r,
+    task=self,
+    file_path=file_path,
+    user_id=user_id,
+    func_name="compute_nldr",
+    func_args=[key, neighborsKey, resolution]
+  )
   
-  result: ComputationResponse = {
+  runner.add_step(
+    "Computing Leiden clusters",
+    predicate=lambda ad: neighborsKey not in ad.obs_keys(),
+    func=lambda ad: sc.tl.leiden(
+      ad,
+      neighbors_key=neighborsKey,
+      key_added=key,
+      resolution=resolution,
+      flavor="igraph"
+    )
+  )
+  
+  result: BackendResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
     "code": 500
   }
   
-  with open_h5ad_write(file_path, user_id) as adata:
-    
-    try:
-      key_observation = f"{key}"
-      key_neighbors = f"{neighborsKey}"
+  try: 
+    with runner as job:
       
-      changes_made = handle_pipeline_steps(self, [
-        PipelineStep("Computing Leiden clusters", partial(handle_leiden, adata, key_neighbors, key_observation, resolution)),
-      ])
+      job.run_steps()
       
-      end_progress(self)
-      
-      if changes_made:
-        sc.write(file_path, adata)
-      
-      obs_data = adata.obs[key_observation].astype("category")
-      labels = list(obs_data.cat.categories)
-      label_map = list(obs_data.cat.codes)
+      if job.changes_made:
+        sc.write(file_path, job.adata)
+        
+      obs_data = job.adata.obs[key].astype("category")
       
       result["response"] = {
-        "categories": labels,
-        "codes": label_map
+        "categories": list(obs_data.cat.categories), # labels
+        "codes": list(obs_data.cat.codes) # label-map
       }
       result["ok"] = True
       result["code"] = 200
-      _finalize_task(self.request.id, user_id, "SUCCESS")
-    
-    except Exception as e:
-      errorMessage = f"Something unexpected happened: {e}"
-      result["response"] = errorMessage
-      result["ok"] = False
-      result["code"] = 500
-      _finalize_task(self.request.id, user_id, "FAILURE", error=str(e))
+        
+  
+  except Exception as e:
+    result["response"] = f"Something unexpected happened: {e}"
+    result["ok"] = False
+    result["code"] = 500
   
   return result
 
 # ============================================================================================
 @celery_app.task(bind=True)
 def compute_rgg(
-  self,
+  self: Task,
   file_path: str,
   user_id: str,
   uns_key: str,
   n_genes: int,
   selected_genes: Optional[list[str]]
-):
+) -> BackendResponse:
   
-  start_progress(self)
+  runner = TaskRunner(
+    r=r,
+    task=self,
+    file_path=file_path,
+    user_id=user_id,
+    func_name="compute_nldr",
+    func_args=[uns_key, n_genes, selected_genes]
+  )
   
-  result: ComputationResponse = {
+  key_cluster = f"{uns_key}"
+  key_rgg = f"rank_genes_groups_{uns_key}"
+  key_dendrogram = f"dendrogram_{uns_key}"
+  key_dotplot = f"dotplot_stats_g{n_genes}_{'_'.join(selected_genes).lower() if (selected_genes != None) else ''}_{uns_key}"
+  
+  runner.add_step(
+    f"Computing gene-rankings from the clustering '{uns_key}'",
+    predicate=lambda ad: key_rgg not in ad.uns_keys(),
+    func=lambda ad: sc.tl.rank_genes_groups(
+      ad,
+      method="wilcoxon",
+      groupby=key_cluster,
+      key_added=key_rgg
+    )
+  )
+  
+  runner.add_step(
+    "Computing dendrogram",
+    predicate=lambda ad: key_dendrogram not in ad.uns_keys(),
+    func=lambda ad: sc.tl.dendrogram(
+      ad,
+      groupby=key_cluster,
+      key_added=key_dendrogram
+    )
+  )
+  
+  runner.add_step(
+    "Computing dotplot table",
+    predicate=lambda ad: key_dotplot not in ad.uns_keys(),
+    func=lambda ad: ts.handle_dge_data(
+      ad,
+      key_cluster=key_cluster,
+      key_dotplot=key_dotplot,
+      key_rgg=key_rgg,
+      key_dendrogram=key_dendrogram,
+      n_genes=n_genes,
+      selected_genes=selected_genes
+    )
+  )
+  
+  result: BackendResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
     "code": 500
   }
   
-  with open_h5ad_write(file_path, user_id) as adata:
-    
-    try:
-      key_cluster = f"{uns_key}"
-      key_rgg = f"rank_genes_groups_{uns_key}"
-      key_dendrogram = f"dendrogram_{uns_key}"
-      key_dotplot = f"dotplot_stats_g{n_genes}_{'_'.join(selected_genes).lower() if (selected_genes != None) else ''}_{uns_key}"
-    
-      changes_made = handle_pipeline_steps(self, [
-        PipelineStep(f"Computing gene-rankings from the clustering '{uns_key}'", partial(handle_rank_genes_groups, adata, key_cluster, key_rgg)),
-        PipelineStep(f"Computing dendrogram", partial(handle_dendrogram, adata, key_cluster, key_dendrogram)),
-        PipelineStep(f"Computing dotplot table", partial(handle_rgg_data_table, adata, key_cluster, key_dotplot, key_rgg, n_genes, selected_genes))
-      ])
+  try: 
+    with runner as job:
       
-      end_progress(self)
+      job.run_steps()
       
-      if changes_made:
-        sc.write(file_path, adata)
+      if job.changes_made:
+        sc.write(file_path, job.adata)
       
+      dotplot = job.adata.uns["key_dotplot"]
+      data = pd.DataFrame(dotplot["table"]).to_dict(orient="records")
+      dotplot["table"] = data
       
-      dendro_data = adata.uns[key_dendrogram]
-      dendro_order = dendro_data["categories_ordered"]
-      dendro_tree = build_dendrogram_tree(dendro_data["linkage"], dendro_order)
-      
-      dotplot_data = adata.uns[key_dotplot]
-      data_sorted = sort_by_dendro_rgg_rbb_order(
-        pd.DataFrame(dotplot_data["data"]),
-        dendro_order,
-        n_genes
-      )
-      
-      result["response"] = {
-        "table": data_sorted.to_dict(orient="records"),
-        "n_genes": int(dotplot_data["n_genes"]),
-        "n_clusters": int(len(dendro_order)),
-        "dendro": json.dumps(make_safe(dendro_tree)),
-      }
+      result["response"] = dotplot
       result["ok"] = True
       result["code"] = 200
-      
-    except Exception as e:
-      errorMessage = f"Something unexpected happened: {e}"
-      result["response"] = errorMessage
-      result["ok"] = False
-      result["code"] = 500
+  
+  except Exception as e:
+    result["response"] = f"Something unexpected happened: {e}"
+    result["ok"] = False
+    result["code"] = 500
   
   return result
+  
 
 @celery_app.task(bind=True)
 def compute_save_file_as(
-  self,
+  self: Task,
   file_path: str,
   user_id: str,
-  new_file_path: str,
+  new_file_id: str,
   selected_obs: str,
   selected_obs_clusters: list[str],
-):
+) -> BackendResponse:
   
-  simple_update_progress(self, "Opening AnnData object")
+  runner = TaskRunner(
+    r=r,
+    task=self,
+    file_path=file_path,
+    user_id=user_id,
+    func_name="compute_nldr",
+    func_args=[new_file_id, selected_obs, selected_obs_clusters]
+  )
   
-  result: ComputationResponse = {
+  result: BackendResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
     "code": 500
   }
   
-  with open_h5ad_write(file_path, user_id) as adata:
-      
-    try:
-      simple_update_progress(self, "Slicing object using selected clusters")
-
-      adata_subset = adata[adata.obs[selected_obs].isin(selected_obs_clusters), :]
-      
-      simple_update_progress(self, "Saving slice as new file")
-      
-      sc.write(os.path.join(UPLOAD_DIR, new_file_path), adata_subset)
-      
-      result["response"] = "Slicing successful"
-      result["ok"] = True
-      result["code"] = 200
+  try:
     
-    except Exception as e:
-      errorMessage = f"Something unexpected happened: {e}"
-      result["response"] = errorMessage
-      result["ok"] = False
-      result["code"] = 500
+    with runner as job:
+      
+      adata = job.adata
+      
+      subset_mask = adata.obs[selected_obs].isin(selected_obs_clusters)
+      
+      adata_subset = adata[subset_mask, :]
+      
+      subset_file_path = os.path.join(UPLOAD_DIR, new_file_id)
+      
+      sc.write(subset_file_path, adata_subset)
+    
+    result["response"] = "Slicing successful"
+    result["ok"] = True
+    result["code"] = 200
   
-  return result
+  except Exception as e:
+    errorMessage = f"Something unexpected happened: {e}"
+    result["response"] = errorMessage
+    result["ok"] = False
+    result["code"] = 500
   
 # ============================================================================================
 @celery_app.task(bind=True)
 def compute_celltypist_annotations(
-  self,
+  self: Task,
   file_path: str,
   user_id: str,
   key: str,
   connectivities_key: str,
   annotation_model: str = "Immune_All_Low.pkl",
-):
+) -> BackendResponse:
   
-  # TODO: Use connectivities_key to avoid having to recompute neigbours/connectivities for celltypist
+  uns_key = f"celltypist_metadata_{key}"
   
-  start_progress(self)
+  runner = TaskRunner(
+    r=r,
+    task=self,
+    file_path=file_path,
+    user_id=user_id,
+    func_name="compute_nldr",
+    func_args=[key, connectivities_key, annotation_model]
+  )
   
-  result: ComputationResponse = {
+  runner.add_step(
+    f"Predicting clusters using model '{annotation_model}'",
+    predicate=lambda ad: uns_key not in ad.uns_keys(),
+    func=lambda ad: ts.handle_annotation(
+      ad,
+      obs_prefix=key,
+      connectivities_key=connectivities_key,
+      annotation_model=annotation_model
+    )
+  )
+  
+  result: BackendResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
     "code": 500
   }
   
-  with open_h5ad_write(file_path, user_id) as adata:
+  try:
     
-    try:
+    with runner as job:
       
-      step_current = 0
-      function_steps = [
-        "Loading in specified model",
-        "Predicting annotations",
-        "Converting to anndata format"
-        "Writing predictions to anndata object"
-      ]
+      job.run_steps()
       
-      update_progress(self, step_current, function_steps)
-      model = ct.models.Model.load(model = annotation_model)
+      if job.changes_made:
+        sc.write(file_path, job.adata)
       
-      keyStripped = connectivities_key.replace('_connectivities', '')
-      
-      adata.uns["neighbors"] = copy.deepcopy(adata.uns[keyStripped])
-      adata.uns["neighbors"]["connectivities_key"] = "connectivities"
-      adata.uns["neighbors"]["distances_key"] = "distances"
-      
-      adata.obsp["connectivities"] = adata.obsp[f"{connectivities_key}"].copy()
-      adata.obsp["distances"] = adata.obsp[f"{connectivities_key.replace('_connectivities', '')}_distances"].copy()
-      
-      step_current += 1
-      update_progress(self, step_current, function_steps)
-      predictions = ct.annotate(adata, model = model, majority_voting = True)
-      
-      step_current += 1
-      update_progress(self, step_current, function_steps)
-      adata_with_preds = predictions.to_adata(prefix=key + "-")
-  
-      # labels = predictions.predicted_labels.to_dict(orient="records")
-      
-      step_current += 1
-      update_progress(self, step_current, function_steps)
-      sc.write(file_path, adata_with_preds)
-      
-      obs_data = adata.obs[f"{key}-majority_voting"].astype("category")
-      labels = list(obs_data.cat.categories)
-      label_map = list(obs_data.cat.codes)
+      obs_data = job.adata.obs[f"{key}_majority_voting"].astype("category")
       
       result["response"] = {
-        "categories": labels,
-        "codes": label_map
+        "categories": list(obs_data.cat.categories), # labels
+        "codes": list(obs_data.cat.codes) # label-map
       }
-      
-      # result["response"] = {
-      #   "labels": labels
-      # }
       result["ok"] = True
       result["code"] = 200
+      
+  except Exception as e:
+  
+    logger.debug(["ERROR", e])
     
-    except Exception as e:
-      
-      logger.debug(["ERROR", e])
-      
-      errorMessage = f"OKAY Something unexpected happened: {e}"
-      result["response"] = errorMessage
-      result["ok"] = False
-      result["code"] = 500
-      
+    errorMessage = f"OKAY Something unexpected happened: {e}"
+    result["response"] = errorMessage
+    result["ok"] = False
+    result["code"] = 500
+  
   return result
   
 # ============================================================================================
 @celery_app.task(bind=True)
 def compute_recluster(
-  self,
+  self: Task,
   file_path: str,
   user_id: str,
   observation_dict: dict
-):
+) -> BackendResponse:
   
+  runner = TaskRunner(
+    r=r,
+    task=self,
+    file_path=file_path,
+    user_id=user_id,
+    func_name="compute_nldr",
+    func_args=[observation_dict]
+  )
   
-  start_progress(self)
+  observation = newObservation.model_validate(observation_dict)
   
-  result: ComputationResponse = {
+  runner.add_step(
+    f"Creating new observation '{observation.name}'",
+    predicate=lambda ad: observation.name not in ad.obs_keys(),
+    func=lambda ad: ts.handle_reclustering(ad, observation_dict)
+  )
+  
+  result: BackendResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
     "code": 500
   }
   
-  with open_h5ad_write(file_path, user_id) as adata:
-
-    try:
-      observation = newObservation.model_validate(observation_dict)
+  try:
+    
+    with runner as job:
       
-      adata = sc.read_h5ad(file_path)
-      
-      obs_map = {
-        sub: cluster.label
-        for cluster in observation.clusters
-        for sub in cluster.subclusters
-      }
-      
+      if job.changes_made:
+        sc.write(file_path, job.adata)
+    
       obs_key = observation.name
-      
-      adata.obs[obs_key] = adata.obs[observation.base].replace(obs_map)
-      adata.obs[obs_key] = adata.obs[obs_key].astype("category")
-
-      end_progress(self)
-      
-      sc.write(file_path, adata)
       
       result["response"] = obs_key
       result["ok"] = True
       result["code"] = 200
-
-    except Exception as e:
-      errorMessage = f"Something unexpected happened: {e}"
-      result["response"] = errorMessage
-      result["ok"] = False
-      result["code"] = 500
+    
+  
+  except Exception as e:
+    errorMessage = f"Something unexpected happened: {e}"
+    result["response"] = errorMessage
+    result["ok"] = False
+    result["code"] = 500
   
   return result
 
 # ============================================================================================
 @celery_app.task(bind=True)
 def compute_merge_data(
-  self,
-  file_path: str,
+  self: Task,
+  file_path_src: str,
   user_id: str,
-  file_path_dest: str,
+  file_id_dest: str,
   observation_dict: dict
-):
+) -> BackendResponse:
   
-  start_progress(self)
+  file_path_dest = os.path.join(UPLOAD_DIR, file_id_dest)
   
-  result: ComputationResponse = {
+  runner = TaskRunner(
+    r=r,
+    task=self,
+    file_path=file_path_dest,
+    user_id=user_id,
+    func_name="compute_nldr",
+    func_args=[file_id_dest, observation_dict]
+  )
+  
+  
+  runner.add_step(
+    "Transferring metadata between AnnData objects",
+    predicate=lambda ad: ad,
+    func=lambda ad: ts.handle_merging(ad, file_path_src, observation_dict, r, )
+  )
+  
+  result: BackendResponse = {
     "response": "Something went VERY wrong",
     "ok": False,
     "code": 500
   }
   
-  with open_h5ad_read(file_path, user_id) as adata_src:
+  try:
     
-    with open_h5ad_write(file_path_dest, user_id) as adata_dest:
+    with runner as job:
       
-      try:
-        observation = newObservation.model_validate(observation_dict)
-        
-        obs_map = {
-          sub: cluster.label
-          for cluster in observation.clusters
-          for sub in cluster.subclusters
-        }
-        
-        obs_key = observation.name
-        
-        valid_source_levels: Set[str] = set(obs_map.keys())
-        mask = adata_src[obs_key].isin(valid_source_levels)
-        
-        src_subset = adata_src[mask].copy()
-        
-        ad.concat(
-          [adata_dest, src_subset],
-          axis=0,
-          join="inner",
-          merge="same",
-          label=None
-        )
-        
-        end_progress(self)
+      job.run_steps()
       
-        sc.write(file_path_dest, adata_dest)
-        
-        result["response"] = {
-          "obs":  list(filter(notStartWith, adata_dest.obs_keys())),
-          "var":  list(filter(notStartWith, adata_dest.var_keys())),
-          "uns": make_safe(adata_dest.uns),
-          "obsm": list(filter(notStartWith, adata_dest.obsm_keys())),
-          "varm": list(filter(notStartWith, adata_dest.varm_keys())),
-          "obsp": list(filter(notStartWith, list(adata_dest.obsp.keys()))),
-        }
-        result["ok"] = True
-        result["code"] = 200
+      adata_dest = job.adata
+      
+      if (job.changes_made):
+        sc.write(file_id_dest, adata_dest)
+    
+      result["response"] = {
+        "obs":  list(filter(notStartWith, adata_dest.obs_keys())),
+        "var":  list(filter(notStartWith, adata_dest.var_keys())),
+        "uns": make_safe(adata_dest.uns),
+        "obsm": list(filter(notStartWith, adata_dest.obsm_keys())),
+        "varm": list(filter(notStartWith, adata_dest.varm_keys())),
+        "obsp": list(filter(notStartWith, list(adata_dest.obsp.keys()))),
+      }
+      result["ok"] = True
+      result["code"] = 200 
+  
+  except Exception as e:
+    errorMessage = f"Something unexpected happened: {e}"
+    result["response"] = errorMessage
+    result["ok"] = False
+    result["code"] = 500
 
-      except Exception as e:
-        errorMessage = f"Something unexpected happened: {e}"
-        result["response"] = errorMessage
-        result["ok"] = False
-        result["code"] = 500
-      
-      
+  return result

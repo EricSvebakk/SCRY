@@ -9,11 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Form, Header
 from dotenv import load_dotenv, dotenv_values
 from pathlib import Path
-from typing import Optional, TypedDict, Callable
+from typing import Optional, Callable
 from celery.result import AsyncResult
 from my_types import newObservation
 import hashlib
-from my_types import ValidationResponse
+from my_types import BackendResponse
 
 load_dotenv()
 FRONTEND_ENDPOINT = os.environ.get("FRONTEND_ENDPOINT")
@@ -53,10 +53,10 @@ logger.setLevel(logging.DEBUG)
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 
 
-def validate(user_id: str, pass_key: str, file_id: str, func: Callable, *args, delay: bool = False) -> ValidationResponse:
+def validate(user_id: str, pass_key: str, file_id: str, func: Callable, *args, delay: bool = False) -> BackendResponse:
   
   if ((len(user_id) == 0) or (pass_key != PASSKEY_SECRET)):
-    response: ValidationResponse = {
+    response: BackendResponse = {
       "response": "Unauthorized Access",
       "ok": False,
       "code": 401,
@@ -76,11 +76,11 @@ def validate(user_id: str, pass_key: str, file_id: str, func: Callable, *args, d
       
       async_response = func.delay(file_path, user_id, *args)
       
-      meta = worker.register_task_for_user(user_id, file_path, async_response.id, func.__name__, list(args))
+      # meta = worker.register_task_for_user(user_id, file_path, async_response.id, func.__name__, list(args))
       
-      response: ValidationResponse = {
+      response: BackendResponse = {
         "response": async_response.id,
-        "timestamp": meta["created_at"],
+        # "timestamp": meta["created_at"],
         "ok": True,
         "code": 200
       }
@@ -336,7 +336,7 @@ async def celery_status(
   obj = None
   
   if ((len(user_id) == 0) or (pass_key != PASSKEY_SECRET)):
-    obj: ValidationResponse = {
+    obj: BackendResponse = {
       "response": "Unauthorized Access",
       "ok": False,
       "code": 401
@@ -346,7 +346,7 @@ async def celery_status(
   
     result = AsyncResult(task_id)
   
-    obj: ValidationResponse = {
+    obj: BackendResponse = {
       "response": {
         "task_id": task_id,
         "status": result.status,
@@ -368,7 +368,7 @@ async def celery_result(
   obj = None
   
   if ((len(user_id) == 0) or (pass_key != PASSKEY_SECRET)):
-    obj: ValidationResponse = {
+    obj: BackendResponse = {
       "response": "Unauthorized Access",
       "ok": False, 
       "code": 401
@@ -380,7 +380,7 @@ async def celery_result(
     
     if result.failed():
       
-      obj: ValidationResponse = {
+      obj: BackendResponse = {
         "response": {
           "type": type(result.result).__name__,
           "message": str(result.result)
@@ -390,10 +390,10 @@ async def celery_result(
       }
       
     elif result.successful():
-      obj: ValidationResponse = result.result
+      obj: BackendResponse = result.result
     
     else:
-      obj: ValidationResponse = {
+      obj: BackendResponse = {
         "response": {
           "status": result.status,
           "message": "Task not finished yet"
