@@ -1,21 +1,22 @@
-
 import { Box, Button, Grid, Stack, SxProps, Typography } from "@mui/material";
-import React, { useState } from "react";
+import React, { ReactElement, useState } from "react";
 import { theme } from "@/lib/design";
 import { BlurCircular, GroupWork } from "@mui/icons-material";
 import PanelGenes from "./panel/PanelGenes";
 import PanelReclustering from "./panel/PanelReclustering";
 import { useAppSelector } from "@/lib/redux/hooks/hooks";
+import PanelMerging from "./panel/PanelMerging";
 
 export default function NavbarRight() {
-  
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
 
-  const [openPanelGenes, setOpenPanelGenes] = useState(false);
-  const [openPanelRecluster, setOpenPanelRecluster] = useState(false);
-  const [openPanelMerge, setOpenPanelMerge] = useState(false);
-  
-  const navItemProps = (isOpen: boolean, up: boolean = false, down: boolean = false) => {
+  const [activePanel, setActivePanel] = useState<0 | 1 | 2>(0);
+
+  const navItemProps = (
+    isOpen: boolean,
+    up: boolean = false,
+    down: boolean = false
+  ) => {
     return {
       color: theme.palette.text.secondary,
       backgroundColor: isOpen
@@ -29,17 +30,15 @@ export default function NavbarRight() {
       },
       borderTop: isOpen && up ? "1px solid grey" : "none",
       borderBottom: isOpen && down ? "1px solid grey" : "none",
-      borderLeft: isOpen  ? "none" : "1px solid grey",
+      borderLeft: isOpen ? "none" : "1px solid grey",
     } as SxProps;
   };
-  
+
   return (
     <Box height="100%">
-      <PanelGenes open={openPanelGenes} setOpen={setOpenPanelGenes} />
-      <PanelReclustering
-        open={openPanelRecluster}
-        setOpen={setOpenPanelRecluster}
-      />
+      <PanelGenes open={activePanel === 0} setOpen={setActivePanel} />
+      <PanelReclustering open={activePanel === 1} setOpen={setActivePanel} />
+      <PanelMerging open={activePanel === 2} setOpen={setActivePanel} />
 
       <Grid
         item
@@ -52,77 +51,27 @@ export default function NavbarRight() {
           zIndex: 1200,
         }}
       >
-        <Grid item height={70}>
-          <Button
-            fullWidth
-            sx={navItemProps(openPanelGenes, false, true)}
-            onClick={() => {
-              setOpenPanelGenes(!openPanelGenes);
-            }}
-          >
-            <Stack
-              direction="column"
-              sx={{
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {<GroupWork />}
-              <Typography fontSize={theme.typography.subtitle1.fontSize}>
-                View Gene
-              </Typography>
-            </Stack>
-          </Button>
-        </Grid>
+        <NavButton
+          label="View Gene"
+          icon={<GroupWork />}
+          sx={navItemProps(activePanel === 0, false, true)}
+          onClick={() => setActivePanel(0)}
+        />
 
-        <Grid item height={70}>
-          <Button
-            fullWidth
-            disabled={!obs.selectedKey}
-            sx={navItemProps(openPanelRecluster, true, true)}
-            onClick={() => {
-              setOpenPanelRecluster(!openPanelRecluster);
-            }}
-          >
-            <Stack
-              direction="column"
-              sx={{
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {<BlurCircular />}
-              <Typography fontSize={theme.typography.subtitle1.fontSize}>
-                Re-cluster observation
-              </Typography>
-            </Stack>
-          </Button>
-        </Grid>
+        <NavButton
+          label="Re-cluster observation"
+          icon={<BlurCircular />}
+          sx={navItemProps(activePanel === 1, true, true)}
+          onClick={() => setActivePanel(1)}
+        />
 
-        {/* <Grid item height={70}>
-          <Button
-            fullWidth
-            // disabled={!obs.selectedKey}
-            sx={navItemProps(openPanelMerge, true, true)}
-            onClick={() => {
-              setOpenPanelMerge(!openPanelMerge);
-            }}
-          >
-            <Stack
-              direction="column"
-              sx={{
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {<BlurCircular />}
-              <Typography fontSize={theme.typography.subtitle1.fontSize}>
-                Merge data
-              </Typography>
-            </Stack>
-          </Button>
-        </Grid> */}
-
+        <NavButton
+          label="Merge data"
+          icon={<BlurCircular />}
+          sx={navItemProps(activePanel === 2, true, true)}
+          onClick={() => setActivePanel(2)}
+        />
+        
         <Grid
           item
           xs
@@ -136,5 +85,38 @@ export default function NavbarRight() {
       </Grid>
     </Box>
   );
-  
+}
+
+function NavButton(props: {
+  label: string;
+  disabled?: boolean;
+  sx: SxProps;
+  icon: ReactElement;
+  onClick: () => void;
+}) {
+  const { label, disabled, sx, icon, onClick } = props;
+
+  return (
+    <Grid item height={70}>
+      <Button
+        fullWidth
+        disabled={disabled ? disabled : false}
+        sx={sx}
+        onClick={() => onClick()}
+      >
+        <Stack
+          direction="column"
+          sx={{
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {icon}
+          <Typography fontSize={theme.typography.subtitle1.fontSize}>
+            {label}
+          </Typography>
+        </Stack>
+      </Button>
+    </Grid>
+  );
 }
