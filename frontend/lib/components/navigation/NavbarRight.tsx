@@ -10,7 +10,7 @@ import PanelMerging from "./panel/PanelMerging";
 export default function NavbarRight() {
   const obs = useAppSelector((state) => state.plotReducer.anndata.obs);
 
-  const [activePanel, setActivePanel] = useState<0 | 1 | 2>(0);
+  const [activePanel, setActivePanel] = useState<0 | 1 | 2 | null>(null);
 
   const navItemProps = (
     isOpen: boolean,
@@ -55,21 +55,21 @@ export default function NavbarRight() {
           label="View Gene"
           icon={<GroupWork />}
           sx={navItemProps(activePanel === 0, false, true)}
-          onClick={() => setActivePanel(0)}
+          onClick={() => setActivePanel(activePanel === 0 ? null : 0)}
         />
 
         <NavButton
           label="Re-cluster observation"
           icon={<BlurCircular />}
           sx={navItemProps(activePanel === 1, true, true)}
-          onClick={() => setActivePanel(1)}
+          onClick={() => setActivePanel(activePanel === 1 ? null : 1)}
         />
 
         <NavButton
           label="Merge data"
           icon={<BlurCircular />}
           sx={navItemProps(activePanel === 2, true, true)}
-          onClick={() => setActivePanel(2)}
+          onClick={() => setActivePanel(activePanel === 2 ? null : 2)}
         />
         
         <Grid
