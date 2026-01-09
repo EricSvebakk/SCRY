@@ -67,10 +67,10 @@ export default function PanelReclustering(props: {
       >
         <Stack
           direction="column"
-          rowGap={1}
+          rowGap={1.5}
           sx={{
-            pt: 4,
             p: 1,
+            pt: 2,
             height: "96vh",
             backgroundColor: theme.palette.background.paper,
             border: "1px solid grey"
@@ -86,9 +86,6 @@ export default function PanelReclustering(props: {
             label="label observation"
             value={observationName}
             onChange={(event) => setObservationName(event.target.value)}
-            sx={{
-              mt:1
-            }}
           />
           
           <TextField

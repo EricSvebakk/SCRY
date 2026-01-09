@@ -1,7 +1,7 @@
 import { Box, Button, Grid, Stack, SxProps, Typography } from "@mui/material";
 import React, { ReactElement, useState } from "react";
 import { theme } from "@/lib/design";
-import { BlurCircular, GroupWork } from "@mui/icons-material";
+import { BlurCircular, GroupWork, MoveUp } from "@mui/icons-material";
 import PanelGenes from "./panel/PanelGenes";
 import PanelReclustering from "./panel/PanelReclustering";
 import { useAppSelector } from "@/lib/redux/hooks/hooks";
@@ -60,6 +60,7 @@ export default function NavbarRight() {
 
         <NavButton
           label="Re-cluster observation"
+          disabled={!obs.selectedKey}
           icon={<BlurCircular />}
           sx={navItemProps(activePanel === 1, true, true)}
           onClick={() => setActivePanel(activePanel === 1 ? null : 1)}
@@ -67,11 +68,11 @@ export default function NavbarRight() {
 
         <NavButton
           label="Merge data"
-          icon={<BlurCircular />}
+          icon={<MoveUp />}
           sx={navItemProps(activePanel === 2, true, true)}
           onClick={() => setActivePanel(activePanel === 2 ? null : 2)}
         />
-        
+
         <Grid
           item
           xs
